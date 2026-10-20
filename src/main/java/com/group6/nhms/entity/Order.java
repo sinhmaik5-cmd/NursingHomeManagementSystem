@@ -8,7 +8,7 @@ import org.hibernate.annotations.Nationalized;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "\"ORDER\"")
+@Table(name = "orders")
 public class Order {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

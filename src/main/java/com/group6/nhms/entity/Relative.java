@@ -6,7 +6,7 @@ import jakarta.validation.constraints.Size;
 import org.hibernate.annotations.Nationalized;
 
 @Entity
-@Table(name = "\"RELATIVE\"")
+@Table(name = "relatives")
 public class Relative {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
