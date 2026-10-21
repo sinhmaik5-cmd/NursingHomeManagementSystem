@@ -20,7 +20,6 @@ public class SecurityConfig {
         http
                 // Tắt CSRF tạm thời để dễ test (khi nào làm form HTML chuẩn thì bật lại sau)
                 .csrf(AbstractHttpConfigurer::disable)
-
                 // Phân quyền các đường dẫn
                 .authorizeHttpRequests(auth -> auth
                         // Cho phép truy cập file tĩnh (CSS, JS, Hình ảnh) của Thymeleaf không cần đăng nhập
