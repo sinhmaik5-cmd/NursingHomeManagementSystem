@@ -142,7 +142,7 @@ public class OrderResponse {
             this.amount = amount;
         }
 
-        public String getServiceName() {
+        public  String getServiceName() {
             return serviceName;
         }
 

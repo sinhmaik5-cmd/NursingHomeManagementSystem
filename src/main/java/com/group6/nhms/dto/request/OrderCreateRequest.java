@@ -10,7 +10,7 @@ public class OrderCreateRequest {
 
     private String note;
 
-    private List<Integer> serviceIds;
+    private List<Integer>  serviceIds;
 
     public OrderCreateRequest() {
     }

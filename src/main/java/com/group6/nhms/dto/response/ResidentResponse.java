@@ -87,7 +87,7 @@ public class ResidentResponse {
         return relativeName;
     }
 
-    public void setRelativeName(String relativeName) {
+    public  void setRelativeName(String relativeName) {
         this.relativeName = relativeName;
     }
 

@@ -41,7 +41,7 @@ public class ResidentCheckInRequest {
         this.fullName = fullName;
     }
 
-    public String getGender() {
+    public String  getGender() {
         return gender;
     }
 

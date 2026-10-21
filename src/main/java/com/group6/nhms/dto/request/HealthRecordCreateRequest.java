@@ -103,7 +103,7 @@ public class HealthRecordCreateRequest {
         @NotNull(message = "Số lượng thuốc phải lớn hơn 0")
         private Integer quantityRequested;
 
-        private String dosage;
+        private String  dosage;
 
         public MedicationItemRequest() {
         }

@@ -17,7 +17,7 @@ public class AccountCreateRequest {
     private String role; // ADMIN, STAFF, RELATIVE
 
     @NotNull(message = "Reference ID không được để trống")
-    private Integer referenceId; // ID của Staff hoặc Relative
+    private Integer  referenceId; // ID của Staff hoặc Relative
 
     public AccountCreateRequest() {
     }

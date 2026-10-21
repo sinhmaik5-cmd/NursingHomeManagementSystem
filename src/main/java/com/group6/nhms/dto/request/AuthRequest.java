@@ -8,7 +8,7 @@ public class AuthRequest {
     private String username;
 
     @NotBlank(message = "Password không được để trống")
-    private String password;
+    private String  password;
 
     public AuthRequest() {
     }

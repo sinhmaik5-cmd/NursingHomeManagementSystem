@@ -6,7 +6,7 @@ public class AuthResponse {
     private String tokenType;
     private String username;
     private String role; // ADMIN, STAFF, RELATIVE
-    private Integer referenceId; // ID của Staff hoặc Relative tương ứng
+    private Integer  referenceId; // ID của Staff hoặc Relative tương ứng
 
     public AuthResponse() {
     }

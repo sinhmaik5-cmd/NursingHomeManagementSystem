@@ -133,7 +133,7 @@ public class HealthRecordResponse {
         public MedicationItemResponse() {
         }
 
-        public MedicationItemResponse(Integer medicationId, String medicationName, Integer quantity, String dosage) {
+        public  MedicationItemResponse(Integer medicationId, String medicationName, Integer quantity, String dosage) {
             this.medicationId = medicationId;
             this.medicationName = medicationName;
             this.quantity = quantity;
