@@ -1,0 +1,9 @@
+package com.group6.nhms.repository;
+
+import com.group6.nhms.entity.HealthRecordDetail;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface HealthRecordDetailRepository extends JpaRepository<HealthRecordDetail, Integer> {
+}
