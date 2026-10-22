@@ -46,7 +46,8 @@ public class TaskScheduleServiceImpl implements TaskScheduleService {
             TaskScheduleCreateRequest request,
             Integer roomId
     ) {
-        if (roomId == null) {
+        Integer targetRoomId = (roomId != null) ? roomId : request.getRoomId();
+        if (targetRoomId == null) {
             throw new BadRequestException("Vui lòng chọn phòng được phân công");
         }
 
@@ -54,17 +55,18 @@ public class TaskScheduleServiceImpl implements TaskScheduleService {
         Staff staff = staffRepository.findById(request.getStaffId())
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Không tìm thấy nhân viên ID " + request.getStaffId()));
-        Room room = roomRepository.findById(roomId)
+        Room room = roomRepository.findById(targetRoomId)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Không tìm thấy phòng ID " + roomId));
+                        "Không tìm thấy phòng ID " + targetRoomId));
 
+        // Nghiệp vụ: Chặn xếp trùng 2 ca trực khác nhau cho 1 nhân viên trong cùng khung giờ/ngày
         boolean alreadyAssigned = taskScheduleRepository
                 .existsByStaffIdAndShiftDateAndShiftType(
                         staff.getId(), request.getWorkDate(), shift);
 
         if (alreadyAssigned) {
             throw new BadRequestException(
-                    "Nhân viên đã được phân công ca này trong ngày đã chọn");
+                    "Nhân viên đã được phân công ca " + shift + " trong ngày " + request.getWorkDate());
         }
 
         TaskSchedule schedule = new TaskSchedule();

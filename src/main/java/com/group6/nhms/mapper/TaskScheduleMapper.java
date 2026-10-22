@@ -30,6 +30,11 @@ public class TaskScheduleMapper {
             response.setRole(entity.getStaff().getJobTitle());
         }
 
+        if (entity.getRoom() != null) {
+            response.setRoomId(entity.getRoom().getId());
+            response.setRoomNumber(entity.getRoom().getRoomNumber());
+        }
+
         return response;
     }
 

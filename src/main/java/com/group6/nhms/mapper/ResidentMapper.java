@@ -22,12 +22,15 @@ public class ResidentMapper {
 
         // Map DOB từ Entity sang ResidentResponse
         response.setDateOfBirth(entity.getDob());
+        response.setAdmissionDate(entity.getAdmissionDate());
+        response.setBloodType(entity.getBloodType());
+        response.setInitialHealthStatus(entity.getInitialHealthStatus());
 
         // Map thông tin Người thân
         if (entity.getRelative() != null) {
             response.setRelativeId(entity.getRelative().getId());
             response.setRelativeName(entity.getRelative().getFullName());
-            response.setRelativePhone(entity.getRelative().getPhone());
+            response.setRelativePhone(entity.getRelative().getPhoneNumber());
         }
 
         // Map thông tin Giường & Phòng

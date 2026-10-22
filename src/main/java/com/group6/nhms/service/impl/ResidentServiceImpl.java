@@ -21,11 +21,13 @@ import com.group6.nhms.service.ResidentService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 @Service
-public class ResidentServiceImpl implements ResidentService{
+public class ResidentServiceImpl implements ResidentService {
 
     private final ResidentRepository residentRepository;
     private final RelativeRepository relativeRepository;
@@ -94,6 +96,22 @@ public class ResidentServiceImpl implements ResidentService{
         bed.setStatus(BedStatus.OCCUPIED.name());
 
         Resident savedResident = residentRepository.save(resident);
+
+        // Nghiệp vụ: Tự động khởi tạo hóa đơn tiền phòng tháng đầu tiên khi cư dân Check-in
+        if (bed.getRoom() != null && bed.getRoom().getBasePrice() != null) {
+            BigDecimal roomPrice = bed.getRoom().getBasePrice();
+            Order checkInOrder = new Order();
+            checkInOrder.setResident(savedResident);
+            checkInOrder.setRoomPrice(roomPrice);
+            checkInOrder.setServicesPrice(BigDecimal.ZERO);
+            checkInOrder.setMedicationsPrice(BigDecimal.ZERO);
+            checkInOrder.setTotalAmount(roomPrice);
+            checkInOrder.setPaymentStatus(PaymentStatus.PENDING.name());
+            checkInOrder.setIssueDate(LocalDate.now());
+            checkInOrder.setDueDate(LocalDate.now().plusDays(7));
+            orderRepository.save(checkInOrder);
+        }
+
         return residentMapper.toResponse(savedResident);
     }
 
@@ -111,6 +129,15 @@ public class ResidentServiceImpl implements ResidentService{
 
         if (resident.getBed() == null) {
             throw new BadRequestException("Cư dân hiện không được gán giường");
+        }
+
+        // Nghiệp vụ: Cư dân phải ở tối thiểu 1 tháng (30 ngày) mới được chuyển phòng
+        if (resident.getAdmissionDate() != null) {
+            long daysStayed = ChronoUnit.DAYS.between(resident.getAdmissionDate(), LocalDate.now());
+            if (daysStayed < 30) {
+                throw new BadRequestException(
+                        "Cư dân phải lưu trú tối thiểu 1 tháng (30 ngày) mới được chuyển phòng/giường. Thời gian hiện tại: " + daysStayed + " ngày.");
+            }
         }
 
         Integer oldBedId = resident.getBed().getId();
@@ -143,7 +170,8 @@ public class ResidentServiceImpl implements ResidentService{
         }
 
         newBed.setStatus(BedStatus.OCCUPIED.name());
-        oldBed.setStatus(BedStatus.AVAILABLE.name());
+        // Nghiệp vụ: Giường cũ chuyển sang trạng thái MAINTENANCE (bảo trì/vệ sinh), Staff sẽ tự đổi sang AVAILABLE sau
+        oldBed.setStatus(BedStatus.MAINTENANCE.name());
         resident.setBed(newBed);
 
         Resident savedResident = residentRepository.save(resident);
@@ -166,6 +194,7 @@ public class ResidentServiceImpl implements ResidentService{
             throw new BadRequestException("Cư dân không ở trạng thái đang lưu trú");
         }
 
+        // Nghiệp vụ: Kiểm tra hóa đơn chưa thanh toán trước khi cho xuất viện
         List<Order> unpaidOrders = orderRepository.findByResidentIdAndPaymentStatus(
                 residentId,
                 PaymentStatus.PENDING.name()
@@ -173,7 +202,7 @@ public class ResidentServiceImpl implements ResidentService{
 
         if (!unpaidOrders.isEmpty()) {
             throw new BadRequestException(
-                    "Cư dân còn hóa đơn chưa thanh toán, không thể hoàn tất xuất viện");
+                    "Cư dân còn " + unpaidOrders.size() + " hóa đơn chưa thanh toán, cần tất toán trước khi làm thủ tục xuất viện");
         }
 
         if (resident.getBed() != null) {
@@ -181,7 +210,8 @@ public class ResidentServiceImpl implements ResidentService{
                     .orElseThrow(() ->
                             new ResourceNotFoundException("Không tìm thấy giường hiện tại của cư dân"));
 
-            bed.setStatus(BedStatus.AVAILABLE.name());
+            // Nghiệp vụ: Chuyển sang MAINTENANCE để nhân viên dọn dẹp vệ sinh/khử khuẩn trước khi mở lại
+            bed.setStatus(BedStatus.MAINTENANCE.name());
             resident.setBed(null);
         }
 

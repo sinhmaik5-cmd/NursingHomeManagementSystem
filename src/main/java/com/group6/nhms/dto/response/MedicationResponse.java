@@ -1,37 +1,51 @@
 package com.group6.nhms.dto.response;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 public class MedicationResponse {
-
     private Integer id;
-    private String name;
-    private String unit; // Viên, Hộp, Chai
-    private Integer stockQuantity;
+    private String medName;
+    private Integer quantityInStock;
+    private LocalDate expiryDate;
+    private String supplier;
     private BigDecimal unitPrice;
 
     public MedicationResponse() {
     }
 
-    public MedicationResponse(Integer id, String name, String unit, Integer stockQuantity, BigDecimal unitPrice) {
+    public MedicationResponse(Integer id, String medName, Integer quantityInStock, LocalDate expiryDate, String supplier) {
         this.id = id;
-        this.name = name;
-        this.unit = unit;
-        this.stockQuantity = stockQuantity;
+        this.medName = medName;
+        this.quantityInStock = quantityInStock;
+        this.expiryDate = expiryDate;
+        this.supplier = supplier;
+    }
+
+    public MedicationResponse(Integer id, String medName, Integer quantityInStock, LocalDate expiryDate, String supplier, BigDecimal unitPrice) {
+        this.id = id;
+        this.medName = medName;
+        this.quantityInStock = quantityInStock;
+        this.expiryDate = expiryDate;
+        this.supplier = supplier;
         this.unitPrice = unitPrice;
     }
 
+    // Getters and Setters
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }
 
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
+    public String getMedName() { return medName; }
+    public void setMedName(String medName) { this.medName = medName; }
 
-    public String getUnit() { return unit; }
-    public void setUnit(String unit) { this.unit = unit; }
+    public Integer getQuantityInStock() { return quantityInStock; }
+    public void setQuantityInStock(Integer quantityInStock) { this.quantityInStock = quantityInStock; }
 
-    public Integer getStockQuantity() { return stockQuantity; }
-    public void setStockQuantity(Integer stockQuantity) { this.stockQuantity = stockQuantity; }
+    public LocalDate getExpiryDate() { return expiryDate; }
+    public void setExpiryDate(LocalDate expiryDate) { this.expiryDate = expiryDate; }
+
+    public String getSupplier() { return supplier; }
+    public void setSupplier(String supplier) { this.supplier = supplier; }
 
     public BigDecimal getUnitPrice() { return unitPrice; }
     public void setUnitPrice(BigDecimal unitPrice) { this.unitPrice = unitPrice; }

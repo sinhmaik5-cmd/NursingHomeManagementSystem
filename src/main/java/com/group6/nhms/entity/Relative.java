@@ -22,7 +22,7 @@ public class Relative {
     @Size(max = 20)
     @NotNull
     @Column(name = "Phone", nullable = false, length = 20)
-    private String phone;
+    private String phoneNumber;
 
     @Size(max = 100)
     @Column(name = "Email", length = 100)
@@ -54,12 +54,20 @@ public class Relative {
         this.fullName = fullName;
     }
 
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+
+    public void setPhoneNumber(String phone) {
+        this.phoneNumber = phone;
+    }
+
     public String getPhone() {
-        return phone;
+        return phoneNumber;
     }
 
     public void setPhone(String phone) {
-        this.phone = phone;
+        this.phoneNumber = phone;
     }
 
     public String getEmail() {

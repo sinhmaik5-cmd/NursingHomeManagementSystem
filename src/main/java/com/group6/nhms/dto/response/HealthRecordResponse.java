@@ -1,5 +1,6 @@
 package com.group6.nhms.dto.response;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -129,15 +130,26 @@ public class HealthRecordResponse {
         private String medicationName;
         private Integer quantity;
         private String dosage;
+        private BigDecimal unitPrice;
+        private BigDecimal totalPrice;
 
         public MedicationItemResponse() {
         }
 
-        public  MedicationItemResponse(Integer medicationId, String medicationName, Integer quantity, String dosage) {
+        public MedicationItemResponse(Integer medicationId, String medicationName, Integer quantity, String dosage) {
             this.medicationId = medicationId;
             this.medicationName = medicationName;
             this.quantity = quantity;
             this.dosage = dosage;
+        }
+
+        public MedicationItemResponse(Integer medicationId, String medicationName, Integer quantity, String dosage, BigDecimal unitPrice, BigDecimal totalPrice) {
+            this.medicationId = medicationId;
+            this.medicationName = medicationName;
+            this.quantity = quantity;
+            this.dosage = dosage;
+            this.unitPrice = unitPrice;
+            this.totalPrice = totalPrice;
         }
 
         public Integer getMedicationId() {
@@ -170,6 +182,22 @@ public class HealthRecordResponse {
 
         public void setDosage(String dosage) {
             this.dosage = dosage;
+        }
+
+        public BigDecimal getUnitPrice() {
+            return unitPrice;
+        }
+
+        public void setUnitPrice(BigDecimal unitPrice) {
+            this.unitPrice = unitPrice;
+        }
+
+        public BigDecimal getTotalPrice() {
+            return totalPrice;
+        }
+
+        public void setTotalPrice(BigDecimal totalPrice) {
+            this.totalPrice = totalPrice;
         }
     }
 }

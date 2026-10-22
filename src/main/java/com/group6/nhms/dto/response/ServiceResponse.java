@@ -3,31 +3,51 @@ package com.group6.nhms.dto.response;
 import java.math.BigDecimal;
 
 public class ServiceResponse {
-
     private Integer id;
-    private String name;
+    private String serviceName;
     private String description;
-    private BigDecimal price;
+    private BigDecimal unitPrice;
 
     public ServiceResponse() {
     }
 
-    public ServiceResponse(Integer id, String name, String description, BigDecimal price) {
+    public ServiceResponse(Integer id, String serviceName, String description, BigDecimal unitPrice) {
         this.id = id;
-        this.name = name;
+        this.serviceName = serviceName;
         this.description = description;
-        this.price = price;
+        this.unitPrice = unitPrice;
     }
 
-    public Integer getId() { return id; }
-    public void setId(Integer id) { this.id = id; }
+    // Getters and Setters
+    public Integer getId() {
+        return id;
+    }
 
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
+    public void setId(Integer id) {
+        this.id = id;
+    }
 
-    public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
+    public String getServiceName() {
+        return serviceName;
+    }
 
-    public BigDecimal getPrice() { return price; }
-    public void setPrice(BigDecimal price) { this.price = price; }
+    public void setServiceName(String serviceName) {
+        this.serviceName = serviceName;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public BigDecimal getUnitPrice() {
+        return unitPrice;
+    }
+
+    public void setUnitPrice(BigDecimal unitPrice) {
+        this.unitPrice = unitPrice;
+    }
 }

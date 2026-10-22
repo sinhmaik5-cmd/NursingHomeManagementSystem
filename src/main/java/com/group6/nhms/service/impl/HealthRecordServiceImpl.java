@@ -20,7 +20,9 @@ import com.group6.nhms.service.HealthRecordService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -96,19 +98,35 @@ public class HealthRecordServiceImpl implements HealthRecordService {
                                 new ResourceNotFoundException(
                                         "Không tìm thấy thuốc ID " + item.getMedicationId()));
 
-                Integer stock = medication.getQuantityInStock();
-
-                if (stock == null || stock < item.getQuantityRequested()) {
-                    throw new BadRequestException("Thuốc trong kho không đủ");
+                // 1. Nghiệp vụ: Chặn kê đơn nếu thuốc đã hết hạn (hạn dùng <= ngày hiện tại)
+                if (medication.getExpiryDate() != null && !medication.getExpiryDate().isAfter(LocalDate.now())) {
+                    throw new BadRequestException("Thuốc " + medication.getMedName()
+                            + " đã hết hạn sử dụng (" + medication.getExpiryDate() + "), không thể kê đơn");
                 }
 
+                Integer stock = medication.getQuantityInStock();
+
+                // 2. Kiểm tra tồn kho
+                if (stock == null || stock < item.getQuantityRequested()) {
+                    throw new BadRequestException("Thuốc " + medication.getMedName()
+                            + " trong kho không đủ (còn " + (stock == null ? 0 : stock)
+                            + ", yêu cầu " + item.getQuantityRequested() + ")");
+                }
+
+                // 3. Trừ kho tự động
                 medication.setQuantityInStock(stock - item.getQuantityRequested());
+
+                // 4. Lưu vết đơn giá và thành tiền để tính phí cuối tháng
+                BigDecimal unitPrice = (medication.getUnitPrice() != null) ? medication.getUnitPrice() : BigDecimal.ZERO;
+                BigDecimal totalPrice = unitPrice.multiply(BigDecimal.valueOf(item.getQuantityRequested()));
 
                 HealthRecordDetail detail = new HealthRecordDetail();
                 detail.setHealthRecord(savedRecord);
                 detail.setMedication(medication);
                 detail.setQuantity(item.getQuantityRequested());
                 detail.setDosage(item.getDosage());
+                detail.setUnitPrice(unitPrice);
+                detail.setTotalPrice(totalPrice);
 
                 savedDetails.add(detail);
             }
@@ -117,19 +135,72 @@ public class HealthRecordServiceImpl implements HealthRecordService {
         List<HealthRecordDetail> persistedDetails =
                 healthRecordDetailRepository.saveAll(savedDetails);
 
-        HealthRecordResponse response = healthRecordMapper.toResponse(savedRecord);
-        List<HealthRecordResponse.MedicationItemResponse> medicationResponses =
-                new ArrayList<>();
+        return buildRecordResponse(savedRecord, persistedDetails);
+    }
 
-        for (HealthRecordDetail detail : persistedDetails) {
-            medicationResponses.add(
-                    new HealthRecordResponse.MedicationItemResponse(
-                            detail.getMedication().getId(),
-                            detail.getMedication().getMedName(),
-                            detail.getQuantity(),
-                            detail.getDosage()
-                    )
-            );
+    @Override
+    @Transactional(readOnly = true)
+    public List<HealthRecordResponse> getRecordsByResident(Integer residentId) {
+        List<HealthRecord> records = healthRecordRepository.findByResidentIdOrderByRecordDateDesc(residentId);
+        List<HealthRecordResponse> responses = new ArrayList<>();
+        for (HealthRecord record : records) {
+            List<HealthRecordDetail> details = healthRecordDetailRepository.findByHealthRecordId(record.getId());
+            responses.add(buildRecordResponse(record, details));
+        }
+        return responses;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public HealthRecordResponse getRecordById(Integer id) {
+        HealthRecord record = healthRecordRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy hồ sơ sức khỏe ID " + id));
+        List<HealthRecordDetail> details = healthRecordDetailRepository.findByHealthRecordId(record.getId());
+        return buildRecordResponse(record, details);
+    }
+
+    @Override
+    @Transactional
+    public void cancelHealthRecord(Integer recordId) {
+        HealthRecord record = healthRecordRepository.findById(recordId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy hồ sơ sức khỏe ID " + recordId));
+
+        // Nghiệp vụ: Hoàn kho (Rollback) toàn bộ thuốc đã kê khi hủy đơn thuốc / phiếu khám
+        List<HealthRecordDetail> details = healthRecordDetailRepository.findByHealthRecordId(recordId);
+        for (HealthRecordDetail detail : details) {
+            if (detail.getMedication() != null && detail.getQuantity() != null) {
+                Medication medication = medicationRepository.findByIdForUpdate(detail.getMedication().getId())
+                        .orElse(null);
+                if (medication != null) {
+                    int currentStock = (medication.getQuantityInStock() != null) ? medication.getQuantityInStock() : 0;
+                    medication.setQuantityInStock(currentStock + detail.getQuantity());
+                    medicationRepository.save(medication);
+                }
+            }
+        }
+
+        // Xóa chi tiết và hồ sơ khám
+        healthRecordDetailRepository.deleteAll(details);
+        healthRecordRepository.delete(record);
+    }
+
+    private HealthRecordResponse buildRecordResponse(HealthRecord record, List<HealthRecordDetail> details) {
+        HealthRecordResponse response = healthRecordMapper.toResponse(record);
+        List<HealthRecordResponse.MedicationItemResponse> medicationResponses = new ArrayList<>();
+
+        if (details != null) {
+            for (HealthRecordDetail detail : details) {
+                medicationResponses.add(
+                        new HealthRecordResponse.MedicationItemResponse(
+                                detail.getMedication().getId(),
+                                detail.getMedication().getMedName(),
+                                detail.getQuantity(),
+                                detail.getDosage(),
+                                detail.getUnitPrice(),
+                                detail.getTotalPrice()
+                        )
+                );
+            }
         }
 
         response.setMedications(medicationResponses);

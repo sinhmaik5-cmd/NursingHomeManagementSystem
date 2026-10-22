@@ -8,6 +8,8 @@ public class TaskScheduleResponse {
     private Integer staffId;
     private String staffName;
     private String role;
+    private Integer roomId;
+    private String roomNumber;
     private LocalDate workDate;
     private String shift;
     private String note;
@@ -15,11 +17,13 @@ public class TaskScheduleResponse {
     public TaskScheduleResponse() {
     }
 
-    public TaskScheduleResponse(Integer id, Integer staffId, String staffName, String role, LocalDate workDate, String shift, String note) {
+    public TaskScheduleResponse(Integer id, Integer staffId, String staffName, String role, Integer roomId, String roomNumber, LocalDate workDate, String shift, String note) {
         this.id = id;
         this.staffId = staffId;
         this.staffName = staffName;
         this.role = role;
+        this.roomId = roomId;
+        this.roomNumber = roomNumber;
         this.workDate = workDate;
         this.shift = shift;
         this.note = note;
@@ -36,6 +40,12 @@ public class TaskScheduleResponse {
 
     public String getRole() { return role; }
     public void setRole(String role) { this.role = role; }
+
+    public Integer getRoomId() { return roomId; }
+    public void setRoomId(Integer roomId) { this.roomId = roomId; }
+
+    public String getRoomNumber() { return roomNumber; }
+    public void setRoomNumber(String roomNumber) { this.roomNumber = roomNumber; }
 
     public LocalDate getWorkDate() { return workDate; }
     public void setWorkDate(LocalDate workDate) { this.workDate = workDate; }

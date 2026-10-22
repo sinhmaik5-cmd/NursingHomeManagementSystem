@@ -5,6 +5,8 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import org.hibernate.annotations.Nationalized;
 
+import java.math.BigDecimal;
+
 @Entity
 @Table(name = "HEALTH_RECORD_DETAIL")
 public class HealthRecordDetail {
@@ -36,6 +38,12 @@ public class HealthRecordDetail {
     @Nationalized
     @Column(name = "Frequency", length = 100)
     private String frequency;
+
+    @Column(name = "UnitPrice", precision = 18, scale = 2)
+    private BigDecimal unitPrice;
+
+    @Column(name = "TotalPrice", precision = 18, scale = 2)
+    private BigDecimal totalPrice;
 
     public Integer getId() {
         return id;
@@ -85,4 +93,19 @@ public class HealthRecordDetail {
         this.frequency = frequency;
     }
 
+    public BigDecimal getUnitPrice() {
+        return unitPrice;
+    }
+
+    public void setUnitPrice(BigDecimal unitPrice) {
+        this.unitPrice = unitPrice;
+    }
+
+    public BigDecimal getTotalPrice() {
+        return totalPrice;
+    }
+
+    public void setTotalPrice(BigDecimal totalPrice) {
+        this.totalPrice = totalPrice;
+    }
 }

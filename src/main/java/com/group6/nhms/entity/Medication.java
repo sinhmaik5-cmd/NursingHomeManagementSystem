@@ -6,6 +6,7 @@ import jakarta.validation.constraints.Size;
 import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.Nationalized;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Entity
@@ -34,6 +35,11 @@ public class Medication {
     @Nationalized
     @Column(name = "Supplier", length = 150)
     private String supplier;
+
+    @NotNull
+    @ColumnDefault("0")
+    @Column(name = "UnitPrice", nullable = false, precision = 18, scale = 2)
+    private BigDecimal unitPrice;
 
     public Integer getId() {
         return id;
@@ -75,4 +81,11 @@ public class Medication {
         this.supplier = supplier;
     }
 
+    public BigDecimal getUnitPrice() {
+        return unitPrice;
+    }
+
+    public void setUnitPrice(BigDecimal unitPrice) {
+        this.unitPrice = unitPrice;
+    }
 }

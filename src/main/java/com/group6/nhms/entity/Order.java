@@ -5,7 +5,11 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import org.hibernate.annotations.Nationalized;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "orders")
@@ -31,6 +35,24 @@ public class Order {
     @Nationalized
     @Column(name = "PaymentStatus", length = 50)
     private String paymentStatus;
+
+    @Column(name = "RoomPrice", precision = 18, scale = 2)
+    private BigDecimal roomPrice;
+
+    @Column(name = "ServicesPrice", precision = 18, scale = 2)
+    private BigDecimal servicesPrice;
+
+    @Column(name = "MedicationsPrice", precision = 18, scale = 2)
+    private BigDecimal medicationsPrice;
+
+    @Column(name = "TotalAmount", precision = 18, scale = 2)
+    private BigDecimal totalAmount;
+
+    @Column(name = "PaymentDate")
+    private LocalDateTime paymentDate;
+
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<OrderDetail> orderDetails = new ArrayList<>();
 
     public Integer getId() {
         return id;
@@ -72,4 +94,51 @@ public class Order {
         this.paymentStatus = paymentStatus;
     }
 
+    public BigDecimal getRoomPrice() {
+        return roomPrice;
+    }
+
+    public void setRoomPrice(BigDecimal roomPrice) {
+        this.roomPrice = roomPrice;
+    }
+
+    public BigDecimal getServicesPrice() {
+        return servicesPrice;
+    }
+
+    public void setServicesPrice(BigDecimal servicesPrice) {
+        this.servicesPrice = servicesPrice;
+    }
+
+    public BigDecimal getMedicationsPrice() {
+        return medicationsPrice;
+    }
+
+    public void setMedicationsPrice(BigDecimal medicationsPrice) {
+        this.medicationsPrice = medicationsPrice;
+    }
+
+    public BigDecimal getTotalAmount() {
+        return totalAmount;
+    }
+
+    public void setTotalAmount(BigDecimal totalAmount) {
+        this.totalAmount = totalAmount;
+    }
+
+    public LocalDateTime getPaymentDate() {
+        return paymentDate;
+    }
+
+    public void setPaymentDate(LocalDateTime paymentDate) {
+        this.paymentDate = paymentDate;
+    }
+
+    public List<OrderDetail> getOrderDetails() {
+        return orderDetails;
+    }
+
+    public void setOrderDetails(List<OrderDetail> orderDetails) {
+        this.orderDetails = orderDetails;
+    }
 }

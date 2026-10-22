@@ -8,6 +8,9 @@ public class ResidentResponse {
     private String fullName;
     private String gender;
     private LocalDate dateOfBirth;
+    private LocalDate admissionDate;
+    private String bloodType;
+    private String initialHealthStatus;
     private String status; // OCCUPIED, DISCHARGED, DECEASED
 
     private Integer relativeId;
@@ -21,11 +24,14 @@ public class ResidentResponse {
     public ResidentResponse() {
     }
 
-    public ResidentResponse(Integer id, String fullName, String gender, LocalDate dateOfBirth, String status, Integer relativeId, String relativeName, String relativePhone, Integer bedId, String bedNumber, String roomNumber) {
+    public ResidentResponse(Integer id, String fullName, String gender, LocalDate dateOfBirth, LocalDate admissionDate, String bloodType, String initialHealthStatus, String status, Integer relativeId, String relativeName, String relativePhone, Integer bedId, String bedNumber, String roomNumber) {
         this.id = id;
         this.fullName = fullName;
         this.gender = gender;
         this.dateOfBirth = dateOfBirth;
+        this.admissionDate = admissionDate;
+        this.bloodType = bloodType;
+        this.initialHealthStatus = initialHealthStatus;
         this.status = status;
         this.relativeId = relativeId;
         this.relativeName = relativeName;
@@ -67,6 +73,30 @@ public class ResidentResponse {
         this.dateOfBirth = dateOfBirth;
     }
 
+    public LocalDate getAdmissionDate() {
+        return admissionDate;
+    }
+
+    public void setAdmissionDate(LocalDate admissionDate) {
+        this.admissionDate = admissionDate;
+    }
+
+    public String getBloodType() {
+        return bloodType;
+    }
+
+    public void setBloodType(String bloodType) {
+        this.bloodType = bloodType;
+    }
+
+    public String getInitialHealthStatus() {
+        return initialHealthStatus;
+    }
+
+    public void setInitialHealthStatus(String initialHealthStatus) {
+        this.initialHealthStatus = initialHealthStatus;
+    }
+
     public String getStatus() {
         return status;
     }
@@ -87,7 +117,7 @@ public class ResidentResponse {
         return relativeName;
     }
 
-    public  void setRelativeName(String relativeName) {
+    public void setRelativeName(String relativeName) {
         this.relativeName = relativeName;
     }
 

@@ -3,41 +3,71 @@ package com.group6.nhms.dto.response;
 import java.math.BigDecimal;
 
 public class RoomResponse {
-
     private Integer id;
     private String roomNumber;
     private String roomType;
+    private Integer capacity; // Thuộc tính bị thiếu gây ra lỗi đỏ
     private BigDecimal basePrice;
-    private Integer totalBeds;
-    private Integer availableBeds;
+    private String status;
 
     public RoomResponse() {
     }
 
-    public RoomResponse(Integer id, String roomNumber, String roomType, BigDecimal basePrice, Integer totalBeds, Integer availableBeds) {
+    public RoomResponse(Integer id, String roomNumber, String roomType, Integer capacity, BigDecimal basePrice, String status) {
         this.id = id;
         this.roomNumber = roomNumber;
         this.roomType = roomType;
+        this.capacity = capacity;
         this.basePrice = basePrice;
-        this.totalBeds = totalBeds;
-        this.availableBeds = availableBeds;
+        this.status = status;
     }
 
-    public Integer getId() { return id; }
-    public void setId(Integer id) { this.id = id; }
+    // Getters and Setters
+    public Integer getId() {
+        return id;
+    }
 
-    public String getRoomNumber() { return roomNumber; }
-    public void setRoomNumber(String roomNumber) { this.roomNumber = roomNumber; }
+    public void setId(Integer id) {
+        this.id = id;
+    }
 
-    public String getRoomType() { return roomType; }
-    public void setRoomType(String roomType) { this.roomType = roomType; }
+    public String getRoomNumber() {
+        return roomNumber;
+    }
 
-    public BigDecimal getBasePrice() { return basePrice; }
-    public void setBasePrice(BigDecimal basePrice) { this.basePrice = basePrice; }
+    public void setRoomNumber(String roomNumber) {
+        this.roomNumber = roomNumber;
+    }
 
-    public Integer getTotalBeds() { return totalBeds; }
-    public void setTotalBeds(Integer totalBeds) { this.totalBeds = totalBeds; }
+    public String getRoomType() {
+        return roomType;
+    }
 
-    public Integer getAvailableBeds() { return availableBeds; }
-    public void setAvailableBeds(Integer availableBeds) { this.availableBeds = availableBeds; }
+    public void setRoomType(String roomType) {
+        this.roomType = roomType;
+    }
+
+    public Integer getCapacity() {
+        return capacity;
+    }
+
+    public void setCapacity(Integer capacity) {
+        this.capacity = capacity;
+    }
+
+    public BigDecimal getBasePrice() {
+        return basePrice;
+    }
+
+    public void setBasePrice(BigDecimal basePrice) {
+        this.basePrice = basePrice;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
 }

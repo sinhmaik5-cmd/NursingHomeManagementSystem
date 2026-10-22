@@ -1,6 +1,7 @@
 package com.group6.nhms.exception;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 public class ErrorResponse {
     private LocalDateTime timestamp;
@@ -8,6 +9,11 @@ public class ErrorResponse {
     private String error;
     private String message;
     private String path;
+    private Map<String, String> validationErrors;
+
+    public ErrorResponse() {
+        this.timestamp = LocalDateTime.now();
+    }
 
     public ErrorResponse(int status, String error, String message, String path) {
         this.timestamp = LocalDateTime.now();
@@ -17,7 +23,15 @@ public class ErrorResponse {
         this.path = path;
     }
 
-    // Getters và Setters
+    public ErrorResponse(int status, String error, String message, String path, Map<String, String> validationErrors) {
+        this.timestamp = LocalDateTime.now();
+        this.status = status;
+        this.error = error;
+        this.message = message;
+        this.path = path;
+        this.validationErrors = validationErrors;
+    }
+
     public LocalDateTime getTimestamp() { return timestamp; }
     public void setTimestamp(LocalDateTime timestamp) { this.timestamp = timestamp; }
     public int getStatus() { return status; }
@@ -28,4 +42,6 @@ public class ErrorResponse {
     public void setMessage(String message) { this.message = message; }
     public String getPath() { return path; }
     public void setPath(String path) { this.path = path; }
+    public Map<String, String> getValidationErrors() { return validationErrors; }
+    public void setValidationErrors(Map<String, String> validationErrors) { this.validationErrors = validationErrors; }
 }

@@ -13,12 +13,23 @@ import java.util.Optional;
 
 @Repository
 public interface BedRepository extends JpaRepository<Bed, Integer> {
-    // Tìm danh sách tất cả các giường đang trống (Status = 'AVAILABLE')
+
+    // Tìm danh sách tất cả các giường theo trạng thái (AVAILABLE, OCCUPIED, MAINTENANCE)
     List<Bed> findByStatus(String status);
 
-    // Tìm giường trống trong một phòng cụ thể
+    // Tìm danh sách giường thuộc một phòng cụ thể
+    List<Bed> findByRoomId(Integer roomId);
+
+    // Tìm giường theo phòng và trạng thái
     List<Bed> findByRoomIdAndStatus(Integer roomId, String status);
 
+    // Đếm số giường trong một phòng (để kiểm tra không vượt quá Capacity)
+    long countByRoomId(Integer roomId);
+
+    // Đếm số giường theo trạng thái (phục vụ tính tỷ lệ lấp đầy Occupancy Rate)
+    long countByStatus(String status);
+
+    // Khóa bi quan khi thực hiện check-in, chuyển giường, check-out
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select b from Bed b where b.id = :id")
     Optional<Bed> findByIdForUpdate(@Param("id") Integer id);
