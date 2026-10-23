@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout :: layout(~{::title}, ~{::content}, 'bed-management')}">
+<head>
+    <title>Sơ Đồ Phòng & Giường Trực Quan - NHMS Care</title>
+</head>
+<body>
+<div th:fragment="content">
+    <!-- Header -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <div>
+            <h4 class="fw-bold mb-1 text-dark">
+                <i class="bi bi-hospital-fill text-primary me-2"></i>Sơ Đồ Quản Lý Phòng & Giường Trực Quan
+            </h4>
+            <p class="text-muted small mb-0">Theo dõi trạng thái thời gian thực các phòng và giường, hỗ trợ nhân viên cập nhật giường sau khi dọn dẹp khử trùng</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a th:href="@{/residents/check-in}" class="btn btn-primary btn-sm" sec:authorize="hasAnyRole('MANAGER', 'ADMIN')">
+                <i class="bi bi-person-plus-fill me-1"></i> Tiếp nhận Cư dân mới
+            </a>
+        </div>
+    </div>
+
+    <!-- Occupancy Metrics Summary Bar -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="nh-card p-3 d-flex align-items-center justify-content-between">
+                <div>
+                    <span class="text-muted small d-block">TỔNG SỐ GIƯỜNG</span>
+                    <h4 class="fw-bold mb-0 text-dark" th:text="${totalBeds}">0</h4>
+                </div>
+                <div class="stat-icon primary"><i class="bi bi-grid-fill"></i></div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="nh-card p-3 d-flex align-items-center justify-content-between">
+                <div>
+                    <span class="text-muted small d-block">GIƯỜNG ĐANG NẰM</span>
+                    <h4 class="fw-bold mb-0 text-primary" th:text="${occupiedBeds}">0</h4>
+                </div>
+                <div class="stat-icon primary"><i class="bi bi-person-check-fill"></i></div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="nh-card p-3 d-flex align-items-center justify-content-between">
+                <div>
+                    <span class="text-muted small d-block">GIƯỜNG TRỐNG (AVAILABLE)</span>
+                    <h4 class="fw-bold mb-0 text-success" th:text="${availableBeds}">0</h4>
+                </div>
+                <div class="stat-icon success"><i class="bi bi-check-circle-fill"></i></div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="nh-card p-3 d-flex align-items-center justify-content-between">
+                <div>
+                    <span class="text-muted small d-block">CẦN DỌN DẸP / BẢO TRÌ</span>
+                    <h4 class="fw-bold mb-0 text-warning" th:text="${maintenanceBeds}">0</h4>
+                </div>
+                <div class="stat-icon warning"><i class="bi bi-tools"></i></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Legend Bar -->
+    <div class="d-flex flex-wrap align-items-center gap-3 mb-4 p-3 bg-white border rounded">
+        <span class="small fw-bold text-muted"><i class="bi bi-info-circle me-1"></i>Chú thích trạng thái:</span>
+        <span class="badge badge-status-available px-3 py-2">
+            <i class="bi bi-circle-fill me-1 small"></i> AVAILABLE (Trống - Sẵn sàng đón khách)
+        </span>
+        <span class="badge badge-status-occupied px-3 py-2">
+            <i class="bi bi-circle-fill me-1 small"></i> OCCUPIED (Đang có cư dân lưu trú)
+        </span>
+        <span class="badge badge-status-maintenance px-3 py-2">
+            <i class="bi bi-circle-fill me-1 small"></i> MAINTENANCE (Bảo trì / Cần dọn dẹp khử trùng)
+        </span>
+    </div>
+
+    <!-- Room Grid -->
+    <div class="row g-4">
+        <div class="col-12 col-lg-6" th:each="room : ${rooms}">
+            <div class="room-card shadow-sm h-100">
+                <!-- Room Header -->
+                <div class="room-header">
+                    <div>
+                        <span class="fs-5 fw-bold text-dark me-2">Phòng <span th:text="${room.roomNumber}">P101</span></span>
+                        <span class="badge bg-secondary-subtle text-secondary" th:text="${room.roomType}">STANDARD</span>
+                    </div>
+                    <div class="text-end">
+                        <span class="small text-muted d-block" style="font-size: 0.75rem;">Đơn giá phòng:</span>
+                        <span class="fw-bold text-primary small"
+                              th:text="${#numbers.formatDecimal(room.basePrice, 0, 'COMMA', 0, 'POINT')} + ' VNĐ/tháng'">
+                            5,000,000 VNĐ/tháng
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Bed list inside room -->
+                <div class="p-3">
+                    <div class="row g-3">
+                        <div class="col-12 col-sm-6" th:each="bed : ${bedsByRoomId.get(room.id)}">
+                            <div class="bed-box"
+                                 th:classappend="${bed.status == 'AVAILABLE' ? 'status-available' : (bed.status == 'OCCUPIED' ? 'status-occupied' : 'status-maintenance')}">
+                                
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div class="d-flex align-items-center">
+                                        <i class="bi bi-hospital fs-4 me-2"
+                                           th:classappend="${bed.status == 'AVAILABLE' ? 'text-success' : (bed.status == 'OCCUPIED' ? 'text-primary' : 'text-warning')}"></i>
+                                        <div>
+                                            <h6 class="fw-bold mb-0 text-dark" th:text="${bed.bedNumber}">G101-1</h6>
+                                            <small class="text-muted" th:text="'Mã: #' + ${bed.id}">#1</small>
+                                        </div>
+                                    </div>
+                                    <span th:if="${bed.status == 'AVAILABLE'}" class="badge badge-status-available">AVAILABLE</span>
+                                    <span th:if="${bed.status == 'OCCUPIED'}" class="badge badge-status-occupied">OCCUPIED</span>
+                                    <span th:if="${bed.status == 'MAINTENANCE'}" class="badge badge-status-maintenance">MAINTENANCE</span>
+                                </div>
+
+                                <!-- Content based on status -->
+                                <div th:if="${bed.status == 'OCCUPIED'}" class="mt-2 pt-2 border-top">
+                                    <small class="text-muted d-block" style="font-size: 0.75rem;">Cư dân lưu trú:</small>
+                                    <div class="fw-bold text-dark small text-truncate"
+                                         th:text="${residentByBedId.get(bed.id) != null ? residentByBedId.get(bed.id).fullName : 'Cư dân đang ở'}">
+                                        Nguyễn Văn An
+                                    </div>
+                                </div>
+
+                                <div th:if="${bed.status == 'AVAILABLE'}" class="mt-2 pt-2 border-top text-center">
+                                    <span class="text-success small fw-semibold">
+                                        <i class="bi bi-check2-circle me-1"></i>Sẵn sàng tiếp nhận
+                                    </span>
+                                </div>
+
+                                <!-- Action button for MAINTENANCE: Staff switches to AVAILABLE -->
+                                <div th:if="${bed.status == 'MAINTENANCE'}" class="mt-2 pt-2 border-top">
+                                    <div class="small text-muted mb-2">
+                                        <i class="bi bi-shield-exclamation text-warning me-1"></i>Đang chờ khử trùng & dọn dẹp
+                                    </div>
+                                    <form th:action="@{'/rooms/beds/' + ${bed.id} + '/status'}" method="post" class="m-0">
+                                        <input type="hidden" name="status" value="AVAILABLE">
+                                        <button type="submit" class="btn btn-sm btn-success w-100 py-1 shadow-sm"
+                                                onclick="return confirm('Xác nhận giường đã hoàn tất khử trùng và dọn dẹp sạch sẽ để đổi sang AVAILABLE?')">
+                                            <i class="bi bi-stars me-1"></i> Hoàn tất dọn dẹp &rarr; Đổi sang AVAILABLE
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- If no beds found in room -->
+                        <div class="col-12 text-center text-muted py-3" th:if="${#lists.isEmpty(bedsByRoomId.get(room.id))}">
+                            <small>Phòng chưa được thiết lập giường nào.</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
