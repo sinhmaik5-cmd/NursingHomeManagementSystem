@@ -25,6 +25,9 @@ public interface OrderRepository extends JpaRepository<Order, Integer> {
     // Lấy tất cả hóa đơn theo trạng thái thanh toán
     List<Order> findByPaymentStatus(String paymentStatus);
 
+    // Đếm số lượng hóa đơn theo trạng thái thanh toán
+    long countByPaymentStatus(String paymentStatus);
+
     // Tìm hóa đơn phát hành trong khoảng thời gian
     List<Order> findByIssueDateBetween(LocalDate startDate, LocalDate endDate);
 

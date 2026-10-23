@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout :: layout(~{::title}, ~{::content}, 'billing-monthly')}">
+<head>
+    <title>Chốt Hóa Đơn Hàng Tháng - NHMS Care</title>
+</head>
+<body>
+<div th:fragment="content">
+    <!-- Header -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <div>
+            <h4 class="fw-bold mb-1 text-dark">
+                <i class="bi bi-receipt text-success me-2"></i>Quyết Toán & Chốt Hóa Đơn Hàng Tháng
+            </h4>
+            <p class="text-muted small mb-0">Hệ thống tổng hợp tự động 3 khoản: Tiền phòng + Tiền dịch vụ + Tiền thuốc kê đơn trong tháng</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-success btn-sm shadow-sm" data-bs-toggle="modal" data-bs-target="#generateBillModal">
+                <i class="bi bi-calculator me-1"></i> Chốt Hóa Đơn Tháng Này
+            </button>
+        </div>
+    </div>
+
+    <!-- Revenue & Billing Stats -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="nh-card p-3">
+                <span class="text-muted small d-block mb-1">TỔNG SỐ HÓA ĐƠN</span>
+                <h4 class="fw-bold mb-0 text-dark" th:text="${#lists.size(orders)}">0</h4>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="nh-card p-3">
+                <span class="text-muted small d-block mb-1">HÓA ĐƠN CHƯA THU (UNPAID)</span>
+                <h4 class="fw-bold mb-0 text-danger" th:text="${unpaidCount}">0</h4>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="nh-card p-3">
+                <span class="text-muted small d-block mb-1">ĐÃ THANH TOÁN (PAID)</span>
+                <h4 class="fw-bold mb-0 text-success" th:text="${paidCount}">0</h4>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="nh-card p-3">
+                <span class="text-muted small d-block mb-1">TỔNG TIỀN ĐÃ THU</span>
+                <h4 class="fw-bold mb-0 text-primary small"
+                    th:text="${totalCollected != null ? #numbers.formatDecimal(totalCollected, 0, 'COMMA', 0, 'POINT') + ' VNĐ' : '0 VNĐ'}">
+                    0 VNĐ
+                </h4>
+            </div>
+        </div>
+    </div>
+
+    <!-- Monthly Billing Table -->
+    <div class="nh-card">
+        <div class="nh-card-header d-flex justify-content-between align-items-center">
+            <h6 class="fw-bold mb-0 text-dark">
+                <i class="bi bi-table text-primary me-2"></i>Bảng Kê Hóa Đơn Viện Phí Cư Dân
+            </h6>
+            <!-- Filter by Payment Status -->
+            <div class="btn-group btn-group-sm" role="group">
+                <a th:href="@{/billing/monthly}" class="btn btn-outline-secondary" th:classappend="${filterStatus == null ? 'active' : ''}">Tất cả</a>
+                <a th:href="@{/billing/monthly(status='PENDING')}" class="btn btn-outline-danger" th:classappend="${filterStatus == 'PENDING' ? 'active' : ''}">Chưa thanh toán</a>
+                <a th:href="@{/billing/monthly(status='PAID')}" class="btn btn-outline-success" th:classappend="${filterStatus == 'PAID' ? 'active' : ''}">Đã thanh toán</a>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="nh-table">
+                <thead>
+                <tr>
+                    <th>Mã HĐ</th>
+                    <th>Cư dân</th>
+                    <th>Phòng</th>
+                    <th class="text-end">Tiền phòng</th>
+                    <th class="text-end">Tiền dịch vụ</th>
+                    <th class="text-end">Tiền thuốc kê đơn</th>
+                    <th class="text-end">Tổng cộng</th>
+                    <th>Trạng thái</th>
+                    <th class="text-end">Thao tác</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:if="${#lists.isEmpty(orders)}">
+                    <td colspan="9" class="text-center py-5 text-muted">
+                        <i class="bi bi-receipt-cutoff fs-2 d-block mb-1"></i>
+                        Chưa có hóa đơn nào trong danh sách.
+                    </td>
+                </tr>
+                <tr th:each="ord : ${orders}">
+                    <td class="fw-bold text-muted" th:text="'#HĐ-' + ${ord.id}">#HĐ-1</td>
+                    <td>
+                        <span class="fw-bold text-dark" th:text="${ord.residentName}">Nguyễn Văn An</span>
+                        <small class="text-muted d-block" th:if="${ord.issueDate != null}"
+                               th:text="'Ngày lập: ' + ${#temporals.format(ord.issueDate, 'dd/MM/yyyy')}">23/10/2026</small>
+                    </td>
+                    <td>
+                        <span class="badge bg-light text-dark border" th:text="${ord.roomNumber != null ? 'P.' + ord.roomNumber : '-'}">P.101</span>
+                    </td>
+                    <!-- 1. Tiền phòng -->
+                    <td class="text-end fw-semibold text-dark"
+                        th:text="${ord.roomPrice != null ? #numbers.formatDecimal(ord.roomPrice, 0, 'COMMA', 0, 'POINT') + 'đ' : '0đ'}">
+                        5,000,000đ
+                    </td>
+                    <!-- 2. Tiền dịch vụ -->
+                    <td class="text-end fw-semibold text-primary"
+                        th:text="${ord.servicesPrice != null ? #numbers.formatDecimal(ord.servicesPrice, 0, 'COMMA', 0, 'POINT') + 'đ' : '0đ'}">
+                        1,500,000đ
+                    </td>
+                    <!-- 3. Tiền thuốc kê đơn -->
+                    <td class="text-end fw-semibold text-danger"
+                        th:text="${ord.medicationsPrice != null ? #numbers.formatDecimal(ord.medicationsPrice, 0, 'COMMA', 0, 'POINT') + 'đ' : '0đ'}">
+                        350,000đ
+                    </td>
+                    <!-- 4. Tổng cộng -->
+                    <td class="text-end fw-bold text-dark fs-6"
+                        th:text="${ord.totalAmount != null ? #numbers.formatDecimal(ord.totalAmount, 0, 'COMMA', 0, 'POINT') + ' VNĐ' : '0 VNĐ'}">
+                        6,850,000 VNĐ
+                    </td>
+                    <td>
+                        <span th:if="${ord.paymentStatus == 'PAID'}" class="badge badge-status-available">
+                            <i class="bi bi-check-circle-fill me-1"></i>PAID (Đã thu)
+                        </span>
+                        <span th:if="${ord.paymentStatus == 'PENDING' or ord.paymentStatus == 'UNPAID'}" class="badge bg-danger-subtle text-danger">
+                            <i class="bi bi-clock-fill me-1"></i>UNPAID (Chưa thu)
+                        </span>
+                    </td>
+                    <td class="text-end">
+                        <a th:href="@{'/billing/orders/' + ${ord.id}}" class="btn btn-sm btn-outline-primary" title="Xem chi tiết hóa đơn">
+                            <i class="bi bi-eye"></i> Chi tiết
+                        </a>
+                        <!-- Quick pay button if UNPAID -->
+                        <form th:if="${ord.paymentStatus == 'PENDING' or ord.paymentStatus == 'UNPAID'}"
+                              th:action="@{'/billing/orders/' + ${ord.id} + '/pay'}" method="post" class="d-inline ms-1">
+                            <button type="submit" class="btn btn-sm btn-success" title="Xác nhận thanh toán"
+                                    onclick="return confirm('Xác nhận cư dân đã thanh toán đủ tiền hóa đơn này?')">
+                                <i class="bi bi-cash-coin"></i> Thu tiền
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal Generate Monthly Settlement Bill -->
+    <div class="modal fade" id="generateBillModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <form th:action="@{/billing/generate}" method="post">
+                    <div class="modal-header">
+                        <h5 class="modal-title fw-bold text-success">
+                            <i class="bi bi-calculator me-2"></i>Chốt Quyết Toán Hóa Đơn Tháng
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="small text-muted mb-3">
+                            Hệ thống sẽ tự động quét cơ sở dữ liệu để tính toán: <strong>Tiền phòng cơ bản</strong> + <strong>Dịch vụ phát sinh</strong> + <strong>Chi phí thuốc kê đơn trong tháng</strong> của cư dân.
+                        </p>
+
+                        <!-- Select Resident -->
+                        <div class="mb-3">
+                            <label for="billResidentId" class="form-label small fw-semibold">Cư dân cần chốt hóa đơn <span class="text-danger">*</span></label>
+                            <select class="form-select" id="billResidentId" name="residentId" required>
+                                <option value="" disabled selected>-- Chọn cư dân đang lưu trú --</option>
+                                <option th:each="r : ${activeResidents}"
+                                        th:value="${r.id}"
+                                        th:text="${r.fullName} + ' (Phòng ' + ${r.roomNumber} + ' - ' + ${r.bedNumber} + ')'">
+                                    Nguyễn Văn An (P101 - G01)
+                                </option>
+                            </select>
+                        </div>
+
+                        <!-- Month & Year -->
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label for="billMonth" class="form-label small fw-semibold">Tháng <span class="text-danger">*</span></label>
+                                <select class="form-select" id="billMonth" name="month" required>
+                                    <option th:each="m : ${#numbers.sequence(1, 12)}"
+                                            th:value="${m}"
+                                            th:text="'Tháng ' + ${m}"
+                                            th:selected="${m == currentMonth}">
+                                        Tháng 10
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <label for="billYear" class="form-label small fw-semibold">Năm <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control" id="billYear" name="year" th:value="${currentYear}" required>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info py-2 small mb-0">
+                            <i class="bi bi-info-circle-fill me-1"></i> Mỗi cư dân chỉ có 01 hóa đơn tổng hợp cho mỗi tháng để tránh trùng lặp.
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy bỏ</button>
+                        <button type="submit" class="btn btn-success fw-semibold shadow-sm">
+                            <i class="bi bi-file-earmark-check me-1"></i> Tính Toán & Phát Hành Hóa Đơn
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
