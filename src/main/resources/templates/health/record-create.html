@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout :: layout(~{::title}, ~{::content}, 'record-create')}">
+<head>
+    <title>Khám Bệnh & Kê Đơn Thuốc - NHMS Care</title>
+</head>
+<body>
+<div th:fragment="content">
+    <!-- Header -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <div>
+            <h4 class="fw-bold mb-1 text-dark">
+                <i class="bi bi-clipboard2-pulse-fill text-danger me-2"></i>Khám Bệnh & Kê Đơn Thuốc
+            </h4>
+            <p class="text-muted small mb-0">Ghi nhận chỉ số sinh hiệu (Huyết áp, Tim mạch, Nhiệt độ, Đường huyết) và kê đơn thuốc tự động trừ kho</p>
+        </div>
+        <div>
+            <a th:href="@{/health/history}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-clock-history me-1"></i> Xem lịch sử bệnh án
+            </a>
+        </div>
+    </div>
+
+    <!-- Alert warning if low stock medications -->
+    <div th:if="${not #lists.isEmpty(lowStockMeds)}" class="alert alert-warning py-2 small d-flex align-items-center mb-4">
+        <i class="bi bi-exclamation-triangle-fill fs-5 me-2 text-warning"></i>
+        <div>
+            <strong>Cảnh báo tồn kho:</strong> Có <span th:text="${#lists.size(lowStockMeds)}">0</span> loại thuốc sắp hết hàng trong kho y tế (dưới 10 đơn vị).
+        </div>
+    </div>
+
+    <form th:action="@{/health/records/create}" th:object="${recordRequest}" method="post" id="healthRecordForm">
+        <div class="row g-4">
+            <!-- Left Col: Vitals & Diagnosis -->
+            <div class="col-12 col-lg-5">
+                <!-- Resident Selection -->
+                <div class="nh-card mb-4">
+                    <div class="nh-card-header bg-light">
+                        <h6 class="fw-bold mb-0 text-dark">
+                            <i class="bi bi-person-fill text-primary me-2"></i>Chọn Cư Dân Khám Bệnh
+                        </h6>
+                    </div>
+                    <div class="nh-card-body">
+                        <label for="residentId" class="form-label small fw-semibold">Cư dân <span class="text-danger">*</span></label>
+                        <select class="form-select" id="residentId" th:field="*{residentId}" required onchange="onResidentChanged(this)">
+                            <option value="" disabled selected>-- Chọn cư dân đang lưu trú --</option>
+                            <option th:each="res : ${residents}"
+                                    th:value="${res.id}"
+                                    th:selected="${param.residentId != null and param.residentId[0] == #strings.toString(res.id)}"
+                                    th:text="${res.fullName} + ' (Phòng ' + ${res.roomNumber} + ' - ' + ${res.bedNumber} + ')'">
+                                Nguyễn Văn An (Phòng P101 - G01)
+                            </option>
+                        </select>
+                        <div class="form-text small">Chỉ cư dân ở trạng thái ACTIVE mới được tạo phiếu khám.</div>
+                    </div>
+                </div>
+
+                <!-- Vital Signs -->
+                <div class="nh-card mb-4">
+                    <div class="nh-card-header bg-light">
+                        <h6 class="fw-bold mb-0 text-dark">
+                            <i class="bi bi-activity text-danger me-2"></i>Chỉ Số Sinh Hiệu (Vital Signs)
+                        </h6>
+                    </div>
+                    <div class="nh-card-body">
+                        <div class="row g-3">
+                            <!-- Blood Pressure -->
+                            <div class="col-6">
+                                <label for="bloodPressure" class="form-label small fw-semibold">Huyết áp (mmHg)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light text-muted"><i class="bi bi-heart-pulse"></i></span>
+                                    <input type="text" class="form-control" id="bloodPressure" th:field="*{bloodPressure}" placeholder="VD: 120/80">
+                                </div>
+                                <div class="form-text small" style="font-size: 0.72rem;">Bình thường: 90/60 - 120/80</div>
+                            </div>
+
+                            <!-- Heart Rate -->
+                            <div class="col-6">
+                                <label for="heartRate" class="form-label small fw-semibold">Nhịp tim (nhịp/phút)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light text-muted"><i class="bi bi-soundwave"></i></span>
+                                    <input type="number" class="form-control" id="heartRate" th:field="*{heartRate}" placeholder="VD: 75">
+                                </div>
+                                <div class="form-text small" style="font-size: 0.72rem;">Bình thường: 60 - 100 bpm</div>
+                            </div>
+
+                            <!-- Temperature -->
+                            <div class="col-6">
+                                <label for="temperature" class="form-label small fw-semibold">Nhiệt độ cơ thể (°C)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light text-muted"><i class="bi bi-thermometer-half"></i></span>
+                                    <input type="number" step="0.1" class="form-control" id="temperature" th:field="*{temperature}" placeholder="VD: 36.8">
+                                </div>
+                                <div class="form-text small" style="font-size: 0.72rem;">Bình thường: 36.5 - 37.2 °C</div>
+                            </div>
+
+                            <!-- Blood Sugar -->
+                            <div class="col-6">
+                                <label for="bloodSugar" class="form-label small fw-semibold">Đường huyết (mmol/L)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light text-muted"><i class="bi bi-droplet-half"></i></span>
+                                    <input type="number" step="0.1" class="form-control" id="bloodSugar" th:field="*{bloodSugar}" placeholder="VD: 5.6">
+                                </div>
+                                <div class="form-text small" style="font-size: 0.72rem;">Lúc đói: 4.0 - 6.0 mmol/L</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Diagnosis & Note -->
+                <div class="nh-card">
+                    <div class="nh-card-header bg-light">
+                        <h6 class="fw-bold mb-0 text-dark">
+                            <i class="bi bi-clipboard2-check text-primary me-2"></i>Chẩn Đoán & Dặn Dò
+                        </h6>
+                    </div>
+                    <div class="nh-card-body">
+                        <div class="mb-3">
+                            <label for="diagnosis" class="form-label small fw-semibold">Chẩn đoán y khoa <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="diagnosis" th:field="*{diagnosis}" required
+                                   placeholder="VD: Tăng huyết áp độ 1, viêm khớp gối nhẹ">
+                        </div>
+                        <div class="mb-0">
+                            <label for="notes" class="form-label small fw-semibold">Lời dặn & Hướng dẫn chăm sóc</label>
+                            <textarea class="form-control" id="notes" th:field="*{notes}" rows="3"
+                                      placeholder="VD: Cho cụ uống nhiều nước ấm, ăn giảm mặn, tập co duỗi khớp gối 15 phút mỗi sáng..."></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Col: Medication Prescription Table -->
+            <div class="col-12 col-lg-7">
+                <div class="nh-card h-100 d-flex flex-column">
+                    <div class="nh-card-header bg-light d-flex justify-content-between align-items-center">
+                        <h6 class="fw-bold mb-0 text-dark">
+                            <i class="bi bi-capsule-pill text-success me-2"></i>Kê Đơn Thuốc (Tự động trừ kho)
+                        </h6>
+                        <button type="button" class="btn btn-sm btn-success" onclick="addMedicationRow()">
+                            <i class="bi bi-plus-lg me-1"></i> Thêm thuốc
+                        </button>
+                    </div>
+
+                    <div class="nh-card-body p-0 flex-grow-1">
+                        <div class="table-responsive">
+                            <table class="table table-bordered mb-0 align-middle" id="medicationTable">
+                                <thead class="table-light">
+                                <tr>
+                                    <th style="width: 40%;">Tên thuốc (Còn kho - Hạn dùng)</th>
+                                    <th style="width: 20%;">Số lượng kê</th>
+                                    <th style="width: 32%;">Liều dùng / Hướng dẫn</th>
+                                    <th style="width: 8%;" class="text-center">Xóa</th>
+                                </tr>
+                                </thead>
+                                <tbody id="medicationTbody">
+                                <!-- Row 0 Default -->
+                                <tr class="med-row">
+                                    <td>
+                                        <select class="form-select form-select-sm med-select" name="medications[0].medicationId" required onchange="checkStock(this)">
+                                            <option value="" disabled selected>-- Chọn thuốc --</option>
+                                            <option th:each="med : ${availableMeds}"
+                                                    th:value="${med.id}"
+                                                    th:data-stock="${med.quantityInStock}"
+                                                    th:data-price="${med.unitPrice}"
+                                                    th:text="${med.medName} + ' (Tồn: ' + ${med.quantityInStock} + ' | ' + ${#numbers.formatDecimal(med.unitPrice, 0, 'COMMA', 0, 'POINT')} + 'đ)'">
+                                                Amlodipine 5mg (Tồn: 120 | 3.500đ)
+                                            </option>
+                                        </select>
+                                        <div class="stock-warning text-danger small mt-1 d-none" style="font-size: 0.75rem;">
+                                            <i class="bi bi-exclamation-circle me-1"></i>Vượt quá số lượng tồn kho!
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <input type="number" min="1" class="form-control form-control-sm med-qty" name="medications[0].quantityRequested" value="1" required oninput="checkStock(this)">
+                                    </td>
+                                    <td>
+                                        <input type="text" class="form-control form-control-sm" name="medications[0].dosage" placeholder="VD: 1v/ngày sau ăn sáng">
+                                    </td>
+                                    <td class="text-center">
+                                        <button type="button" class="btn btn-sm btn-outline-danger border-0" onclick="removeMedicationRow(this)">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="p-3 text-muted small bg-light border-top">
+                            <i class="bi bi-info-circle me-1"></i> Khi lưu phiếu khám, hệ thống sẽ tự động trừ số lượng trong kho dược phẩm và tích lũy chi phí thuốc vào hóa đơn chốt hàng tháng của cụ.
+                        </div>
+                    </div>
+
+                    <!-- Footer Action Buttons -->
+                    <div class="p-3 bg-white border-top d-flex justify-content-between align-items-center mt-auto">
+                        <a th:href="@{/health/history}" class="btn btn-light">Hủy bỏ</a>
+                        <button type="submit" class="btn btn-primary px-4 fw-semibold shadow-sm" id="submitBtn">
+                            <i class="bi bi-check2-circle me-1"></i> Hoàn Tất Khám & Xuất Đơn Thuốc
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Template for Medication Options used by JS -->
+<template id="medOptionsTemplate">
+    <option value="" disabled selected>-- Chọn thuốc --</option>
+    <option th:each="med : ${availableMeds}"
+            th:value="${med.id}"
+            th:data-stock="${med.quantityInStock}"
+            th:data-price="${med.unitPrice}"
+            th:text="${med.medName} + ' (Tồn: ' + ${med.quantityInStock} + ' | ' + ${#numbers.formatDecimal(med.unitPrice, 0, 'COMMA', 0, 'POINT')} + 'đ)'">
+    </option>
+</template>
+
+<script>
+    let rowIndex = 1;
+
+    function addMedicationRow() {
+        const tbody = document.getElementById('medicationTbody');
+        const templateOptions = document.getElementById('medOptionsTemplate').innerHTML;
+
+        const newRow = document.createElement('tr');
+        newRow.className = 'med-row';
+        newRow.innerHTML = `
+            <td>
+                <select class="form-select form-select-sm med-select" name="medications[${rowIndex}].medicationId" required onchange="checkStock(this)">
+                    ${templateOptions}
+                </select>
+                <div class="stock-warning text-danger small mt-1 d-none" style="font-size: 0.75rem;">
+                    <i class="bi bi-exclamation-circle me-1"></i>Vượt quá số lượng tồn kho!
+                </div>
+            </td>
+            <td>
+                <input type="number" min="1" class="form-control form-control-sm med-qty" name="medications[${rowIndex}].quantityRequested" value="1" required oninput="checkStock(this)">
+            </td>
+            <td>
+                <input type="text" class="form-control form-control-sm" name="medications[${rowIndex}].dosage" placeholder="VD: 1v/ngày sau ăn">
+            </td>
+            <td class="text-center">
+                <button type="button" class="btn btn-sm btn-outline-danger border-0" onclick="removeMedicationRow(this)">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(newRow);
+        rowIndex++;
+    }
+
+    function removeMedicationRow(btn) {
+        const row = btn.closest('tr');
+        const tbody = document.getElementById('medicationTbody');
+        if (tbody.querySelectorAll('tr').length > 1) {
+            row.remove();
+            reindexRows();
+        } else {
+            alert('Đơn thuốc cần có ít nhất 1 loại thuốc hoặc bạn có thể xóa nội dung.');
+        }
+    }
+
+    function reindexRows() {
+        const rows = document.querySelectorAll('#medicationTbody tr');
+        rows.forEach((row, index) => {
+            const select = row.querySelector('.med-select');
+            const qty = row.querySelector('.med-qty');
+            const dosage = row.querySelectorAll('input[type="text"]')[0];
+            if (select) select.name = `medications[${index}].medicationId`;
+            if (qty) qty.name = `medications[${index}].quantityRequested`;
+            if (dosage) dosage.name = `medications[${index}].dosage`;
+        });
+        rowIndex = rows.length;
+    }
+
+    function checkStock(element) {
+        const row = element.closest('tr');
+        const select = row.querySelector('.med-select');
+        const qtyInput = row.querySelector('.med-qty');
+        const warning = row.querySelector('.stock-warning');
+
+        if (select && select.selectedIndex > 0 && qtyInput) {
+            const selectedOption = select.options[select.selectedIndex];
+            const stock = parseInt(selectedOption.getAttribute('data-stock') || '0', 10);
+            const requested = parseInt(qtyInput.value || '0', 10);
+
+            if (requested > stock) {
+                warning.classList.remove('d-none');
+                warning.innerHTML = `<i class="bi bi-exclamation-circle me-1"></i>Kho chỉ còn ${stock} đơn vị!`;
+            } else {
+                warning.classList.add('d-none');
+            }
+        }
+    }
+
+    function onResidentChanged(select) {
+        // Option to pre-fill or load resident info
+    }
+</script>
+</body>
+</html>

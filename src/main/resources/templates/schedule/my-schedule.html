@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout :: layout(~{::title}, ~{::content}, 'my-schedule')}">
+<head>
+    <title>Lịch Trực Cá Nhân - NHMS Care</title>
+</head>
+<body>
+<div th:fragment="content">
+    <!-- Header -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <div>
+            <h4 class="fw-bold mb-1 text-dark">
+                <i class="bi bi-person-badge-fill text-primary me-2"></i>Lịch Trực Cá Nhân Của Tôi
+            </h4>
+            <p class="text-muted small mb-0">Theo dõi ca trực được phân công và xác nhận hoàn tất nhiệm vụ sau ca trực</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a th:href="@{/schedules/assign}" class="btn btn-outline-secondary btn-sm" sec:authorize="hasAnyRole('MANAGER', 'ADMIN')">
+                <i class="bi bi-calendar2-plus me-1"></i> Phân công ca trực khác
+            </a>
+        </div>
+    </div>
+
+    <!-- Staff Info Banner -->
+    <div class="nh-card p-3 mb-4 bg-white border">
+        <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3">
+            <div class="d-flex align-items-center">
+                <div class="sidebar-user-avatar bg-primary text-white fs-4 me-3" style="width: 52px; height: 52px;">
+                    <i class="bi bi-person-heart"></i>
+                </div>
+                <div>
+                    <h5 class="fw-bold mb-0 text-dark" th:text="${staff != null ? staff.fullName : 'Nhân viên trực'}">ĐD. Lê Thị Hoa</h5>
+                    <div class="text-muted small">
+                        <span class="badge bg-info-subtle text-info fw-semibold me-2" th:text="${staff != null ? staff.jobTitle : 'NURSE'}">NURSE</span>
+                        <span th:text="${staff != null ? staff.specialization : 'Chăm sóc người cao tuổi'}">Chăm sóc phục hồi</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Date Selector Filter -->
+            <form th:action="@{/schedules/my-schedule}" method="get" class="d-flex align-items-center gap-2">
+                <label for="dateFilter" class="small fw-semibold text-muted text-nowrap">Chọn ngày:</label>
+                <input type="date" id="dateFilter" name="date" class="form-control form-control-sm" th:value="${selectedDate}" onchange="this.form.submit()">
+            </form>
+        </div>
+    </div>
+
+    <!-- Shift Cards List -->
+    <div class="row g-3">
+        <div th:if="${#lists.isEmpty(schedules)}" class="col-12">
+            <div class="nh-card p-5 text-center text-muted">
+                <i class="bi bi-calendar-check fs-1 text-muted d-block mb-2"></i>
+                <h6 class="fw-bold">Bạn không có ca trực nào trong ngày <span th:text="${#temporals.format(selectedDate, 'dd/MM/yyyy')}">23/10/2026</span></h6>
+                <p class="small mb-0">Hãy nghỉ ngơi tái tạo năng lượng hoặc chọn ngày khác để kiểm tra lịch trực.</p>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-6" th:each="sc : ${schedules}">
+            <div class="nh-card h-100 shadow-sm border"
+                 th:classappend="${sc.shift == 'MORNING' ? 'border-start-warning' : (sc.shift == 'AFTERNOON' ? 'border-start-info' : 'border-start-dark')}"
+                 style="border-left-width: 5px !important;">
+                
+                <div class="nh-card-header bg-light d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center">
+                        <span th:if="${sc.shift == 'MORNING'}" class="badge bg-warning-subtle text-warning-emphasis me-2">
+                            <i class="bi bi-sun-fill me-1"></i>Ca Sáng (06:00 - 14:00)
+                        </span>
+                        <span th:if="${sc.shift == 'AFTERNOON'}" class="badge bg-info-subtle text-info-emphasis me-2">
+                            <i class="bi bi-cloud-sun-fill me-1"></i>Ca Chiều (14:00 - 22:00)
+                        </span>
+                        <span th:if="${sc.shift == 'NIGHT'}" class="badge bg-dark-subtle text-dark me-2">
+                            <i class="bi bi-moon-stars-fill me-1"></i>Ca Đêm (22:00 - 06:00)
+                        </span>
+                    </div>
+
+                    <div>
+                        <span th:if="${sc.note != null and #strings.contains(sc.note, 'COMPLETED')}" class="badge badge-status-available">
+                            <i class="bi bi-check-circle-fill me-1"></i>ĐÃ HOÀN THÀNH
+                        </span>
+                        <span th:unless="${sc.note != null and #strings.contains(sc.note, 'COMPLETED')}" class="badge bg-primary-subtle text-primary">
+                            <i class="bi bi-hourglass-split me-1"></i>ĐANG THỰC HIỆN
+                        </span>
+                    </div>
+                </div>
+
+                <div class="nh-card-body p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <span class="text-muted small d-block">Phòng phụ trách:</span>
+                            <span class="fw-bold fs-5 text-dark">
+                                <i class="bi bi-door-closed text-primary me-1"></i>Phòng <span th:text="${sc.roomNumber}">P101</span>
+                            </span>
+                        </div>
+                        <div class="text-end">
+                            <span class="text-muted small d-block">Ngày làm việc:</span>
+                            <span class="fw-semibold text-dark small" th:text="${#temporals.format(sc.workDate, 'dd/MM/yyyy')}">23/10/2026</span>
+                        </div>
+                    </div>
+
+                    <div class="p-2 bg-light rounded border mb-3">
+                        <small class="fw-semibold text-muted d-block mb-1">Ghi chú & Nhiệm vụ:</small>
+                        <p class="small mb-0 text-dark" th:text="${sc.note != null ? sc.note : 'Chăm sóc và theo dõi sinh hiệu định kỳ.'}">
+                            Đo huyết áp, kiểm tra đường huyết lúc 07:00, hỗ trợ cụ Nguyễn Văn An dùng bữa sáng.
+                        </p>
+                    </div>
+
+                    <!-- Complete button form -->
+                    <div class="pt-2 border-top">
+                        <form th:action="@{'/schedules/' + ${sc.id} + '/complete'}" method="post" class="m-0">
+                            <button type="submit" class="btn btn-success w-100 py-2 fw-semibold shadow-sm"
+                                    onclick="return confirm('Bạn xác nhận đã hoàn tất mọi nhiệm vụ trong ca trực này?')">
+                                <i class="bi bi-check2-circle me-1"></i> Xác Nhận Hoàn Thành Ca Trực
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

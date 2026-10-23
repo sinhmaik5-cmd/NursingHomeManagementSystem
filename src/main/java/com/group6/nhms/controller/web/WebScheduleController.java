@@ -1,0 +1,139 @@
+package com.group6.nhms.controller.web;
+
+import com.group6.nhms.dto.request.TaskScheduleCreateRequest;
+import com.group6.nhms.dto.response.TaskScheduleResponse;
+import com.group6.nhms.entity.Account;
+import com.group6.nhms.entity.Room;
+import com.group6.nhms.entity.Staff;
+import com.group6.nhms.entity.TaskSchedule;
+import com.group6.nhms.repository.AccountRepository;
+import com.group6.nhms.repository.RoomRepository;
+import com.group6.nhms.repository.StaffRepository;
+import com.group6.nhms.repository.TaskScheduleRepository;
+import com.group6.nhms.service.TaskScheduleService;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.security.core.Authentication;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import java.time.LocalDate;
+import java.util.List;
+
+@Controller
+@RequestMapping("/schedules")
+public class WebScheduleController {
+
+    private final TaskScheduleService taskScheduleService;
+    private final TaskScheduleRepository taskScheduleRepository;
+    private final StaffRepository staffRepository;
+    private final RoomRepository roomRepository;
+    private final AccountRepository accountRepository;
+
+    public WebScheduleController(
+            TaskScheduleService taskScheduleService,
+            TaskScheduleRepository taskScheduleRepository,
+            StaffRepository staffRepository,
+            RoomRepository roomRepository,
+            AccountRepository accountRepository
+    ) {
+        this.taskScheduleService = taskScheduleService;
+        this.taskScheduleRepository = taskScheduleRepository;
+        this.staffRepository = staffRepository;
+        this.roomRepository = roomRepository;
+        this.accountRepository = accountRepository;
+    }
+
+    // 1. Giao diện phân công ca trực (Manager & Admin)
+    @GetMapping("/assign")
+    public String showAssignSchedule(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate filterDate,
+            Model model
+    ) {
+        LocalDate targetDate = (filterDate != null) ? filterDate : LocalDate.now();
+        List<Staff> staffList = staffRepository.findAll();
+        List<Room> rooms = roomRepository.findAll();
+        List<TaskSchedule> schedules = taskScheduleRepository.findByShiftDate(targetDate);
+
+        TaskScheduleCreateRequest createRequest = new TaskScheduleCreateRequest();
+        createRequest.setWorkDate(targetDate);
+        createRequest.setShift("MORNING");
+
+        model.addAttribute("staffList", staffList);
+        model.addAttribute("rooms", rooms);
+        model.addAttribute("schedules", schedules);
+        model.addAttribute("scheduleRequest", createRequest);
+        model.addAttribute("filterDate", targetDate);
+        model.addAttribute("activeMenu", "schedule-assign");
+
+        return "schedule/assign";
+    }
+
+    // 2. Xử lý phân công ca trực mới
+    @PostMapping("/assign")
+    public String processAssignSchedule(
+            @ModelAttribute TaskScheduleCreateRequest request,
+            @RequestParam Integer roomId,
+            RedirectAttributes redirectAttributes
+    ) {
+        try {
+            TaskScheduleResponse res = taskScheduleService.createSchedule(request, roomId);
+            redirectAttributes.addFlashAttribute("successMessage",
+                    "Phân công thành công cho nhân viên " + res.getStaffName() + " (Ca " + res.getShift() + " - Phòng " + res.getRoomNumber() + ")!");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Lỗi phân công ca trực: " + e.getMessage());
+        }
+        return "redirect:/schedules/assign?filterDate=" + request.getWorkDate();
+    }
+
+    // 3. Giao diện xem lịch trực cá nhân của nhân viên
+    @GetMapping("/my-schedule")
+    public String mySchedule(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            Authentication authentication,
+            Model model
+    ) {
+        LocalDate targetDate = (date != null) ? date : LocalDate.now();
+        Staff currentStaff = resolveCurrentStaff(authentication);
+
+        List<TaskScheduleResponse> schedules = List.of();
+        if (currentStaff != null) {
+            schedules = taskScheduleService.getStaffSchedule(currentStaff.getId(), targetDate);
+        }
+
+        model.addAttribute("staff", currentStaff);
+        model.addAttribute("schedules", schedules);
+        model.addAttribute("selectedDate", targetDate);
+        model.addAttribute("activeMenu", "my-schedule");
+
+        return "schedule/my-schedule";
+    }
+
+    // 4. Nhân viên xác nhận hoàn thành ca trực
+    @PostMapping("/{id}/complete")
+    public String completeSchedule(
+            @PathVariable Integer id,
+            Authentication authentication,
+            RedirectAttributes redirectAttributes
+    ) {
+        try {
+            Staff currentStaff = resolveCurrentStaff(authentication);
+            Integer staffId = (currentStaff != null) ? currentStaff.getId() : 1;
+            taskScheduleService.completeSchedule(id, staffId);
+            redirectAttributes.addFlashAttribute("successMessage", "Xác nhận hoàn thành ca trực thành công!");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Lỗi xác nhận hoàn thành: " + e.getMessage());
+        }
+        return "redirect:/schedules/my-schedule";
+    }
+
+    private Staff resolveCurrentStaff(Authentication authentication) {
+        if (authentication == null) return staffRepository.findAll().stream().findFirst().orElse(null);
+
+        return accountRepository.findByUsername(authentication.getName())
+                .filter(a -> a.getReferenceId() != null)
+                .flatMap(a -> staffRepository.findById(a.getReferenceId()))
+                .orElseGet(() -> staffRepository.findAll().stream().findFirst().orElse(null));
+    }
+}

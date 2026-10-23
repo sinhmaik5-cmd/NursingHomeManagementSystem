@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout :: layout(~{::title}, ~{::content}, 'resident-list')}">
+<head>
+    <title>Danh Sách Cư Dân - NHMS Care</title>
+</head>
+<body>
+<div th:fragment="content">
+    <!-- Header -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <div>
+            <h4 class="fw-bold mb-1 text-dark">
+                <i class="bi bi-people-fill text-primary me-2"></i>Quản Lý Cư Dân
+            </h4>
+            <p class="text-muted small mb-0">Danh sách theo dõi toàn bộ cư dân, chuyển giường cuối tháng và thực hiện thủ tục xuất viện</p>
+        </div>
+        <div class="d-flex gap-2" sec:authorize="hasAnyRole('MANAGER', 'ADMIN')">
+            <a th:href="@{/residents/check-in}" class="btn btn-primary btn-sm px-3 shadow-sm">
+                <i class="bi bi-person-plus-fill me-1"></i> Tiếp nhận Cư dân mới
+            </a>
+        </div>
+    </div>
+
+    <!-- Search & Filter Card -->
+    <div class="nh-card mb-4">
+        <div class="nh-card-body p-3">
+            <form th:action="@{/residents}" method="get" class="row g-2 align-items-center">
+                <div class="col-12 col-md-5">
+                    <div class="input-group">
+                        <span class="input-group-text bg-light text-muted"><i class="bi bi-search"></i></span>
+                        <input type="text" name="name" class="form-control" placeholder="Tìm theo họ tên cư dân..." th:value="${param.name}">
+                    </div>
+                </div>
+                <div class="col-12 col-md-4">
+                    <select name="status" class="form-select">
+                        <option value="">-- Tất cả trạng thái --</option>
+                        <option value="ACTIVE" th:selected="${param.status != null and param.status[0] == 'ACTIVE'}">Đang lưu trú (ACTIVE)</option>
+                        <option value="DISCHARGED" th:selected="${param.status != null and param.status[0] == 'DISCHARGED'}">Đã xuất viện (DISCHARGED)</option>
+                        <option value="DECEASED" th:selected="${param.status != null and param.status[0] == 'DECEASED'}">Đã qua đời (DECEASED)</option>
+                    </select>
+                </div>
+                <div class="col-12 col-md-3 d-flex gap-2">
+                    <button type="submit" class="btn btn-outline-primary w-100">
+                        <i class="bi bi-funnel me-1"></i> Lọc
+                    </button>
+                    <a th:href="@{/residents}" class="btn btn-light" title="Đặt lại bộ lọc"><i class="bi bi-arrow-counterclockwise"></i></a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Resident Table Card -->
+    <div class="nh-card">
+        <div class="nh-card-header">
+            <h6 class="fw-bold mb-0 text-dark">
+                Danh Sách Cư Dân (<span th:text="${#lists.size(residents)}">0</span>)
+            </h6>
+        </div>
+        <div class="table-responsive">
+            <table class="nh-table">
+                <thead>
+                <tr>
+                    <th>Mã</th>
+                    <th>Họ và Tên</th>
+                    <th>Giới tính / Tuổi</th>
+                    <th>Phòng & Giường</th>
+                    <th>Người bảo lãnh</th>
+                    <th>Ngày tiếp nhận</th>
+                    <th>Trạng thái</th>
+                    <th class="text-end">Hành động</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:if="${#lists.isEmpty(residents)}">
+                    <td colspan="8" class="text-center py-5 text-muted">
+                        <i class="bi bi-people fs-2 d-block mb-2"></i>
+                        Không tìm thấy cư dân nào phù hợp với điều kiện tìm kiếm.
+                    </td>
+                </tr>
+                <tr th:each="r : ${residents}">
+                    <td class="fw-semibold text-muted" th:text="'#' + ${r.id}">#1</td>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <div class="sidebar-user-avatar bg-primary-subtle text-primary me-2">
+                                <i class="bi bi-person-fill"></i>
+                            </div>
+                            <div>
+                                <span class="fw-bold text-dark" th:text="${r.fullName}">Nguyễn Văn An</span>
+                                <small class="text-muted d-block text-truncate" style="max-width: 200px;" th:if="${r.initialHealthStatus}" th:text="${r.initialHealthStatus}">Tiểu đường, cao huyết áp</small>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="badge bg-light text-dark" th:text="${r.gender}">Nam</span>
+                        <small class="text-muted d-block mt-1" th:if="${r.dateOfBirth != null}" th:text="${#temporals.format(r.dateOfBirth, 'dd/MM/yyyy')}">15/06/1945</small>
+                    </td>
+                    <td>
+                        <div th:if="${r.bedNumber != null}">
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-bold">
+                                <i class="bi bi-door-closed me-1"></i>P.<span th:text="${r.roomNumber}">101</span> - <span th:text="${r.bedNumber}">G01</span>
+                            </span>
+                        </div>
+                        <span th:unless="${r.bedNumber != null}" class="text-muted small">Chưa xếp giường</span>
+                    </td>
+                    <td>
+                        <div th:if="${r.relativeName != null}">
+                            <span class="fw-semibold text-dark small" th:text="${r.relativeName}">Nguyễn Tuấn Dũng</span>
+                            <small class="text-muted d-block" th:if="${r.relativePhone != null}">
+                                <i class="bi bi-telephone me-1"></i><span th:text="${r.relativePhone}">0911223344</span>
+                            </small>
+                        </div>
+                        <span th:unless="${r.relativeName != null}" class="text-muted small">-</span>
+                    </td>
+                    <td>
+                        <span class="small text-muted" th:text="${r.admissionDate != null ? #temporals.format(r.admissionDate, 'dd/MM/yyyy') : '-'}">01/10/2026</span>
+                    </td>
+                    <td>
+                        <span th:if="${r.status == 'ACTIVE'}" class="badge badge-status-available">Đang lưu trú</span>
+                        <span th:if="${r.status == 'DISCHARGED'}" class="badge bg-secondary-subtle text-secondary">Đã xuất viện</span>
+                        <span th:if="${r.status == 'DECEASED'}" class="badge bg-dark-subtle text-dark">Đã qua đời</span>
+                    </td>
+                    <td class="text-end">
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-three-dots-vertical"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                <li>
+                                    <a class="dropdown-item py-2" th:href="@{'/health/history/' + ${r.id}}">
+                                        <i class="bi bi-journal-medical text-primary me-2"></i>Xem lịch sử bệnh án
+                                    </a>
+                                </li>
+                                <li sec:authorize="hasAnyRole('DOCTOR', 'NURSE', 'ADMIN')">
+                                    <a class="dropdown-item py-2" th:href="@{'/health/records/create?residentId=' + ${r.id}}">
+                                        <i class="bi bi-clipboard2-pulse text-success me-2"></i>Khám bệnh & Kê đơn
+                                    </a>
+                                </li>
+                                <li sec:authorize="hasAnyRole('MANAGER', 'ADMIN')" th:if="${r.status == 'ACTIVE'}">
+                                    <hr class="dropdown-divider">
+                                </li>
+                                <!-- Chuyển giường (Chỉ áp dụng khi ACTIVE) -->
+                                <li sec:authorize="hasAnyRole('MANAGER', 'ADMIN')" th:if="${r.status == 'ACTIVE'}">
+                                    <button class="dropdown-item py-2 text-warning-emphasis" type="button"
+                                            th:data-id="${r.id}"
+                                            th:data-name="${r.fullName}"
+                                            th:data-current-bed="${r.bedNumber != null ? 'Phòng ' + r.roomNumber + ' - ' + r.bedNumber : 'Chưa có'}"
+                                            onclick="openTransferModal(this)">
+                                        <i class="bi bi-arrow-left-right text-warning me-2"></i>Chuyển giường (cuối tháng)
+                                    </button>
+                                </li>
+                                <!-- Xuất viện (Chỉ áp dụng khi ACTIVE) -->
+                                <li sec:authorize="hasAnyRole('MANAGER', 'ADMIN')" th:if="${r.status == 'ACTIVE'}">
+                                    <button class="dropdown-item py-2 text-danger" type="button"
+                                            th:data-id="${r.id}"
+                                            th:data-name="${r.fullName}"
+                                            onclick="openCheckoutModal(this)">
+                                        <i class="bi bi-box-arrow-right text-danger me-2"></i>Làm thủ tục Xuất viện
+                                    </button>
+                                </li>
+                            </ul>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal 1: Chuyển giường (Bed Transfer) -->
+    <div class="modal fade" id="transferModal" tabindex="-1" aria-labelledby="transferModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <form th:action="@{/residents/transfer-bed}" method="post">
+                    <div class="modal-header">
+                        <h5 class="modal-title fw-bold text-dark" id="transferModalLabel">
+                            <i class="bi bi-arrow-left-right text-warning me-2"></i>Chuyển Giường Cho Cư Dân
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" name="residentId" id="transferResidentId">
+                        
+                        <div class="mb-3">
+                            <label class="form-label small text-muted">Cư dân:</label>
+                            <div class="fw-bold fs-6 text-dark" id="transferResidentName">Nguyễn Văn An</div>
+                            <small class="text-muted">Giường hiện tại: <span id="transferCurrentBed" class="badge bg-light text-dark">P101 - G01</span></small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="newBedId" class="form-label small fw-semibold">Chọn Giường Mới (AVAILABLE) <span class="text-danger">*</span></label>
+                            <select class="form-select" name="newBedId" id="newBedId" required>
+                                <option value="" disabled selected>-- Chọn giường trống mới --</option>
+                                <option th:each="bed : ${availableBeds}"
+                                        th:value="${bed.id}"
+                                        th:text="'Phòng ' + ${bed.roomNumber} + ' - Giường ' + ${bed.bedNumber}">
+                                    Phòng P102 - Giường G102-1
+                                </option>
+                            </select>
+                            <div class="form-text small">Chỉ hiển thị các giường đang trống có thể tiếp nhận.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="transferReason" class="form-label small fw-semibold">Lý do chuyển giường <span class="text-danger">*</span></label>
+                            <textarea class="form-control" name="reason" id="transferReason" rows="3" required
+                                      placeholder="VD: Điều chỉnh phân loại phòng cuối tháng, yêu cầu từ người thân, nâng cấp phòng VIP..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Đóng</button>
+                        <button type="submit" class="btn btn-warning text-dark fw-semibold shadow-sm">
+                            <i class="bi bi-check-lg me-1"></i> Xác nhận Chuyển giường
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 2: Xuất viện (Check-out) -->
+    <div class="modal fade" id="checkoutModal" tabindex="-1" aria-labelledby="checkoutModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <form id="checkoutForm" method="post" th:action="@{/residents/0/check-out}">
+                    <div class="modal-header">
+                        <h5 class="modal-title fw-bold text-danger" id="checkoutModalLabel">
+                            <i class="bi bi-box-arrow-right text-danger me-2"></i>Xác Nhận Xuất Viện (Check-out)
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="mb-2">Bạn có chắc chắn muốn làm thủ tục xuất viện cho cư dân:</p>
+                        <h5 class="fw-bold text-dark mb-3" id="checkoutResidentName">Nguyễn Văn An</h5>
+
+                        <div class="mb-3">
+                            <label for="finalStatus" class="form-label small fw-semibold">Trạng thái kết thúc</label>
+                            <select class="form-select" name="finalStatus" id="finalStatus">
+                                <option value="DISCHARGED" selected>Xuất viện về nhà (DISCHARGED)</option>
+                                <option value="DECEASED">Đã qua đời (DECEASED)</option>
+                            </select>
+                        </div>
+
+                        <div class="alert alert-info py-2 small mb-0">
+                            <i class="bi bi-info-circle-fill me-1"></i> <strong>Lưu ý:</strong> Giường của cư dân sẽ tự động chuyển sang trạng thái <code>MAINTENANCE</code> để nhân viên tiến hành dọn dẹp và khử trùng.
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy bỏ</button>
+                        <button type="submit" class="btn btn-danger fw-semibold shadow-sm">
+                            <i class="bi bi-check-circle me-1"></i> Hoàn tất Xuất viện
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function openTransferModal(button) {
+        const id = button.getAttribute('data-id');
+        const name = button.getAttribute('data-name');
+        const currentBed = button.getAttribute('data-current-bed');
+
+        document.getElementById('transferResidentId').value = id;
+        document.getElementById('transferResidentName').innerText = name;
+        document.getElementById('transferCurrentBed').innerText = currentBed;
+
+        const modal = new bootstrap.Modal(document.getElementById('transferModal'));
+        modal.show();
+    }
+
+    function openCheckoutModal(button) {
+        const id = button.getAttribute('data-id');
+        const name = button.getAttribute('data-name');
+
+        document.getElementById('checkoutResidentName').innerText = name;
+        const form = document.getElementById('checkoutForm');
+        form.action = '/residents/' + id + '/check-out';
+
+        const modal = new bootstrap.Modal(document.getElementById('checkoutModal'));
+        modal.show();
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<body>
+<header th:fragment="header" class="app-header">
+    <div class="d-flex align-items-center gap-3">
+        <button id="sidebarToggleBtn" class="btn btn-sm btn-light d-lg-none" type="button" aria-label="Toggle navigation">
+            <i class="bi bi-list fs-5"></i>
+        </button>
+        <div class="d-none d-md-flex align-items-center text-muted small">
+            <i class="bi bi-calendar3 me-1 text-primary"></i>
+            <span id="currentDateDisplay" th:text="${#temporals.format(#temporals.createNow(), 'EEEE, dd/MM/yyyy')}">Thứ Sáu, 23/10/2026</span>
+        </div>
+    </div>
+
+    <div class="d-flex align-items-center gap-3">
+        <!-- Quick Notification / Status -->
+        <div class="dropdown">
+            <button class="btn btn-sm btn-light position-relative rounded-pill px-3 py-1" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-bell me-1 text-muted"></i>
+                <span class="small text-muted">Thông báo</span>
+                <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle">
+                    <span class="visually-hidden">New alerts</span>
+                </span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="min-width: 280px;">
+                <li><h6 class="dropdown-header border-bottom pb-2">Thông báo mới</h6></li>
+                <li>
+                    <a class="dropdown-item py-2" th:href="@{/incidents/report}">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-exclamation-triangle-fill text-warning me-2 fs-5"></i>
+                            <div>
+                                <p class="mb-0 small fw-semibold">Báo cáo sự cố cần xử lý</p>
+                                <span class="text-muted" style="font-size: 0.75rem;">Kiểm tra danh sách sự cố</span>
+                            </div>
+                        </div>
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item py-2" th:href="@{/rooms/beds}">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-tools text-info me-2 fs-5"></i>
+                            <div>
+                                <p class="mb-0 small fw-semibold">Giường cần dọn dẹp</p>
+                                <span class="text-muted" style="font-size: 0.75rem;">Đổi trạng thái sang AVAILABLE</span>
+                            </div>
+                        </div>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <!-- User profile dropdown -->
+        <div class="dropdown" sec:authorize="isAuthenticated()">
+            <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle text-dark" data-bs-toggle="dropdown" aria-expanded="false">
+                <div class="sidebar-user-avatar bg-primary text-white me-2">
+                    <i class="bi bi-person-fill"></i>
+                </div>
+                <div class="d-none d-sm-block text-start me-1">
+                    <div class="fw-semibold small lh-1" sec:authentication="name">Tài khoản</div>
+                    <small class="text-muted" style="font-size: 0.75rem;">
+                        <span sec:authorize="hasRole('ADMIN')">Quản trị viên</span>
+                        <span sec:authorize="hasRole('MANAGER')">Quản lý</span>
+                        <span sec:authorize="hasRole('DOCTOR')">Bác sĩ</span>
+                        <span sec:authorize="hasRole('NURSE')">Điều dưỡng</span>
+                        <span sec:authorize="hasRole('ACCOUNTANT')">Kế toán</span>
+                        <span sec:authorize="hasRole('RELATIVE')">Người thân</span>
+                        <span sec:authorize="hasRole('STAFF') and !hasRole('MANAGER') and !hasRole('DOCTOR') and !hasRole('NURSE') and !hasRole('ACCOUNTANT')">Nhân viên</span>
+                    </small>
+                </div>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                <li class="px-3 py-2 border-bottom">
+                    <div class="fw-bold" sec:authentication="name">Username</div>
+                    <span class="badge bg-primary-subtle text-primary" style="font-size: 0.75rem;">
+                        <span sec:authentication="principal.authorities">ROLE</span>
+                    </span>
+                </li>
+                <li><a class="dropdown-item py-2" th:href="@{/}"><i class="bi bi-speedometer2 me-2 text-muted"></i>Trang chủ Dashboard</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <form th:action="@{/logout}" method="post" class="m-0">
+                        <button type="submit" class="dropdown-item py-2 text-danger">
+                            <i class="bi bi-box-arrow-right me-2"></i>Đăng xuất
+                        </button>
+                    </form>
+                </li>
+            </ul>
+        </div>
+
+        <!-- If not authenticated (fallback) -->
+        <div sec:authorize="!isAuthenticated()">
+            <a th:href="@{/login}" class="btn btn-sm btn-primary">
+                <i class="bi bi-box-arrow-in-right me-1"></i>Đăng nhập
+            </a>
+        </div>
+    </div>
+</header>
+</body>
+</html>

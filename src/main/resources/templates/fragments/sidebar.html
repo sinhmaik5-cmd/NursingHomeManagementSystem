@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<body>
+<aside th:fragment="sidebar(activeMenu)" class="app-sidebar">
+    <!-- Brand -->
+    <a th:href="@{/}" class="sidebar-brand">
+        <div class="sidebar-brand-icon">
+            <i class="bi bi-heart-pulse-fill"></i>
+        </div>
+        <div>
+            <div class="sidebar-brand-text">NHMS Care</div>
+            <span class="sidebar-brand-sub">Viện Dưỡng Lão Cao Cấp</span>
+        </div>
+    </a>
+
+    <!-- Navigation Menu -->
+    <div class="sidebar-menu">
+        <!-- Overview -->
+        <div class="sidebar-heading">Tổng quan</div>
+        <a th:href="@{/}" class="sidebar-nav-link" th:classappend="${activeMenu == 'dashboard' ? 'active' : ''}">
+            <i class="bi bi-grid-1x2-fill"></i>
+            <span>Dashboard</span>
+        </a>
+
+        <!-- Phân hệ Hành chính & Quản lý (Manager & Admin) -->
+        <div sec:authorize="hasAnyRole('MANAGER', 'ADMIN')">
+            <div class="sidebar-heading">Quản trị & Cư dân</div>
+            <a th:href="@{/residents/check-in}" class="sidebar-nav-link" th:classappend="${activeMenu == 'check-in' ? 'active' : ''}">
+                <i class="bi bi-person-plus-fill"></i>
+                <span>Tiếp nhận Cư dân</span>
+            </a>
+            <a th:href="@{/residents}" class="sidebar-nav-link" th:classappend="${activeMenu == 'resident-list' ? 'active' : ''}">
+                <i class="bi bi-people-fill"></i>
+                <span>Danh sách Cư dân</span>
+            </a>
+            <a th:href="@{/rooms/beds}" class="sidebar-nav-link" th:classappend="${activeMenu == 'bed-management' ? 'active' : ''}">
+                <i class="bi bi-hospital-fill"></i>
+                <span>Sơ đồ Phòng & Giường</span>
+            </a>
+            <a th:href="@{/schedules/assign}" class="sidebar-nav-link" th:classappend="${activeMenu == 'schedule-assign' ? 'active' : ''}">
+                <i class="bi bi-calendar2-check-fill"></i>
+                <span>Phân công Ca trực</span>
+            </a>
+        </div>
+
+        <!-- Phân hệ Y tế & Điều dưỡng (Doctor, Nurse, Staff & Admin) -->
+        <div sec:authorize="hasAnyRole('DOCTOR', 'NURSE', 'STAFF', 'ADMIN')">
+            <div class="sidebar-heading">Y tế & Chăm sóc</div>
+            <a th:href="@{/health/records/create}" class="sidebar-nav-link" th:classappend="${activeMenu == 'record-create' ? 'active' : ''}">
+                <i class="bi bi-clipboard2-pulse-fill"></i>
+                <span>Khám bệnh & Kê đơn</span>
+            </a>
+            <a th:href="@{/health/history}" class="sidebar-nav-link" th:classappend="${activeMenu == 'health-history' ? 'active' : ''}">
+                <i class="bi bi-clock-history"></i>
+                <span>Lịch sử Bệnh án</span>
+            </a>
+            <a th:href="@{/incidents/report}" class="sidebar-nav-link" th:classappend="${activeMenu == 'incident-report' ? 'active' : ''}">
+                <i class="bi bi-exclamation-octagon-fill"></i>
+                <span>Báo cáo Sự cố</span>
+            </a>
+            <a th:href="@{/schedules/my-schedule}" class="sidebar-nav-link" th:classappend="${activeMenu == 'my-schedule' ? 'active' : ''}">
+                <i class="bi bi-person-badge-fill"></i>
+                <span>Lịch trực Cá nhân</span>
+            </a>
+        </div>
+
+        <!-- Phân hệ Kế toán (Accountant & Admin) -->
+        <div sec:authorize="hasAnyRole('ACCOUNTANT', 'ADMIN')">
+            <div class="sidebar-heading">Tài chính & Thu phí</div>
+            <a th:href="@{/billing/monthly}" class="sidebar-nav-link" th:classappend="${activeMenu == 'billing-monthly' ? 'active' : ''}">
+                <i class="bi bi-receipt"></i>
+                <span>Chốt Hóa đơn Tháng</span>
+            </a>
+        </div>
+
+        <!-- Cổng thông tin người thân (Relative & Admin) -->
+        <div sec:authorize="hasAnyRole('RELATIVE', 'ADMIN')">
+            <div class="sidebar-heading">Người thân</div>
+            <a th:href="@{/portal/dashboard}" class="sidebar-nav-link" th:classappend="${activeMenu == 'portal-dashboard' ? 'active' : ''}">
+                <i class="bi bi-house-heart-fill"></i>
+                <span>Cổng Người thân</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- User Section Bottom -->
+    <div class="sidebar-user" sec:authorize="isAuthenticated()">
+        <div class="sidebar-user-avatar">
+            <i class="bi bi-shield-lock-fill"></i>
+        </div>
+        <div class="text-truncate">
+            <div class="text-white small fw-bold text-truncate" sec:authentication="name">User</div>
+            <div class="text-muted" style="font-size: 0.7rem;">
+                <span sec:authorize="hasRole('ADMIN')">Administrator</span>
+                <span sec:authorize="hasRole('MANAGER')">Manager</span>
+                <span sec:authorize="hasRole('DOCTOR')">Doctor</span>
+                <span sec:authorize="hasRole('NURSE')">Nurse</span>
+                <span sec:authorize="hasRole('ACCOUNTANT')">Accountant</span>
+                <span sec:authorize="hasRole('RELATIVE')">Relative</span>
+            </div>
+        </div>
+    </div>
+</aside>
+</body>
+</html>

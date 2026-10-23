@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout :: layout(~{::title}, ~{::content}, 'incident-report')}">
+<head>
+    <title>Báo Cáo & Xử Lý Sự Cố - NHMS Care</title>
+</head>
+<body>
+<div th:fragment="content">
+    <!-- Header -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <div>
+            <h4 class="fw-bold mb-1 text-dark">
+                <i class="bi bi-exclamation-octagon-fill text-danger me-2"></i>Báo Cáo & Quản Lý Sự Cố
+            </h4>
+            <p class="text-muted small mb-0">Ghi nhận kịp thời các sự cố (ngã, cấp cứu, tai nạn) và theo dõi tiến trình xử lý y tế khẩn cấp</p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Report Form (Left Col) -->
+        <div class="col-12 col-lg-5">
+            <div class="nh-card h-100">
+                <div class="nh-card-header bg-light">
+                    <h6 class="fw-bold mb-0 text-dark">
+                        <i class="bi bi-pencil-square text-danger me-2"></i>Ghi Nhận Sự Cố Mới
+                    </h6>
+                </div>
+                <div class="nh-card-body p-4">
+                    <form th:action="@{/incidents/report}" th:object="${incidentRequest}" method="post">
+                        <!-- Resident -->
+                        <div class="mb-3">
+                            <label for="residentId" class="form-label small fw-semibold">Cư dân gặp sự cố <span class="text-danger">*</span></label>
+                            <select class="form-select" id="residentId" th:field="*{residentId}" required>
+                                <option value="" disabled selected>-- Chọn cư dân --</option>
+                                <option th:each="res : ${residents}"
+                                        th:value="${res.id}"
+                                        th:text="${res.fullName} + ' (Phòng ' + ${res.roomNumber} + ' - ' + ${res.bedNumber} + ')'">
+                                    Nguyễn Văn An (P101 - G01)
+                                </option>
+                            </select>
+                        </div>
+
+                        <!-- Incident Title -->
+                        <div class="mb-3">
+                            <label for="title" class="form-label small fw-semibold">Tên / Loại sự cố <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="title" th:field="*{title}" required
+                                   placeholder="VD: Trượt ngã trong nhà vệ sinh, Hụt hơi khó thở ban đêm, Sốt cao co giật...">
+                        </div>
+
+                        <!-- Severity Level -->
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold d-block">Mức độ nghiêm trọng <span class="text-danger">*</span></label>
+                            <div class="d-flex flex-column gap-2">
+                                <div class="form-check p-2 border rounded">
+                                    <input class="form-check-input ms-0 me-2" type="radio" name="severityLevel" id="sevLow" value="LOW" th:field="*{severityLevel}">
+                                    <label class="form-check-label d-flex justify-content-between align-items-center w-100" for="sevLow">
+                                        <span class="small fw-semibold text-dark">LOW (Mức độ Nhẹ)</span>
+                                        <span class="badge badge-severity-low">Trầy xước, va chạm nhẹ</span>
+                                    </label>
+                                </div>
+                                <div class="form-check p-2 border rounded">
+                                    <input class="form-check-input ms-0 me-2" type="radio" name="severityLevel" id="sevMed" value="MEDIUM" th:field="*{severityLevel}">
+                                    <label class="form-check-label d-flex justify-content-between align-items-center w-100" for="sevMed">
+                                        <span class="small fw-semibold text-dark">MEDIUM (Mức độ Vừa)</span>
+                                        <span class="badge badge-severity-medium">Sốt nhẹ, xây xát, bầm tím</span>
+                                    </label>
+                                </div>
+                                <div class="form-check p-2 border rounded">
+                                    <input class="form-check-input ms-0 me-2" type="radio" name="severityLevel" id="sevHigh" value="HIGH" th:field="*{severityLevel}">
+                                    <label class="form-check-label d-flex justify-content-between align-items-center w-100" for="sevHigh">
+                                        <span class="small fw-semibold text-dark">HIGH (Mức độ Nặng)</span>
+                                        <span class="badge badge-severity-high">Nghi ngờ rạn xương, ngã chấn thương</span>
+                                    </label>
+                                </div>
+                                <div class="form-check p-2 border rounded bg-danger-subtle">
+                                    <input class="form-check-input ms-0 me-2" type="radio" name="severityLevel" id="sevCrit" value="CRITICAL" th:field="*{severityLevel}">
+                                    <label class="form-check-label d-flex justify-content-between align-items-center w-100" for="sevCrit">
+                                        <span class="small fw-bold text-danger">CRITICAL (Khẩn cấp / Nguy kịch)</span>
+                                        <span class="badge badge-severity-critical">Đột quỵ, ngưng thở, cấp cứu</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Description -->
+                        <div class="mb-4">
+                            <label for="description" class="form-label small fw-semibold">Mô tả chi tiết sự việc <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="description" th:field="*{description}" rows="3" required
+                                      placeholder="Mô tả hoàn cảnh diễn ra sự cố, thời điểm phát hiện, tình trạng ban đầu của cụ..."></textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-danger w-100 py-2 fw-semibold shadow-sm">
+                            <i class="bi bi-send-fill me-1"></i> Gửi Báo Cáo Sự Cố
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Incidents List (Right Col) -->
+        <div class="col-12 col-lg-7">
+            <div class="nh-card h-100">
+                <div class="nh-card-header d-flex justify-content-between align-items-center">
+                    <h6 class="fw-bold mb-0 text-dark">
+                        <i class="bi bi-list-task me-2 text-primary"></i>Danh Sách Sự Cố Gần Đây (<span th:text="${#lists.size(incidents)}">0</span>)
+                    </h6>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <a th:href="@{/incidents/report}" class="btn btn-outline-secondary" th:classappend="${filterStatus == null ? 'active' : ''}">Tất cả</a>
+                        <a th:href="@{/incidents/report(status='PENDING')}" class="btn btn-outline-warning" th:classappend="${filterStatus == 'PENDING' ? 'active' : ''}">Chờ xử lý</a>
+                        <a th:href="@{/incidents/report(status='RESOLVED')}" class="btn btn-outline-success" th:classappend="${filterStatus == 'RESOLVED' ? 'active' : ''}">Đã giải quyết</a>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="nh-table">
+                        <thead>
+                        <tr>
+                            <th>Thời gian</th>
+                            <th>Cư dân</th>
+                            <th>Mức độ</th>
+                            <th>Tên sự cố</th>
+                            <th>Trạng thái</th>
+                            <th class="text-end">Xử lý</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:if="${#lists.isEmpty(incidents)}">
+                            <td colspan="6" class="text-center py-5 text-muted">
+                                <i class="bi bi-shield-check fs-2 text-success d-block mb-1"></i>
+                                Tuyệt vời! Không có sự cố nào đang cần xử lý.
+                            </td>
+                        </tr>
+                        <tr th:each="inc : ${incidents}">
+                            <td class="small" th:text="${#temporals.format(inc.createdDate, 'dd/MM/yyyy HH:mm')}">23/10/2026 08:15</td>
+                            <td>
+                                <span class="fw-bold text-dark small" th:text="${inc.residentName}">Nguyễn Văn An</span>
+                                <small class="text-muted d-block" th:if="${inc.roomNumber}">Phòng <span th:text="${inc.roomNumber}">P101</span></small>
+                            </td>
+                            <td>
+                                <span th:if="${inc.severityLevel == 'LOW'}" class="badge badge-severity-low">LOW</span>
+                                <span th:if="${inc.severityLevel == 'MEDIUM'}" class="badge badge-severity-medium">MEDIUM</span>
+                                <span th:if="${inc.severityLevel == 'HIGH'}" class="badge badge-severity-high">HIGH</span>
+                                <span th:if="${inc.severityLevel == 'CRITICAL'}" class="badge badge-severity-critical">CRITICAL</span>
+                            </td>
+                            <td>
+                                <span class="fw-semibold text-dark small" th:text="${inc.title}">Trượt chân ngã</span>
+                                <small class="text-muted d-block text-truncate" style="max-width: 160px;" th:text="${inc.description}">Đã kiểm tra sơ bộ...</small>
+                            </td>
+                            <td>
+                                <span th:if="${inc.status == 'PENDING'}" class="badge bg-warning-subtle text-warning-emphasis">CHỜ XỬ LÝ</span>
+                                <span th:if="${inc.status == 'RESOLVED'}" class="badge badge-status-available">ĐÃ XỬ LÝ</span>
+                            </td>
+                            <td class="text-end">
+                                <button th:if="${inc.status == 'PENDING'}"
+                                        type="button" class="btn btn-sm btn-outline-success"
+                                        th:data-id="${inc.id}"
+                                        th:data-title="${inc.title}"
+                                        th:data-name="${inc.residentName}"
+                                        onclick="openResolveModal(this)"
+                                        sec:authorize="hasAnyRole('DOCTOR', 'NURSE', 'MANAGER', 'ADMIN')">
+                                    <i class="bi bi-check2-circle me-1"></i> Xử lý
+                                </button>
+                                <span th:unless="${inc.status == 'PENDING'}" class="text-muted small">
+                                    <i class="bi bi-check-all text-success"></i> Xong
+                                </span>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Resolve Incident -->
+    <div class="modal fade" id="resolveIncidentModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <form id="resolveForm" method="post" action="">
+                    <div class="modal-header">
+                        <h5 class="modal-title fw-bold text-success">
+                            <i class="bi bi-shield-check me-2"></i>Cập Nhật Phương Án Xử Lý Sự Cố
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-2">
+                            <span class="text-muted small d-block">Sự cố:</span>
+                            <span class="fw-bold text-dark" id="modalIncidentTitle">Trượt chân ngã</span>
+                            <small class="text-muted d-block" id="modalResidentName">Cư dân: Nguyễn Văn An</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="actionTaken" class="form-label small fw-semibold">Biện pháp / Kết quả xử lý <span class="text-danger">*</span></label>
+                            <textarea class="form-control" name="actionTaken" id="actionTaken" rows="3" required
+                                      placeholder="VD: Đã băng bó vết thương nhẹ, đo sinh hiệu huyết áp 125/80, cho cụ nằm nghỉ ngơi và thông báo cho người thân..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Đóng</button>
+                        <button type="submit" class="btn btn-success fw-semibold shadow-sm">
+                            <i class="bi bi-check-lg me-1"></i> Hoàn Tất & Đổi Sang RESOLVED
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function openResolveModal(button) {
+        const id = button.getAttribute('data-id');
+        const title = button.getAttribute('data-title');
+        const name = button.getAttribute('data-name');
+
+        document.getElementById('modalIncidentTitle').innerText = title;
+        document.getElementById('modalResidentName').innerText = 'Cư dân: ' + name;
+
+        const form = document.getElementById('resolveForm');
+        form.action = '/incidents/' + id + '/resolve';
+
+        const modal = new bootstrap.Modal(document.getElementById('resolveIncidentModal'));
+        modal.show();
+    }
+</script>
+</body>
+</html>

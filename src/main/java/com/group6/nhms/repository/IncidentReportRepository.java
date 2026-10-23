@@ -24,7 +24,10 @@ public interface IncidentReportRepository extends JpaRepository<IncidentReport, 
     // 4. Lấy danh sách sự cố chưa xử lý, sắp xếp theo thời gian mới nhất
     List<IncidentReport> findByStatusOrderByIncidentTimeDesc(String status);
 
-    // 5. Thống kê số lượng sự cố theo mức độ nghiêm trọng trong khoảng thời gian (Dashboard Admin)
+    // 5. Đếm số sự cố theo trạng thái
+    long countByStatus(String status);
+
+    // 6. Thống kê số lượng sự cố theo mức độ nghiêm trọng trong khoảng thời gian (Dashboard Admin)
     @Query("SELECT COUNT(i) FROM IncidentReport i WHERE i.severityLevel = :severityLevel AND i.incidentTime BETWEEN :startDate AND :endDate")
     long countBySeverityLevelAndIncidentTimeBetween(
             @Param("severityLevel") String severityLevel,
