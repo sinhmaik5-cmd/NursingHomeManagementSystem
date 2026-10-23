@@ -2,6 +2,8 @@ package com.group6.nhms.service;
 
 import com.group6.nhms.dto.response.OrderResponse;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 public interface OrderService {
@@ -19,4 +21,14 @@ public interface OrderService {
     OrderResponse createMonthlySettlement(Integer residentId, int year, int month);
 
     OrderResponse addServiceToResident(Integer residentId, Integer serviceId);
+
+    List<OrderResponse> getAllOrders(String paymentStatus);
+
+    long countUnpaidOrders();
+
+    long countPaidOrders();
+
+    BigDecimal getTotalCollectedRevenue();
+
+    BigDecimal getRevenueBetweenDates(LocalDate startDate, LocalDate endDate);
 }

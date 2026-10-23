@@ -18,6 +18,8 @@ import com.group6.nhms.repository.OrderRepository;
 import com.group6.nhms.repository.RelativeRepository;
 import com.group6.nhms.repository.ResidentRepository;
 import com.group6.nhms.service.ResidentService;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -56,145 +58,161 @@ public class ResidentServiceImpl implements ResidentService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<ResidentResponse> getAllResidents(String name, String status) {
+        List<Resident> residents;
+        if (name != null && !name.trim().isEmpty()) {
+            residents = residentRepository.findByFullNameContainingIgnoreCase(name.trim());
+        } else if (status != null && !status.trim().isEmpty()) {
+            residents = residentRepository.findByStatus(status.trim().toUpperCase());
+        } else {
+            residents = residentRepository.findAll();
+        }
+        return residents.stream().map(residentMapper::toResponse).toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ResidentResponse getResidentById(Integer id) {
+        Resident resident = residentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy cư dân ID " + id));
+        return residentMapper.toResponse(resident);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ResidentResponse> getResidentsByRelative(Integer relativeId) {
+        return residentRepository.findByRelativeId(relativeId)
+                .stream()
+                .map(residentMapper::toResponse)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public long countActiveResidents() {
+        return residentRepository.countByStatus(ResidentStatus.ACTIVE.name());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ResidentResponse> getRecentResidents(int limit) {
+        return residentRepository.findAll(
+                PageRequest.of(0, limit, Sort.by(Sort.Direction.DESC, "admissionDate", "id"))
+        ).getContent().stream().map(residentMapper::toResponse).toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ResidentResponse getResidentByBedId(Integer bedId) {
+        return residentRepository.findByBedId(bedId)
+                .map(residentMapper::toResponse)
+                .orElse(null);
+    }
+
+    @Override
     @Transactional
     public ResidentResponse checkIn(ResidentCheckInRequest request) {
-        Bed bed = bedRepository.findByIdForUpdate(request.getBedId())
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("Không tìm thấy giường ID " + request.getBedId()));
-
-        if (!BedStatus.AVAILABLE.name().equals(bed.getStatus())) {
-            throw new BadRequestException("Giường đã được sử dụng hoặc không ở trạng thái sẵn sàng");
-        }
-
         Relative relative;
 
         if (request.getRelativeId() != null) {
             relative = relativeRepository.findById(request.getRelativeId())
-                    .orElseThrow(() ->
-                            new ResourceNotFoundException(
-                                    "Không tìm thấy người thân ID " + request.getRelativeId()));
+                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người thân ID " + request.getRelativeId()));
         } else {
             if (isBlank(request.getRelativeFullName()) || isBlank(request.getRelativePhone())) {
-                throw new BadRequestException(
-                        "Cần nhập tên và số điện thoại người thân, hoặc chọn người thân đã có");
+                throw new BadRequestException("Cần cung cấp thông tin người thân hoặc chọn người thân có sẵn");
             }
 
-            relative = new Relative();
-            relative.setFullName(request.getRelativeFullName().trim());
-            relative.setPhone(request.getRelativePhone().trim());
-            relative.setAddress(request.getRelativeAddress());
-            relative.setRelationship(request.getRelationship());
-            relative = relativeRepository.save(relative);
+            relative = relativeRepository.findFirstByPhoneNumber(request.getRelativePhone().trim())
+                    .orElseGet(() -> {
+                        Relative newRel = new Relative();
+                        newRel.setFullName(request.getRelativeFullName().trim());
+                        newRel.setPhoneNumber(request.getRelativePhone().trim());
+                        newRel.setAddress(request.getRelativeAddress());
+                        newRel.setRelationship(request.getRelationship());
+                        return relativeRepository.save(newRel);
+                    });
         }
 
-        Resident resident = residentMapper.toEntity(request);
-        resident.setRelative(relative);
-        resident.setBed(bed);
-        resident.setAdmissionDate(LocalDate.now());
-        resident.setStatus(ResidentStatus.ACTIVE.name());
+        Bed bed = bedRepository.findByIdForUpdate(request.getBedId())
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy giường ID " + request.getBedId()));
+
+        if (!BedStatus.AVAILABLE.name().equals(bed.getStatus())) {
+            throw new BadRequestException("Giường " + bed.getBedNumber() + " hiện không ở trạng thái AVAILABLE để tiếp nhận");
+        }
 
         bed.setStatus(BedStatus.OCCUPIED.name());
 
-        Resident savedResident = residentRepository.save(resident);
+        Resident resident = new Resident();
+        resident.setFullName(request.getFullName().trim());
+        resident.setGender(request.getGender());
+        resident.setDob(request.getDateOfBirth());
+        resident.setAdmissionDate(LocalDate.now());
+        resident.setInitialHealthStatus(request.getMedicalHistory());
+        resident.setStatus(ResidentStatus.ACTIVE.name());
+        resident.setRelative(relative);
+        resident.setBed(bed);
 
-        // Nghiệp vụ: Tự động khởi tạo hóa đơn tiền phòng tháng đầu tiên khi cư dân Check-in
-        if (bed.getRoom() != null && bed.getRoom().getBasePrice() != null) {
-            BigDecimal roomPrice = bed.getRoom().getBasePrice();
-            Order checkInOrder = new Order();
-            checkInOrder.setResident(savedResident);
-            checkInOrder.setRoomPrice(roomPrice);
-            checkInOrder.setServicesPrice(BigDecimal.ZERO);
-            checkInOrder.setMedicationsPrice(BigDecimal.ZERO);
-            checkInOrder.setTotalAmount(roomPrice);
-            checkInOrder.setPaymentStatus(PaymentStatus.PENDING.name());
-            checkInOrder.setIssueDate(LocalDate.now());
-            checkInOrder.setDueDate(LocalDate.now().plusDays(7));
-            orderRepository.save(checkInOrder);
-        }
-
-        return residentMapper.toResponse(savedResident);
+        Resident saved = residentRepository.save(resident);
+        return residentMapper.toResponse(saved);
     }
 
     @Override
     @Transactional
     public ResidentResponse transferBed(BedTransferRequest request) {
         Resident resident = residentRepository.findByIdForUpdate(request.getResidentId())
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Không tìm thấy cư dân ID " + request.getResidentId()));
-
-        if (!ResidentStatus.ACTIVE.name().equals(resident.getStatus())) {
-            throw new BadRequestException("Chỉ có thể chuyển giường cho cư dân đang lưu trú");
-        }
-
-        if (resident.getBed() == null) {
-            throw new BadRequestException("Cư dân hiện không được gán giường");
-        }
-
-        // Nghiệp vụ: Cư dân phải ở tối thiểu 1 tháng (30 ngày) mới được chuyển phòng
-        if (resident.getAdmissionDate() != null) {
-            long daysStayed = ChronoUnit.DAYS.between(resident.getAdmissionDate(), LocalDate.now());
-            if (daysStayed < 30) {
-                throw new BadRequestException(
-                        "Cư dân phải lưu trú tối thiểu 1 tháng (30 ngày) mới được chuyển phòng/giường. Thời gian hiện tại: " + daysStayed + " ngày.");
-            }
-        }
-
-        Integer oldBedId = resident.getBed().getId();
-        Integer newBedId = request.getNewBedId();
-
-        if (oldBedId.equals(newBedId)) {
-            throw new BadRequestException("Giường mới phải khác giường hiện tại");
-        }
-
-        Integer firstId = Math.min(oldBedId, newBedId);
-        Integer secondId = Math.max(oldBedId, newBedId);
-
-        Bed firstBed = bedRepository.findByIdForUpdate(firstId)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("Không tìm thấy giường ID " + firstId));
-
-        Bed secondBed = bedRepository.findByIdForUpdate(secondId)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("Không tìm thấy giường ID " + secondId));
-
-        Bed oldBed = oldBedId.equals(firstId) ? firstBed : secondBed;
-        Bed newBed = newBedId.equals(firstId) ? firstBed : secondBed;
-
-        if (!BedStatus.OCCUPIED.name().equals(oldBed.getStatus())) {
-            throw new BadRequestException("Giường hiện tại không ở trạng thái đang sử dụng");
-        }
-
-        if (!BedStatus.AVAILABLE.name().equals(newBed.getStatus())) {
-            throw new BadRequestException("Giường mới không còn trống");
-        }
-
-        newBed.setStatus(BedStatus.OCCUPIED.name());
-        // Nghiệp vụ: Giường cũ chuyển sang trạng thái MAINTENANCE (bảo trì/vệ sinh), Staff sẽ tự đổi sang AVAILABLE sau
-        oldBed.setStatus(BedStatus.MAINTENANCE.name());
-        resident.setBed(newBed);
-
-        Resident savedResident = residentRepository.save(resident);
-        return residentMapper.toResponse(savedResident);
-    }
-
-    @Override
-    @Transactional
-    public void checkOut(Integer residentId, String finalStatus) {
-        if (!ResidentStatus.DISCHARGED.name().equals(finalStatus)
-                && !ResidentStatus.DECEASED.name().equals(finalStatus)) {
-            throw new BadRequestException("Trạng thái xuất viện phải là DISCHARGED hoặc DECEASED");
-        }
-
-        Resident resident = residentRepository.findByIdForUpdate(residentId)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("Không tìm thấy cư dân ID " + residentId));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy cư dân ID " + request.getResidentId()));
 
         if (!ResidentStatus.ACTIVE.name().equals(resident.getStatus())) {
             throw new BadRequestException("Cư dân không ở trạng thái đang lưu trú");
         }
 
-        // Nghiệp vụ: Kiểm tra hóa đơn chưa thanh toán trước khi cho xuất viện
+        Bed oldBed = resident.getBed();
+        if (oldBed == null) {
+            throw new BadRequestException("Cư dân hiện tại chưa được gán giường");
+        }
+
+        if (oldBed.getId().equals(request.getNewBedId())) {
+            throw new BadRequestException("Giường mới phải khác giường hiện tại");
+        }
+
+        Bed newBed = bedRepository.findByIdForUpdate(request.getNewBedId())
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy giường đích ID " + request.getNewBedId()));
+
+        if (!BedStatus.AVAILABLE.name().equals(newBed.getStatus())) {
+            throw new BadRequestException("Giường mới " + newBed.getBedNumber() + " hiện không ở trạng thái AVAILABLE");
+        }
+
+        LocalDate now = LocalDate.now();
+        LocalDate lastDayOfMonth = now.withDayOfMonth(now.lengthOfMonth());
+        boolean isEndOfMonth = ChronoUnit.DAYS.between(now, lastDayOfMonth) <= 3;
+
+        BigDecimal oldPrice = oldBed.getRoom().getBasePrice();
+        BigDecimal newPrice = newBed.getRoom().getBasePrice();
+
+        if (newPrice.compareTo(oldPrice) > 0 && !isEndOfMonth) {
+            // Cho phép nhưng có cảnh báo hoặc lưu log
+        }
+
+        oldBed.setStatus(BedStatus.MAINTENANCE.name());
+        newBed.setStatus(BedStatus.OCCUPIED.name());
+
+        resident.setBed(newBed);
+        Resident saved = residentRepository.save(resident);
+
+        return residentMapper.toResponse(saved);
+    }
+
+    @Override
+    @Transactional
+    public void checkOut(Integer residentId, String finalStatus) {
+        Resident resident = residentRepository.findByIdForUpdate(residentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy cư dân ID " + residentId));
+
+        if (!ResidentStatus.ACTIVE.name().equals(resident.getStatus())) {
+            throw new BadRequestException("Cư dân không ở trạng thái đang lưu trú");
+        }
+
         List<Order> unpaidOrders = orderRepository.findByResidentIdAndPaymentStatus(
                 residentId,
                 PaymentStatus.PENDING.name()
@@ -207,10 +225,8 @@ public class ResidentServiceImpl implements ResidentService {
 
         if (resident.getBed() != null) {
             Bed bed = bedRepository.findByIdForUpdate(resident.getBed().getId())
-                    .orElseThrow(() ->
-                            new ResourceNotFoundException("Không tìm thấy giường hiện tại của cư dân"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy giường hiện tại của cư dân"));
 
-            // Nghiệp vụ: Chuyển sang MAINTENANCE để nhân viên dọn dẹp vệ sinh/khử khuẩn trước khi mở lại
             bed.setStatus(BedStatus.MAINTENANCE.name());
             resident.setBed(null);
         }

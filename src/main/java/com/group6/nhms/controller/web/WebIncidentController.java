@@ -3,17 +3,9 @@ package com.group6.nhms.controller.web;
 import com.group6.nhms.dto.request.IncidentReportCreateRequest;
 import com.group6.nhms.dto.response.IncidentReportResponse;
 import com.group6.nhms.dto.response.ResidentResponse;
-import com.group6.nhms.entity.IncidentReport;
-import com.group6.nhms.entity.Staff;
-import com.group6.nhms.enums.ResidentStatus;
-import com.group6.nhms.mapper.IncidentReportMapper;
-import com.group6.nhms.mapper.ResidentMapper;
-import com.group6.nhms.repository.AccountRepository;
-import com.group6.nhms.repository.IncidentReportRepository;
-import com.group6.nhms.repository.ResidentRepository;
-import com.group6.nhms.repository.StaffRepository;
 import com.group6.nhms.service.IncidentReportService;
-import org.springframework.data.domain.Sort;
+import com.group6.nhms.service.ResidentService;
+import com.group6.nhms.service.StaffService;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -27,29 +19,17 @@ import java.util.List;
 public class WebIncidentController {
 
     private final IncidentReportService incidentReportService;
-    private final IncidentReportRepository incidentReportRepository;
-    private final ResidentRepository residentRepository;
-    private final StaffRepository staffRepository;
-    private final AccountRepository accountRepository;
-    private final ResidentMapper residentMapper;
-    private final IncidentReportMapper incidentReportMapper;
+    private final ResidentService residentService;
+    private final StaffService staffService;
 
     public WebIncidentController(
             IncidentReportService incidentReportService,
-            IncidentReportRepository incidentReportRepository,
-            ResidentRepository residentRepository,
-            StaffRepository staffRepository,
-            AccountRepository accountRepository,
-            ResidentMapper residentMapper,
-            IncidentReportMapper incidentReportMapper
+            ResidentService residentService,
+            StaffService staffService
     ) {
         this.incidentReportService = incidentReportService;
-        this.incidentReportRepository = incidentReportRepository;
-        this.residentRepository = residentRepository;
-        this.staffRepository = staffRepository;
-        this.accountRepository = accountRepository;
-        this.residentMapper = residentMapper;
-        this.incidentReportMapper = incidentReportMapper;
+        this.residentService = residentService;
+        this.staffService = staffService;
     }
 
     // 1. Giao diện báo cáo và danh sách sự cố
@@ -58,25 +38,8 @@ public class WebIncidentController {
             @RequestParam(required = false) String status,
             Model model
     ) {
-        List<ResidentResponse> residents = residentRepository.findByStatus(ResidentStatus.ACTIVE.name())
-                .stream()
-                .map(residentMapper::toResponse)
-                .toList();
-
-        List<IncidentReportResponse> incidents;
-        if ("PENDING".equalsIgnoreCase(status)) {
-            incidents = incidentReportService.getPendingIncidents();
-        } else if ("RESOLVED".equalsIgnoreCase(status)) {
-            incidents = incidentReportRepository.findByStatus("RESOLVED")
-                    .stream()
-                    .map(incidentReportMapper::toResponse)
-                    .toList();
-        } else {
-            incidents = incidentReportRepository.findAll(Sort.by(Sort.Direction.DESC, "incidentTime", "id"))
-                    .stream()
-                    .map(incidentReportMapper::toResponse)
-                    .toList();
-        }
+        List<ResidentResponse> residents = residentService.getAllResidents(null, "ACTIVE");
+        List<IncidentReportResponse> incidents = incidentReportService.getAllIncidents(status);
 
         IncidentReportCreateRequest request = new IncidentReportCreateRequest();
         request.setSeverityLevel("LOW");
@@ -98,7 +61,7 @@ public class WebIncidentController {
             RedirectAttributes redirectAttributes
     ) {
         try {
-            Integer reporterStaffId = resolveStaffId(authentication);
+            Integer reporterStaffId = staffService.resolveCurrentStaffId(authentication);
             IncidentReportResponse res = incidentReportService.createIncident(request, reporterStaffId);
             redirectAttributes.addFlashAttribute("successMessage",
                     "Đã ghi nhận sự cố '" + res.getTitle() + "' cho cư dân " + res.getResidentName() + " (Mức độ: " + res.getSeverityLevel() + ").");
@@ -123,16 +86,5 @@ public class WebIncidentController {
             redirectAttributes.addFlashAttribute("errorMessage", "Lỗi cập nhật xử lý sự cố: " + e.getMessage());
         }
         return "redirect:/incidents/report";
-    }
-
-    private Integer resolveStaffId(Authentication authentication) {
-        if (authentication == null) {
-            return staffRepository.findAll().stream().findFirst().map(Staff::getId).orElse(1);
-        }
-
-        return accountRepository.findByUsername(authentication.getName())
-                .filter(a -> a.getReferenceId() != null)
-                .map(a -> a.getReferenceId())
-                .orElseGet(() -> staffRepository.findAll().stream().findFirst().map(Staff::getId).orElse(1));
     }
 }

@@ -2,8 +2,6 @@ package com.group6.nhms.controller;
 
 import com.group6.nhms.dto.request.TaskScheduleCreateRequest;
 import com.group6.nhms.dto.response.TaskScheduleResponse;
-import com.group6.nhms.mapper.TaskScheduleMapper;
-import com.group6.nhms.repository.TaskScheduleRepository;
 import com.group6.nhms.service.TaskScheduleService;
 import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -19,17 +17,9 @@ import java.util.List;
 public class TaskScheduleController {
 
     private final TaskScheduleService taskScheduleService;
-    private final TaskScheduleRepository taskScheduleRepository;
-    private final TaskScheduleMapper taskScheduleMapper;
 
-    public TaskScheduleController(
-            TaskScheduleService taskScheduleService,
-            TaskScheduleRepository taskScheduleRepository,
-            TaskScheduleMapper taskScheduleMapper
-    ) {
+    public TaskScheduleController(TaskScheduleService taskScheduleService) {
         this.taskScheduleService = taskScheduleService;
-        this.taskScheduleRepository = taskScheduleRepository;
-        this.taskScheduleMapper = taskScheduleMapper;
     }
 
     // 1. Quản lý phân công ca trực mới (có validate chống trùng ca trực trong cùng khung giờ/ngày)
@@ -68,10 +58,7 @@ public class TaskScheduleController {
     public ResponseEntity<List<TaskScheduleResponse>> getSchedulesByDate(
             @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
     ) {
-        List<TaskScheduleResponse> responses = taskScheduleRepository.findByShiftDate(date)
-                .stream()
-                .map(taskScheduleMapper::toResponse)
-                .toList();
+        List<TaskScheduleResponse> responses = taskScheduleService.getSchedulesByDate(date);
         return ResponseEntity.ok(responses);
     }
 }

@@ -17,4 +17,16 @@ public interface BedService {
     BedResponse updateBedStatus(Integer id, BedStatusUpdateRequest request);
 
     BedResponse createBed(BedCreateRequest request);
+
+    List<BedResponse> getAllBeds();
+
+    long countTotalBeds();
+
+    long countOccupiedBeds();
+
+    long countAvailableBeds();
+
+    long countMaintenanceBeds();
+
+    double getOccupancyRate();
 }

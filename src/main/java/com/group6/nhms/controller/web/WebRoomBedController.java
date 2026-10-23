@@ -1,15 +1,12 @@
 package com.group6.nhms.controller.web;
 
 import com.group6.nhms.dto.request.BedStatusUpdateRequest;
-import com.group6.nhms.entity.Bed;
-import com.group6.nhms.entity.Resident;
-import com.group6.nhms.entity.Room;
-import com.group6.nhms.enums.BedStatus;
-import com.group6.nhms.enums.ResidentStatus;
-import com.group6.nhms.repository.BedRepository;
-import com.group6.nhms.repository.ResidentRepository;
-import com.group6.nhms.repository.RoomRepository;
+import com.group6.nhms.dto.response.BedResponse;
+import com.group6.nhms.dto.response.ResidentResponse;
+import com.group6.nhms.dto.response.RoomResponse;
 import com.group6.nhms.service.BedService;
+import com.group6.nhms.service.ResidentService;
+import com.group6.nhms.service.RoomService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -23,45 +20,41 @@ import java.util.Map;
 @RequestMapping("/rooms/beds")
 public class WebRoomBedController {
 
-    private final RoomRepository roomRepository;
-    private final BedRepository bedRepository;
-    private final ResidentRepository residentRepository;
+    private final RoomService roomService;
     private final BedService bedService;
+    private final ResidentService residentService;
 
     public WebRoomBedController(
-            RoomRepository roomRepository,
-            BedRepository bedRepository,
-            ResidentRepository residentRepository,
-            BedService bedService
+            RoomService roomService,
+            BedService bedService,
+            ResidentService residentService
     ) {
-        this.roomRepository = roomRepository;
-        this.bedRepository = bedRepository;
-        this.residentRepository = residentRepository;
+        this.roomService = roomService;
         this.bedService = bedService;
+        this.residentService = residentService;
     }
 
     @GetMapping
     public String bedManagement(Model model) {
-        List<Room> rooms = roomRepository.findAll();
-        List<Bed> allBeds = bedRepository.findAll();
+        List<RoomResponse> rooms = roomService.getAllRooms();
 
-        Map<Integer, List<Bed>> bedsByRoomId = new HashMap<>();
-        for (Room room : rooms) {
-            bedsByRoomId.put(room.getId(), bedRepository.findByRoomId(room.getId()));
+        Map<Integer, List<BedResponse>> bedsByRoomId = new HashMap<>();
+        for (RoomResponse room : rooms) {
+            bedsByRoomId.put(room.getId(), bedService.getBedsByRoom(room.getId()));
         }
 
-        List<Resident> activeResidents = residentRepository.findByStatus(ResidentStatus.ACTIVE.name());
-        Map<Integer, Resident> residentByBedId = new HashMap<>();
-        for (Resident r : activeResidents) {
-            if (r.getBed() != null) {
-                residentByBedId.put(r.getBed().getId(), r);
+        List<ResidentResponse> activeResidents = residentService.getAllResidents(null, "ACTIVE");
+        Map<Integer, ResidentResponse> residentByBedId = new HashMap<>();
+        for (ResidentResponse r : activeResidents) {
+            if (r.getBedId() != null) {
+                residentByBedId.put(r.getBedId(), r);
             }
         }
 
-        long totalBeds = allBeds.size();
-        long occupiedBeds = bedRepository.countByStatus(BedStatus.OCCUPIED.name());
-        long availableBeds = bedRepository.countByStatus(BedStatus.AVAILABLE.name());
-        long maintenanceBeds = bedRepository.countByStatus(BedStatus.MAINTENANCE.name());
+        long totalBeds = bedService.countTotalBeds();
+        long occupiedBeds = bedService.countOccupiedBeds();
+        long availableBeds = bedService.countAvailableBeds();
+        long maintenanceBeds = bedService.countMaintenanceBeds();
 
         model.addAttribute("rooms", rooms);
         model.addAttribute("bedsByRoomId", bedsByRoomId);

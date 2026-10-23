@@ -42,31 +42,25 @@ public class TaskScheduleServiceImpl implements TaskScheduleService {
 
     @Override
     @Transactional
-    public TaskScheduleResponse createSchedule(
-            TaskScheduleCreateRequest request,
-            Integer roomId
-    ) {
-        Integer targetRoomId = (roomId != null) ? roomId : request.getRoomId();
-        if (targetRoomId == null) {
-            throw new BadRequestException("Vui lòng chọn phòng được phân công");
-        }
-
-        String shift = normalizeShift(request.getShift());
+    public TaskScheduleResponse createSchedule(TaskScheduleCreateRequest request, Integer roomId) {
         Staff staff = staffRepository.findById(request.getStaffId())
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Không tìm thấy nhân viên ID " + request.getStaffId()));
-        Room room = roomRepository.findById(targetRoomId)
+
+        Room room = roomRepository.findById(roomId)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Không tìm thấy phòng ID " + targetRoomId));
+                        "Không tìm thấy phòng ID " + roomId));
 
-        // Nghiệp vụ: Chặn xếp trùng 2 ca trực khác nhau cho 1 nhân viên trong cùng khung giờ/ngày
-        boolean alreadyAssigned = taskScheduleRepository
-                .existsByStaffIdAndShiftDateAndShiftType(
-                        staff.getId(), request.getWorkDate(), shift);
+        String shift = normalizeShift(request.getShift());
 
-        if (alreadyAssigned) {
-            throw new BadRequestException(
-                    "Nhân viên đã được phân công ca " + shift + " trong ngày " + request.getWorkDate());
+        boolean exists = taskScheduleRepository.existsByStaffIdAndShiftDateAndShiftType(
+                request.getStaffId(),
+                request.getWorkDate(),
+                shift
+        );
+
+        if (exists) {
+            throw new BadRequestException("Nhân viên này đã được phân công ca " + shift + " vào ngày " + request.getWorkDate());
         }
 
         TaskSchedule schedule = new TaskSchedule();
@@ -106,6 +100,15 @@ public class TaskScheduleServiceImpl implements TaskScheduleService {
 
         schedule.setStatus(TaskStatus.COMPLETED.name());
         return taskScheduleMapper.toResponse(taskScheduleRepository.save(schedule));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<TaskScheduleResponse> getSchedulesByDate(LocalDate date) {
+        return taskScheduleRepository.findByShiftDate(date)
+                .stream()
+                .map(taskScheduleMapper::toResponse)
+                .toList();
     }
 
     private String normalizeShift(String value) {

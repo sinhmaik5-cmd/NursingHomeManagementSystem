@@ -1,14 +1,9 @@
 package com.group6.nhms.controller.web;
 
-import com.group6.nhms.entity.Resident;
-import com.group6.nhms.enums.BedStatus;
-import com.group6.nhms.enums.IncidentStatus;
-import com.group6.nhms.enums.ResidentStatus;
-import com.group6.nhms.repository.BedRepository;
-import com.group6.nhms.repository.IncidentReportRepository;
-import com.group6.nhms.repository.ResidentRepository;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
+import com.group6.nhms.dto.response.ResidentResponse;
+import com.group6.nhms.service.BedService;
+import com.group6.nhms.service.IncidentReportService;
+import com.group6.nhms.service.ResidentService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,42 +13,38 @@ import java.util.List;
 @Controller
 public class HomeController {
 
-    private final ResidentRepository residentRepository;
-    private final BedRepository bedRepository;
-    private final IncidentReportRepository incidentReportRepository;
+    private final ResidentService residentService;
+    private final BedService bedService;
+    private final IncidentReportService incidentReportService;
 
     public HomeController(
-            ResidentRepository residentRepository,
-            BedRepository bedRepository,
-            IncidentReportRepository incidentReportRepository
+            ResidentService residentService,
+            BedService bedService,
+            IncidentReportService incidentReportService
     ) {
-        this.residentRepository = residentRepository;
-        this.bedRepository = bedRepository;
-        this.incidentReportRepository = incidentReportRepository;
+        this.residentService = residentService;
+        this.bedService = bedService;
+        this.incidentReportService = incidentReportService;
     }
 
     @GetMapping("/")
     public String index(Model model) {
-        long totalResidents = residentRepository.countByStatus(ResidentStatus.ACTIVE.name());
-        long totalBeds = bedRepository.count();
-        long occupiedBeds = bedRepository.countByStatus(BedStatus.OCCUPIED.name());
-        long availableBeds = bedRepository.countByStatus(BedStatus.AVAILABLE.name());
-        long maintenanceBeds = bedRepository.countByStatus(BedStatus.MAINTENANCE.name());
-        long pendingIncidents = incidentReportRepository.countByStatus(IncidentStatus.PENDING.name());
+        long totalResidents = residentService.countActiveResidents();
+        long totalBeds = bedService.countTotalBeds();
+        long occupiedBeds = bedService.countOccupiedBeds();
+        long availableBeds = bedService.countAvailableBeds();
+        long maintenanceBeds = bedService.countMaintenanceBeds();
+        long pendingIncidents = incidentReportService.countPendingIncidents();
+        double occupancyRate = bedService.getOccupancyRate();
 
-        double occupancyRate = totalBeds > 0 ? ((double) occupiedBeds / totalBeds) * 100.0 : 0.0;
-        double roundedRate = Math.round(occupancyRate * 10.0) / 10.0;
-
-        List<Resident> recentResidents = residentRepository.findAll(
-                PageRequest.of(0, 5, Sort.by(Sort.Direction.DESC, "admissionDate", "id"))
-        ).getContent();
+        List<ResidentResponse> recentResidents = residentService.getRecentResidents(5);
 
         model.addAttribute("totalResidents", totalResidents);
         model.addAttribute("totalBeds", totalBeds);
         model.addAttribute("occupiedBeds", occupiedBeds);
         model.addAttribute("availableBeds", availableBeds);
         model.addAttribute("maintenanceBeds", maintenanceBeds);
-        model.addAttribute("occupancyRate", roundedRate);
+        model.addAttribute("occupancyRate", occupancyRate);
         model.addAttribute("pendingIncidents", pendingIncidents);
         model.addAttribute("recentResidents", recentResidents);
         model.addAttribute("activeMenu", "dashboard");

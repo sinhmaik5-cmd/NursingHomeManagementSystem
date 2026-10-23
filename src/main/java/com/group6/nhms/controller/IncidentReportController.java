@@ -2,17 +2,12 @@ package com.group6.nhms.controller;
 
 import com.group6.nhms.dto.request.IncidentReportCreateRequest;
 import com.group6.nhms.dto.response.IncidentReportResponse;
-import com.group6.nhms.enums.SeverityLevel;
-import com.group6.nhms.repository.IncidentReportRepository;
 import com.group6.nhms.service.IncidentReportService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -21,14 +16,9 @@ import java.util.Map;
 public class IncidentReportController {
 
     private final IncidentReportService incidentReportService;
-    private final IncidentReportRepository incidentReportRepository;
 
-    public IncidentReportController(
-            IncidentReportService incidentReportService,
-            IncidentReportRepository incidentReportRepository
-    ) {
+    public IncidentReportController(IncidentReportService incidentReportService) {
         this.incidentReportService = incidentReportService;
-        this.incidentReportRepository = incidentReportRepository;
     }
 
     // 1. Nhân viên ghi nhận sự cố mới
@@ -71,17 +61,7 @@ public class IncidentReportController {
     // 5. Thống kê sự cố trong 30 ngày gần nhất theo mức độ nghiêm trọng (Dashboard Admin)
     @GetMapping("/statistics/monthly")
     public ResponseEntity<Map<String, Long>> getMonthlyIncidentStats() {
-        Instant endDate = Instant.now();
-        Instant startDate = endDate.minus(30, ChronoUnit.DAYS);
-
-        Map<String, Long> stats = new HashMap<>();
-        for (SeverityLevel level : SeverityLevel.values()) {
-            long count = incidentReportRepository.countBySeverityLevelAndIncidentTimeBetween(
-                    level.name(), startDate, endDate
-            );
-            stats.put(level.name(), count);
-        }
-
+        Map<String, Long> stats = incidentReportService.getMonthlyIncidentStats();
         return ResponseEntity.ok(stats);
     }
 }

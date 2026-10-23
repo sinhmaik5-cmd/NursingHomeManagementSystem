@@ -12,4 +12,6 @@ public interface TaskScheduleService {
     List<TaskScheduleResponse> getStaffSchedule(Integer staffId, LocalDate date);
 
     TaskScheduleResponse completeSchedule(Integer scheduleId, Integer loggedInStaffId);
+
+    List<TaskScheduleResponse> getSchedulesByDate(LocalDate date);
 }
