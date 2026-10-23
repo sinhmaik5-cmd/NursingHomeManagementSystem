@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đăng nhập - Hệ Thống Quản Lý Viện Dưỡng Lão</title>
+    <!-- Bootstrap 5 CSS -->
+    <link rel="stylesheet" th:href="@{/css/bootstrap.min.css}">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+    <style>
+        body.login-page {
+            background: linear-gradient(135deg, #f0fdf4 0%, #e0f2fe 50%, #f1f5f9 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+        }
+        .login-card {
+            max-width: 460px;
+            width: 100%;
+            background: #ffffff;
+            border-radius: 20px;
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+            overflow: hidden;
+        }
+        .login-header {
+            background: linear-gradient(135deg, #0284c7 0%, #0d9488 100%);
+            color: #ffffff;
+            padding: 2.25rem 2rem;
+            text-align: center;
+            position: relative;
+        }
+        .login-logo-circle {
+            width: 64px;
+            height: 64px;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(8px);
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            margin-bottom: 0.85rem;
+        }
+        .login-body {
+            padding: 2.25rem 2rem;
+        }
+        .demo-pill {
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.78rem;
+        }
+        .demo-pill:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body class="login-page">
+
+<div class="login-card">
+    <!-- Header with Branding -->
+    <div class="login-header">
+        <div class="login-logo-circle">
+            <i class="bi bi-heart-pulse-fill"></i>
+        </div>
+        <h3 class="fw-bold mb-1">NHMS Care</h3>
+        <p class="mb-0 text-white-50 small">Hệ Thống Quản Lý Viện Dưỡng Lão Toàn Diện</p>
+    </div>
+
+    <!-- Body -->
+    <div class="login-body">
+        <!-- Error Alert -->
+        <div th:if="${param.error}" class="alert alert-danger alert-dismissible fade show d-flex align-items-center mb-3" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+            <div class="small">Tên đăng nhập hoặc mật khẩu không chính xác!</div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+
+        <!-- Logout Alert -->
+        <div th:if="${param.logout}" class="alert alert-success alert-dismissible fade show d-flex align-items-center mb-3" role="alert">
+            <i class="bi bi-check-circle-fill me-2 fs-5"></i>
+            <div class="small">Bạn đã đăng xuất thành công khỏi hệ thống.</div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+
+        <!-- Login Form -->
+        <form th:action="@{/login}" method="post" id="loginForm">
+            <div class="mb-3">
+                <label for="usernameInput" class="form-label small fw-semibold text-muted">Tên đăng nhập</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0 text-muted"><i class="bi bi-person"></i></span>
+                    <input type="text" class="form-control border-start-0 ps-0" id="usernameInput" name="username" placeholder="Nhập username của bạn" required autofocus>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <label for="passwordInput" class="form-label small fw-semibold text-muted mb-0">Mật khẩu</label>
+                </div>
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0 text-muted"><i class="bi bi-lock"></i></span>
+                    <input type="password" class="form-control border-start-0 ps-0" id="passwordInput" name="password" placeholder="Nhập mật khẩu" required>
+                    <button class="btn btn-outline-light text-muted border border-start-0" type="button" id="togglePasswordBtn">
+                        <i class="bi bi-eye" id="toggleIcon"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="rememberMe" name="remember-me">
+                    <label class="form-check-label small text-muted" for="rememberMe">
+                        Ghi nhớ đăng nhập
+                    </label>
+                </div>
+                <span class="text-muted small">Cần hỗ trợ? Gọi 1900-NHMS</span>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold shadow-sm mb-3">
+                <i class="bi bi-box-arrow-in-right me-1"></i> Đăng nhập hệ thống
+            </button>
+        </form>
+
+        <!-- Quick Fill Helper for Testing Roles -->
+        <div class="pt-3 border-top mt-3">
+            <div class="small fw-semibold text-muted mb-2 text-center">
+                <i class="bi bi-lightning-charge-fill text-warning me-1"></i>Chọn nhanh tài khoản thử nghiệm:
+            </div>
+            <div class="d-flex flex-wrap gap-1 justify-content-center">
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle demo-pill py-1 px-2" onclick="quickFill('manager', '123456')">
+                    <i class="bi bi-person-gear"></i> Manager
+                </span>
+                <span class="badge bg-success-subtle text-success border border-success-subtle demo-pill py-1 px-2" onclick="quickFill('doctor', '123456')">
+                    <i class="bi bi-heart-pulse"></i> Doctor
+                </span>
+                <span class="badge bg-info-subtle text-info border border-info-subtle demo-pill py-1 px-2" onclick="quickFill('nurse', '123456')">
+                    <i class="bi bi-activity"></i> Nurse
+                </span>
+                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle demo-pill py-1 px-2" onclick="quickFill('accountant', '123456')">
+                    <i class="bi bi-cash-stack"></i> Accountant
+                </span>
+                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle demo-pill py-1 px-2" onclick="quickFill('relative', '123456')">
+                    <i class="bi bi-people"></i> Relative
+                </span>
+                <span class="badge bg-dark-subtle text-dark border border-dark-subtle demo-pill py-1 px-2" onclick="quickFill('admin', '123456')">
+                    <i class="bi bi-shield-lock"></i> Admin
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bootstrap 5 Bundle JS -->
+<script th:src="@{/js/bootstrap.bundle.min.js}"></script>
+<script>
+    function quickFill(user, pass) {
+        document.getElementById('usernameInput').value = user;
+        document.getElementById('passwordInput').value = pass;
+    }
+
+    const toggleBtn = document.getElementById('togglePasswordBtn');
+    const pwdInput = document.getElementById('passwordInput');
+    const toggleIcon = document.getElementById('toggleIcon');
+    if (toggleBtn && pwdInput) {
+        toggleBtn.addEventListener('click', function () {
+            if (pwdInput.type === 'password') {
+                pwdInput.type = 'text';
+                toggleIcon.classList.replace('bi-eye', 'bi-eye-slash');
+            } else {
+                pwdInput.type = 'password';
+                toggleIcon.classList.replace('bi-eye-slash', 'bi-eye');
+            }
+        });
+    }
+</script>
+</body>
+</html>

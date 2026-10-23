@@ -56,7 +56,7 @@ public class SecurityConfig {
 
                 // Cấu hình Form Login sử dụng Session (phù hợp cho Thymeleaf)
                 .formLogin(form -> form
-                        // .loginPage("/login") // Mở dòng này khi team đã hoàn thiện trang templates/login.html
+                        .loginPage("/login")
                         .defaultSuccessUrl("/", true)
                         .permitAll()
                 )
