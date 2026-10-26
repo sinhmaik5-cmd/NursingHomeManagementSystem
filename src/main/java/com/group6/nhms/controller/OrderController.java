@@ -1,7 +1,6 @@
 package com.group6.nhms.controller;
 
 import com.group6.nhms.dto.response.OrderResponse;
-import com.group6.nhms.repository.OrderRepository;
 import com.group6.nhms.service.OrderService;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
@@ -19,11 +18,9 @@ import java.util.Map;
 public class OrderController {
 
     private final OrderService orderService;
-    private final OrderRepository orderRepository;
 
-    public OrderController(OrderService orderService, OrderRepository orderRepository) {
+    public OrderController(OrderService orderService) {
         this.orderService = orderService;
-        this.orderRepository = orderRepository;
     }
 
     // 1. Lấy danh sách hóa đơn theo cư dân (cho Kế toán & Cổng thông tin người thân)
@@ -81,7 +78,7 @@ public class OrderController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
     ) {
-        BigDecimal totalRevenue = orderRepository.sumRevenueBetweenDates(startDate, endDate);
+        BigDecimal totalRevenue = orderService.getRevenueBetweenDates(startDate, endDate);
         Map<String, Object> result = new HashMap<>();
         result.put("startDate", startDate);
         result.put("endDate", endDate);

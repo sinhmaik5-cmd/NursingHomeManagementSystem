@@ -16,4 +16,15 @@ public interface ResidentService {
 
     void checkOut(Integer residentId, String finalStatus);
 
+    List<ResidentResponse> getAllResidents(String name, String status);
+
+    ResidentResponse getResidentById(Integer id);
+
+    List<ResidentResponse> getResidentsByRelative(Integer relativeId);
+
+    long countActiveResidents();
+
+    List<ResidentResponse> getRecentResidents(int limit);
+
+    ResidentResponse getResidentByBedId(Integer bedId);
 }

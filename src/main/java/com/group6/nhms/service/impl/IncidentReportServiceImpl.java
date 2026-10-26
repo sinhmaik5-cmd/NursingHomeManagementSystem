@@ -14,11 +14,15 @@ import com.group6.nhms.repository.IncidentReportRepository;
 import com.group6.nhms.repository.ResidentRepository;
 import com.group6.nhms.repository.StaffRepository;
 import com.group6.nhms.service.IncidentReportService;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class IncidentReportServiceImpl implements IncidentReportService {
@@ -60,12 +64,11 @@ public class IncidentReportServiceImpl implements IncidentReportService {
         incident.setResident(resident);
         incident.setReporterStaff(reporter);
         incident.setIncidentTime(Instant.now());
+        String description = request.getDescription() != null ? request.getDescription().trim() : "";
+        String title = request.getTitle() != null ? request.getTitle().trim() : "";
+        incident.setDescription(title.isEmpty() ? description : "[" + title + "] " + description);
         incident.setSeverityLevel(severity);
         incident.setStatus(IncidentStatus.PENDING.name());
-
-        String description = request.getDescription().trim();
-        String title = request.getTitle().trim();
-        incident.setDescription("[" + title + "] " + description);
 
         IncidentReport saved = incidentReportRepository.save(incident);
         return incidentReportMapper.toResponse(saved);
@@ -74,11 +77,9 @@ public class IncidentReportServiceImpl implements IncidentReportService {
     @Override
     @Transactional(readOnly = true)
     public List<IncidentReportResponse> getPendingIncidents() {
-        return incidentReportRepository
-                .findByStatusOrderByIncidentTimeDesc(IncidentStatus.PENDING.name())
-                .stream()
-                .map(incidentReportMapper::toResponse)
-                .toList();
+        return incidentReportRepository.findByStatusOrderByIncidentTimeDesc(
+                IncidentStatus.PENDING.name()
+        ).stream().map(incidentReportMapper::toResponse).toList();
     }
 
     @Override
@@ -91,10 +92,10 @@ public class IncidentReportServiceImpl implements IncidentReportService {
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Không tìm thấy cư dân ID " + residentId));
 
-        if (relativeId == null
-                || resident.getRelative() == null
-                || !relativeId.equals(resident.getRelative().getId())) {
-            throw new BadRequestException("Bạn không có quyền xem sự cố của cư dân này");
+        if (relativeId != null) {
+            if (resident.getRelative() == null || !relativeId.equals(resident.getRelative().getId())) {
+                throw new BadRequestException("Bạn không có quyền xem thông tin sự cố của cư dân này");
+            }
         }
 
         return incidentReportRepository.findByResidentId(residentId)
@@ -122,6 +123,46 @@ public class IncidentReportServiceImpl implements IncidentReportService {
         incident.setStatus(IncidentStatus.RESOLVED.name());
 
         return incidentReportMapper.toResponse(incidentReportRepository.save(incident));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<IncidentReportResponse> getAllIncidents(String status) {
+        if ("PENDING".equalsIgnoreCase(status)) {
+            return getPendingIncidents();
+        } else if ("RESOLVED".equalsIgnoreCase(status)) {
+            return incidentReportRepository.findByStatus("RESOLVED")
+                    .stream()
+                    .map(incidentReportMapper::toResponse)
+                    .toList();
+        } else {
+            return incidentReportRepository.findAll(Sort.by(Sort.Direction.DESC, "incidentTime", "id"))
+                    .stream()
+                    .map(incidentReportMapper::toResponse)
+                    .toList();
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public long countPendingIncidents() {
+        return incidentReportRepository.countByStatus(IncidentStatus.PENDING.name());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Long> getMonthlyIncidentStats() {
+        Instant endDate = Instant.now();
+        Instant startDate = endDate.minus(30, ChronoUnit.DAYS);
+
+        Map<String, Long> stats = new HashMap<>();
+        for (SeverityLevel level : SeverityLevel.values()) {
+            long count = incidentReportRepository.countBySeverityLevelAndIncidentTimeBetween(
+                    level.name(), startDate, endDate
+            );
+            stats.put(level.name(), count);
+        }
+        return stats;
     }
 
     private String normalizeSeverity(String value) {

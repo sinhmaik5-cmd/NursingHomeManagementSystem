@@ -2,15 +2,8 @@ package com.group6.nhms.controller.web;
 
 import com.group6.nhms.dto.response.OrderResponse;
 import com.group6.nhms.dto.response.ResidentResponse;
-import com.group6.nhms.entity.Order;
-import com.group6.nhms.enums.PaymentStatus;
-import com.group6.nhms.enums.ResidentStatus;
-import com.group6.nhms.mapper.OrderMapper;
-import com.group6.nhms.mapper.ResidentMapper;
-import com.group6.nhms.repository.OrderRepository;
-import com.group6.nhms.repository.ResidentRepository;
 import com.group6.nhms.service.OrderService;
-import org.springframework.data.domain.Sort;
+import com.group6.nhms.service.ResidentService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -25,23 +18,14 @@ import java.util.List;
 public class WebBillingController {
 
     private final OrderService orderService;
-    private final OrderRepository orderRepository;
-    private final ResidentRepository residentRepository;
-    private final OrderMapper orderMapper;
-    private final ResidentMapper residentMapper;
+    private final ResidentService residentService;
 
     public WebBillingController(
             OrderService orderService,
-            OrderRepository orderRepository,
-            ResidentRepository residentRepository,
-            OrderMapper orderMapper,
-            ResidentMapper residentMapper
+            ResidentService residentService
     ) {
         this.orderService = orderService;
-        this.orderRepository = orderRepository;
-        this.residentRepository = residentRepository;
-        this.orderMapper = orderMapper;
-        this.residentMapper = residentMapper;
+        this.residentService = residentService;
     }
 
     // 1. Bảng chốt hóa đơn hàng tháng
@@ -50,30 +34,12 @@ public class WebBillingController {
             @RequestParam(required = false) String status,
             Model model
     ) {
-        List<Order> ordersList;
-        if (status != null && !status.trim().isEmpty()) {
-            ordersList = orderRepository.findByPaymentStatus(status.trim().toUpperCase());
-        } else {
-            ordersList = orderRepository.findAll(Sort.by(Sort.Direction.DESC, "issueDate", "id"));
-        }
+        List<OrderResponse> orders = orderService.getAllOrders(status);
+        List<ResidentResponse> activeResidents = residentService.getAllResidents(null, "ACTIVE");
 
-        List<OrderResponse> orders = ordersList.stream()
-                .map(orderMapper::toResponse)
-                .toList();
-
-        List<ResidentResponse> activeResidents = residentRepository.findByStatus(ResidentStatus.ACTIVE.name())
-                .stream()
-                .map(residentMapper::toResponse)
-                .toList();
-
-        long unpaidCount = orderRepository.countByPaymentStatus(PaymentStatus.PENDING.name());
-        long paidCount = orderRepository.countByPaymentStatus(PaymentStatus.PAID.name());
-
-        BigDecimal totalCollected = ordersList.stream()
-                .filter(o -> PaymentStatus.PAID.name().equalsIgnoreCase(o.getPaymentStatus()))
-                .map(Order::getTotalAmount)
-                .filter(a -> a != null)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        long unpaidCount = orderService.countUnpaidOrders();
+        long paidCount = orderService.countPaidOrders();
+        BigDecimal totalCollected = orderService.getTotalCollectedRevenue();
 
         LocalDate now = LocalDate.now();
 
@@ -115,9 +81,10 @@ public class WebBillingController {
         OrderResponse order = orderService.getOrderById(id);
         ResidentResponse resident = null;
         if (order.getResidentId() != null) {
-            resident = residentRepository.findById(order.getResidentId())
-                    .map(residentMapper::toResponse)
-                    .orElse(null);
+            try {
+                resident = residentService.getResidentById(order.getResidentId());
+            } catch (Exception ignored) {
+            }
         }
 
         model.addAttribute("order", order);

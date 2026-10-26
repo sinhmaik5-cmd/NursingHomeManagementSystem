@@ -2,6 +2,7 @@ package com.group6.nhms.service;
 
 import com.group6.nhms.dto.request.HealthRecordCreateRequest;
 import com.group6.nhms.dto.response.HealthRecordResponse;
+import com.group6.nhms.dto.response.MedicationResponse;
 
 import java.util.List;
 
@@ -17,4 +18,8 @@ public interface HealthRecordService {
     HealthRecordResponse getRecordById(Integer id);
 
     void cancelHealthRecord(Integer recordId);
+
+    List<MedicationResponse> getAvailableMedications();
+
+    List<MedicationResponse> getLowStockMedications();
 }

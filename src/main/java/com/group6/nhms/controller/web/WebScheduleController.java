@@ -1,15 +1,12 @@
 package com.group6.nhms.controller.web;
 
 import com.group6.nhms.dto.request.TaskScheduleCreateRequest;
+import com.group6.nhms.dto.response.RoomResponse;
+import com.group6.nhms.dto.response.StaffResponse;
 import com.group6.nhms.dto.response.TaskScheduleResponse;
-import com.group6.nhms.entity.Account;
-import com.group6.nhms.entity.Room;
 import com.group6.nhms.entity.Staff;
-import com.group6.nhms.entity.TaskSchedule;
-import com.group6.nhms.repository.AccountRepository;
-import com.group6.nhms.repository.RoomRepository;
-import com.group6.nhms.repository.StaffRepository;
-import com.group6.nhms.repository.TaskScheduleRepository;
+import com.group6.nhms.service.RoomService;
+import com.group6.nhms.service.StaffService;
 import com.group6.nhms.service.TaskScheduleService;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.core.Authentication;
@@ -26,23 +23,17 @@ import java.util.List;
 public class WebScheduleController {
 
     private final TaskScheduleService taskScheduleService;
-    private final TaskScheduleRepository taskScheduleRepository;
-    private final StaffRepository staffRepository;
-    private final RoomRepository roomRepository;
-    private final AccountRepository accountRepository;
+    private final StaffService staffService;
+    private final RoomService roomService;
 
     public WebScheduleController(
             TaskScheduleService taskScheduleService,
-            TaskScheduleRepository taskScheduleRepository,
-            StaffRepository staffRepository,
-            RoomRepository roomRepository,
-            AccountRepository accountRepository
+            StaffService staffService,
+            RoomService roomService
     ) {
         this.taskScheduleService = taskScheduleService;
-        this.taskScheduleRepository = taskScheduleRepository;
-        this.staffRepository = staffRepository;
-        this.roomRepository = roomRepository;
-        this.accountRepository = accountRepository;
+        this.staffService = staffService;
+        this.roomService = roomService;
     }
 
     // 1. Giao diện phân công ca trực (Manager & Admin)
@@ -52,9 +43,9 @@ public class WebScheduleController {
             Model model
     ) {
         LocalDate targetDate = (filterDate != null) ? filterDate : LocalDate.now();
-        List<Staff> staffList = staffRepository.findAll();
-        List<Room> rooms = roomRepository.findAll();
-        List<TaskSchedule> schedules = taskScheduleRepository.findByShiftDate(targetDate);
+        List<StaffResponse> staffList = staffService.getAllStaff();
+        List<RoomResponse> rooms = roomService.getAllRooms();
+        List<TaskScheduleResponse> schedules = taskScheduleService.getSchedulesByDate(targetDate);
 
         TaskScheduleCreateRequest createRequest = new TaskScheduleCreateRequest();
         createRequest.setWorkDate(targetDate);
@@ -95,7 +86,7 @@ public class WebScheduleController {
             Model model
     ) {
         LocalDate targetDate = (date != null) ? date : LocalDate.now();
-        Staff currentStaff = resolveCurrentStaff(authentication);
+        Staff currentStaff = staffService.resolveCurrentStaff(authentication);
 
         List<TaskScheduleResponse> schedules = List.of();
         if (currentStaff != null) {
@@ -118,22 +109,12 @@ public class WebScheduleController {
             RedirectAttributes redirectAttributes
     ) {
         try {
-            Staff currentStaff = resolveCurrentStaff(authentication);
-            Integer staffId = (currentStaff != null) ? currentStaff.getId() : 1;
+            Integer staffId = staffService.resolveCurrentStaffId(authentication);
             taskScheduleService.completeSchedule(id, staffId);
             redirectAttributes.addFlashAttribute("successMessage", "Xác nhận hoàn thành ca trực thành công!");
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage", "Lỗi xác nhận hoàn thành: " + e.getMessage());
         }
         return "redirect:/schedules/my-schedule";
-    }
-
-    private Staff resolveCurrentStaff(Authentication authentication) {
-        if (authentication == null) return staffRepository.findAll().stream().findFirst().orElse(null);
-
-        return accountRepository.findByUsername(authentication.getName())
-                .filter(a -> a.getReferenceId() != null)
-                .flatMap(a -> staffRepository.findById(a.getReferenceId()))
-                .orElseGet(() -> staffRepository.findAll().stream().findFirst().orElse(null));
     }
 }

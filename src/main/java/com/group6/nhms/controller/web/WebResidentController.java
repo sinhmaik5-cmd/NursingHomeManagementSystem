@@ -5,11 +5,8 @@ import com.group6.nhms.dto.request.ResidentCheckInRequest;
 import com.group6.nhms.dto.response.BedResponse;
 import com.group6.nhms.dto.response.ResidentResponse;
 import com.group6.nhms.entity.Relative;
-import com.group6.nhms.entity.Resident;
-import com.group6.nhms.mapper.ResidentMapper;
-import com.group6.nhms.repository.RelativeRepository;
-import com.group6.nhms.repository.ResidentRepository;
 import com.group6.nhms.service.BedService;
+import com.group6.nhms.service.RelativeService;
 import com.group6.nhms.service.ResidentService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -23,23 +20,17 @@ import java.util.List;
 public class WebResidentController {
 
     private final ResidentService residentService;
-    private final ResidentRepository residentRepository;
-    private final RelativeRepository relativeRepository;
     private final BedService bedService;
-    private final ResidentMapper residentMapper;
+    private final RelativeService relativeService;
 
     public WebResidentController(
             ResidentService residentService,
-            ResidentRepository residentRepository,
-            RelativeRepository relativeRepository,
             BedService bedService,
-            ResidentMapper residentMapper
+            RelativeService relativeService
     ) {
         this.residentService = residentService;
-        this.residentRepository = residentRepository;
-        this.relativeRepository = relativeRepository;
         this.bedService = bedService;
-        this.residentMapper = residentMapper;
+        this.relativeService = relativeService;
     }
 
     // 1. Danh sách cư dân
@@ -49,22 +40,10 @@ public class WebResidentController {
             @RequestParam(required = false) String status,
             Model model
     ) {
-        List<Resident> residents;
-        if (name != null && !name.trim().isEmpty()) {
-            residents = residentRepository.findByFullNameContainingIgnoreCase(name.trim());
-        } else if (status != null && !status.trim().isEmpty()) {
-            residents = residentRepository.findByStatus(status.trim().toUpperCase());
-        } else {
-            residents = residentRepository.findAll();
-        }
-
-        List<ResidentResponse> responses = residents.stream()
-                .map(residentMapper::toResponse)
-                .toList();
-
+        List<ResidentResponse> residents = residentService.getAllResidents(name, status);
         List<BedResponse> availableBeds = bedService.getAvailableBeds();
 
-        model.addAttribute("residents", responses);
+        model.addAttribute("residents", residents);
         model.addAttribute("availableBeds", availableBeds);
         model.addAttribute("activeMenu", "resident-list");
         return "resident/list";
@@ -74,7 +53,7 @@ public class WebResidentController {
     @GetMapping("/check-in")
     public String showCheckInForm(Model model) {
         List<BedResponse> availableBeds = bedService.getAvailableBeds();
-        List<Relative> relatives = relativeRepository.findAll();
+        List<Relative> relatives = relativeService.getAllRelatives();
 
         model.addAttribute("checkInRequest", new ResidentCheckInRequest());
         model.addAttribute("availableBeds", availableBeds);

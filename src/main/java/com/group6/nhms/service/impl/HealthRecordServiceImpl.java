@@ -2,6 +2,7 @@ package com.group6.nhms.service.impl;
 
 import com.group6.nhms.dto.request.HealthRecordCreateRequest;
 import com.group6.nhms.dto.response.HealthRecordResponse;
+import com.group6.nhms.dto.response.MedicationResponse;
 import com.group6.nhms.entity.HealthRecord;
 import com.group6.nhms.entity.HealthRecordDetail;
 import com.group6.nhms.entity.Medication;
@@ -11,6 +12,7 @@ import com.group6.nhms.enums.ResidentStatus;
 import com.group6.nhms.exception.BadRequestException;
 import com.group6.nhms.exception.ResourceNotFoundException;
 import com.group6.nhms.mapper.HealthRecordMapper;
+import com.group6.nhms.mapper.MedicationMapper;
 import com.group6.nhms.repository.HealthRecordDetailRepository;
 import com.group6.nhms.repository.HealthRecordRepository;
 import com.group6.nhms.repository.MedicationRepository;
@@ -35,6 +37,7 @@ public class HealthRecordServiceImpl implements HealthRecordService {
     private final ResidentRepository residentRepository;
     private final StaffRepository staffRepository;
     private final HealthRecordMapper healthRecordMapper;
+    private final MedicationMapper medicationMapper;
 
     public HealthRecordServiceImpl(
             HealthRecordRepository healthRecordRepository,
@@ -42,7 +45,8 @@ public class HealthRecordServiceImpl implements HealthRecordService {
             MedicationRepository medicationRepository,
             ResidentRepository residentRepository,
             StaffRepository staffRepository,
-            HealthRecordMapper healthRecordMapper
+            HealthRecordMapper healthRecordMapper,
+            MedicationMapper medicationMapper
     ) {
         this.healthRecordRepository = healthRecordRepository;
         this.healthRecordDetailRepository = healthRecordDetailRepository;
@@ -50,6 +54,7 @@ public class HealthRecordServiceImpl implements HealthRecordService {
         this.residentRepository = residentRepository;
         this.staffRepository = staffRepository;
         this.healthRecordMapper = healthRecordMapper;
+        this.medicationMapper = medicationMapper;
     }
 
     @Override
@@ -59,83 +64,71 @@ public class HealthRecordServiceImpl implements HealthRecordService {
             Integer staffId
     ) {
         Resident resident = residentRepository.findById(request.getResidentId())
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Không tìm thấy cư dân ID " + request.getResidentId()));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy cư dân ID " + request.getResidentId()));
 
         if (!ResidentStatus.ACTIVE.name().equals(resident.getStatus())) {
-            throw new BadRequestException(
-                    "Chỉ có thể tạo hồ sơ khám cho cư dân đang lưu trú");
+            throw new BadRequestException("Cư dân không ở trạng thái lưu trú");
         }
 
         Staff staff = staffRepository.findById(staffId)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("Không tìm thấy nhân viên ID " + staffId));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy nhân viên/bác sĩ ID " + staffId));
 
-        HealthRecord healthRecord = new HealthRecord();
-        healthRecord.setResident(resident);
-        healthRecord.setStaff(staff);
-        healthRecord.setRecordDate(Instant.now());
-        healthRecord.setBloodPressure(request.getBloodPressure());
-        healthRecord.setHeartRate(request.getHeartRate());
-        healthRecord.setTemperature(request.getTemperature());
-        healthRecord.setBloodSugar(request.getBloodSugar());
-        healthRecord.setNotes(request.getNotes());
+        HealthRecord record = new HealthRecord();
+        record.setResident(resident);
+        record.setStaff(staff);
+        record.setRecordDate(Instant.now());
+        record.setBloodPressure(request.getBloodPressure());
+        record.setHeartRate(request.getHeartRate());
+        record.setBloodSugar(request.getBloodSugar());
+        record.setTemperature(request.getTemperature());
+        String notes = request.getNotes();
+        if (request.getDiagnosis() != null && !request.getDiagnosis().isBlank()) {
+            notes = (notes == null || notes.isBlank()) ? request.getDiagnosis() : request.getDiagnosis() + " - " + notes;
+        }
+        record.setNotes(notes);
 
-        HealthRecord savedRecord = healthRecordRepository.save(healthRecord);
-
+        HealthRecord savedRecord = healthRecordRepository.save(record);
         List<HealthRecordDetail> savedDetails = new ArrayList<>();
 
-        if (request.getMedications() != null) {
+        if (request.getMedications() != null && !request.getMedications().isEmpty()) {
             for (HealthRecordCreateRequest.MedicationItemRequest item : request.getMedications()) {
-                if (item.getQuantityRequested() == null || item.getQuantityRequested() <= 0) {
+                if (item.getMedicationId() == null) continue;
+
+                Medication medication = medicationRepository.findByIdForUpdate(item.getMedicationId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thuốc ID " + item.getMedicationId()));
+
+                if (medication.getExpiryDate() != null && medication.getExpiryDate().isBefore(LocalDate.now())) {
+                    throw new BadRequestException("Thuốc '" + medication.getMedName() + "' đã hết hạn sử dụng");
+                }
+
+                int requestedQty = item.getQuantityRequested() != null ? item.getQuantityRequested() : 0;
+                if (requestedQty <= 0) {
                     throw new BadRequestException("Số lượng thuốc phải lớn hơn 0");
                 }
 
-                Medication medication = medicationRepository
-                        .findByIdForUpdate(item.getMedicationId())
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "Không tìm thấy thuốc ID " + item.getMedicationId()));
-
-                // 1. Nghiệp vụ: Chặn kê đơn nếu thuốc đã hết hạn (hạn dùng <= ngày hiện tại)
-                if (medication.getExpiryDate() != null && !medication.getExpiryDate().isAfter(LocalDate.now())) {
-                    throw new BadRequestException("Thuốc " + medication.getMedName()
-                            + " đã hết hạn sử dụng (" + medication.getExpiryDate() + "), không thể kê đơn");
+                if (medication.getQuantityInStock() < requestedQty) {
+                    throw new BadRequestException("Thuốc '" + medication.getMedName() + "' không đủ số lượng trong kho (Còn: "
+                            + medication.getQuantityInStock() + ", Yêu cầu: " + requestedQty + ")");
                 }
 
-                Integer stock = medication.getQuantityInStock();
-
-                // 2. Kiểm tra tồn kho
-                if (stock == null || stock < item.getQuantityRequested()) {
-                    throw new BadRequestException("Thuốc " + medication.getMedName()
-                            + " trong kho không đủ (còn " + (stock == null ? 0 : stock)
-                            + ", yêu cầu " + item.getQuantityRequested() + ")");
-                }
-
-                // 3. Trừ kho tự động
-                medication.setQuantityInStock(stock - item.getQuantityRequested());
-
-                // 4. Lưu vết đơn giá và thành tiền để tính phí cuối tháng
-                BigDecimal unitPrice = (medication.getUnitPrice() != null) ? medication.getUnitPrice() : BigDecimal.ZERO;
-                BigDecimal totalPrice = unitPrice.multiply(BigDecimal.valueOf(item.getQuantityRequested()));
+                medication.setQuantityInStock(medication.getQuantityInStock() - requestedQty);
+                medicationRepository.save(medication);
 
                 HealthRecordDetail detail = new HealthRecordDetail();
                 detail.setHealthRecord(savedRecord);
                 detail.setMedication(medication);
-                detail.setQuantity(item.getQuantityRequested());
+                detail.setQuantity(requestedQty);
                 detail.setDosage(item.getDosage());
-                detail.setUnitPrice(unitPrice);
-                detail.setTotalPrice(totalPrice);
+                detail.setUnitPrice(medication.getUnitPrice());
 
-                savedDetails.add(detail);
+                BigDecimal total = medication.getUnitPrice().multiply(BigDecimal.valueOf(requestedQty));
+                detail.setTotalPrice(total);
+
+                savedDetails.add(healthRecordDetailRepository.save(detail));
             }
         }
 
-        List<HealthRecordDetail> persistedDetails =
-                healthRecordDetailRepository.saveAll(savedDetails);
-
-        return buildRecordResponse(savedRecord, persistedDetails);
+        return buildRecordResponse(savedRecord, savedDetails);
     }
 
     @Override
@@ -143,10 +136,12 @@ public class HealthRecordServiceImpl implements HealthRecordService {
     public List<HealthRecordResponse> getRecordsByResident(Integer residentId) {
         List<HealthRecord> records = healthRecordRepository.findByResidentIdOrderByRecordDateDesc(residentId);
         List<HealthRecordResponse> responses = new ArrayList<>();
+
         for (HealthRecord record : records) {
             List<HealthRecordDetail> details = healthRecordDetailRepository.findByHealthRecordId(record.getId());
             responses.add(buildRecordResponse(record, details));
         }
+
         return responses;
     }
 
@@ -155,6 +150,7 @@ public class HealthRecordServiceImpl implements HealthRecordService {
     public HealthRecordResponse getRecordById(Integer id) {
         HealthRecord record = healthRecordRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy hồ sơ sức khỏe ID " + id));
+
         List<HealthRecordDetail> details = healthRecordDetailRepository.findByHealthRecordId(record.getId());
         return buildRecordResponse(record, details);
     }
@@ -163,25 +159,38 @@ public class HealthRecordServiceImpl implements HealthRecordService {
     @Transactional
     public void cancelHealthRecord(Integer recordId) {
         HealthRecord record = healthRecordRepository.findById(recordId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy hồ sơ sức khỏe ID " + recordId));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy hồ sơ khám ID " + recordId));
 
-        // Nghiệp vụ: Hoàn kho (Rollback) toàn bộ thuốc đã kê khi hủy đơn thuốc / phiếu khám
         List<HealthRecordDetail> details = healthRecordDetailRepository.findByHealthRecordId(recordId);
+
         for (HealthRecordDetail detail : details) {
-            if (detail.getMedication() != null && detail.getQuantity() != null) {
-                Medication medication = medicationRepository.findByIdForUpdate(detail.getMedication().getId())
-                        .orElse(null);
-                if (medication != null) {
-                    int currentStock = (medication.getQuantityInStock() != null) ? medication.getQuantityInStock() : 0;
-                    medication.setQuantityInStock(currentStock + detail.getQuantity());
-                    medicationRepository.save(medication);
-                }
-            }
+            Medication medication = medicationRepository.findByIdForUpdate(detail.getMedication().getId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thuốc ID " + detail.getMedication().getId()));
+
+            medication.setQuantityInStock(medication.getQuantityInStock() + detail.getQuantity());
+            medicationRepository.save(medication);
         }
 
-        // Xóa chi tiết và hồ sơ khám
         healthRecordDetailRepository.deleteAll(details);
         healthRecordRepository.delete(record);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<MedicationResponse> getAvailableMedications() {
+        return medicationRepository.findAvailableForPrescription(LocalDate.now())
+                .stream()
+                .map(medicationMapper::toResponse)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<MedicationResponse> getLowStockMedications() {
+        return medicationRepository.findByQuantityInStockLessThan(10)
+                .stream()
+                .map(medicationMapper::toResponse)
+                .toList();
     }
 
     private HealthRecordResponse buildRecordResponse(HealthRecord record, List<HealthRecordDetail> details) {

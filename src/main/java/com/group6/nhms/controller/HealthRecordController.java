@@ -3,15 +3,12 @@ package com.group6.nhms.controller;
 import com.group6.nhms.dto.request.HealthRecordCreateRequest;
 import com.group6.nhms.dto.response.HealthRecordResponse;
 import com.group6.nhms.dto.response.MedicationResponse;
-import com.group6.nhms.mapper.MedicationMapper;
-import com.group6.nhms.repository.MedicationRepository;
 import com.group6.nhms.service.HealthRecordService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -21,17 +18,9 @@ import java.util.Map;
 public class HealthRecordController {
 
     private final HealthRecordService healthRecordService;
-    private final MedicationRepository medicationRepository;
-    private final MedicationMapper medicationMapper;
 
-    public HealthRecordController(
-            HealthRecordService healthRecordService,
-            MedicationRepository medicationRepository,
-            MedicationMapper medicationMapper
-    ) {
+    public HealthRecordController(HealthRecordService healthRecordService) {
         this.healthRecordService = healthRecordService;
-        this.medicationRepository = medicationRepository;
-        this.medicationMapper = medicationMapper;
     }
 
     // 1. Bác sĩ/Điều dưỡng khám bệnh & Kê đơn thuốc tự động trừ kho
@@ -68,32 +57,12 @@ public class HealthRecordController {
     // 5. Danh sách thuốc còn hạn và còn tồn kho để Bác sĩ chọn kê đơn
     @GetMapping("/medications/available")
     public ResponseEntity<List<MedicationResponse>> getAvailableMedications() {
-        List<MedicationResponse> responses = medicationRepository.findAvailableForPrescription(LocalDate.now())
-                .stream()
-                .map(medicationMapper::toResponse)
-                .toList();
-        return ResponseEntity.ok(responses);
+        return ResponseEntity.ok(healthRecordService.getAvailableMedications());
     }
 
-    // 6. Cảnh báo dược phẩm: Danh sách thuốc sắp hết hạn (trong vòng 30 ngày)
-    @GetMapping("/medications/expiring-soon")
-    public ResponseEntity<List<MedicationResponse>> getExpiringMedications() {
-        LocalDate today = LocalDate.now();
-        LocalDate in30Days = today.plusDays(30);
-        List<MedicationResponse> responses = medicationRepository.findByExpiryDateBetween(today, in30Days)
-                .stream()
-                .map(medicationMapper::toResponse)
-                .toList();
-        return ResponseEntity.ok(responses);
-    }
-
-    // 7. Cảnh báo dược phẩm: Danh sách thuốc dưới ngưỡng an toàn (< 10)
+    // 6. Cảnh báo dược phẩm: Danh sách thuốc dưới ngưỡng an toàn (< 10)
     @GetMapping("/medications/low-stock")
     public ResponseEntity<List<MedicationResponse>> getLowStockMedications() {
-        List<MedicationResponse> responses = medicationRepository.findByQuantityInStockLessThan(10)
-                .stream()
-                .map(medicationMapper::toResponse)
-                .toList();
-        return ResponseEntity.ok(responses);
+        return ResponseEntity.ok(healthRecordService.getLowStockMedications());
     }
 }

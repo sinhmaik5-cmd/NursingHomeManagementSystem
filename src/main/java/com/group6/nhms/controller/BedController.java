@@ -3,8 +3,6 @@ package com.group6.nhms.controller;
 import com.group6.nhms.dto.request.BedCreateRequest;
 import com.group6.nhms.dto.request.BedStatusUpdateRequest;
 import com.group6.nhms.dto.response.BedResponse;
-import com.group6.nhms.enums.BedStatus;
-import com.group6.nhms.repository.BedRepository;
 import com.group6.nhms.service.BedService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -20,11 +18,9 @@ import java.util.Map;
 public class BedController {
 
     private final BedService bedService;
-    private final BedRepository bedRepository;
 
-    public BedController(BedService bedService, BedRepository bedRepository) {
+    public BedController(BedService bedService) {
         this.bedService = bedService;
-        this.bedRepository = bedRepository;
     }
 
     // 1. Lấy danh sách tất cả các giường trống (Status = 'AVAILABLE')
@@ -63,16 +59,13 @@ public class BedController {
     }
 
     // 6. Dashboard Thống kê Tỷ lệ Lấp đầy (Occupancy Rate)
-    // Công thức: Tỷ lệ lấp đầy (%) = (Số giường OCCUPIED / Tổng số giường) * 100
     @GetMapping("/occupancy-rate")
     public ResponseEntity<Map<String, Object>> getOccupancyRate() {
-        long totalBeds = bedRepository.count();
-        long occupiedBeds = bedRepository.countByStatus(BedStatus.OCCUPIED.name());
-        long availableBeds = bedRepository.countByStatus(BedStatus.AVAILABLE.name());
-        long maintenanceBeds = bedRepository.countByStatus(BedStatus.MAINTENANCE.name());
-
-        double rate = totalBeds > 0 ? ((double) occupiedBeds / totalBeds) * 100.0 : 0.0;
-        double roundedRate = Math.round(rate * 100.0) / 100.0;
+        long totalBeds = bedService.countTotalBeds();
+        long occupiedBeds = bedService.countOccupiedBeds();
+        long availableBeds = bedService.countAvailableBeds();
+        long maintenanceBeds = bedService.countMaintenanceBeds();
+        double roundedRate = bedService.getOccupancyRate();
 
         Map<String, Object> result = new HashMap<>();
         result.put("totalBeds", totalBeds);
