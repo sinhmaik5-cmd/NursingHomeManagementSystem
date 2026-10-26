@@ -16,9 +16,12 @@ public interface AccountRepository extends JpaRepository<Account, Integer> {
     // Kiểm tra xem username đã tồn tại chưa (khi tạo mới)
     boolean existsByUsername(String username);
 
-    // Tìm tài khoản theo referenceId và vai trò (phục vụ lấy thông tin đăng nhập của Staff/Relative)
+    // Tìm tài khoản theo referenceId và vai trò
     Optional<Account> findByReferenceIdAndRole(Integer referenceId, String role);
 
-    // Lọc danh sách tài khoản theo vai trò (ADMIN, DOCTOR, NURSE, MANAGER, ACCOUNTANT, RELATIVE)
+    // Tìm danh sách tài khoản theo referenceId (1 nhân sự có thể có alias)
+    List<Account> findByReferenceId(Integer referenceId);
+
+    // Lọc danh sách tài khoản theo vai trò
     List<Account> findByRole(String role);
 }

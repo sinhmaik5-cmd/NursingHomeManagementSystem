@@ -1,9 +1,9 @@
 package com.group6.nhms.config;
 
+import com.group6.nhms.security.CustomAuthenticationSuccessHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -18,24 +18,21 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableMethodSecurity
 public class SecurityConfig {
 
+    private final CustomAuthenticationSuccessHandler authenticationSuccessHandler;
+
+    public SecurityConfig(CustomAuthenticationSuccessHandler authenticationSuccessHandler) {
+        this.authenticationSuccessHandler = authenticationSuccessHandler;
+    }
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // Tắt CSRF để thuận tiện cho việc phát triển và gọi API
+                // Tắt CSRF để thuận tiện cho việc submit các form Thymeleaf
                 .csrf(AbstractHttpConfigurer::disable)
 
-                // Phân quyền đường dẫn
+                // Phân quyền đường dẫn Web MVC Thymeleaf theo vai trò nghiệp vụ
                 .authorizeHttpRequests(auth -> auth
-                        // 1. Cho phép truy cập Swagger UI & OpenAPI Documentation không cần đăng nhập
-                        .requestMatchers(
-                                "/swagger-ui/**",
-                                "/swagger-ui.html",
-                                "/v3/api-docs/**",
-                                "/swagger-resources/**",
-                                "/webjars/**"
-                        ).permitAll()
-
-                        // 2. Cho phép truy cập file tĩnh của giao diện (CSS, JS, Fonts, Images)
+                        // 1. Tài nguyên tĩnh giao diện (CSS, JS, Fonts, Images, Icons)
                         .requestMatchers(
                                 "/css/**",
                                 "/js/**",
@@ -44,30 +41,73 @@ public class SecurityConfig {
                                 "/favicon.ico"
                         ).permitAll()
 
-                        // 3. Cho phép truy cập các trang xác thực và trang lỗi
-                        .requestMatchers("/login", "/register", "/error").permitAll()
+                        // 2. Trang công khai không cần đăng nhập
+                        .requestMatchers("/login", "/register", "/error", "/403").permitAll()
 
-                        // 4. Cho phép gọi các REST API trong giai đoạn phát triển & test
-                        .requestMatchers("/api/**").permitAll()
+                        // 3. Phân hệ Quản trị Nhân sự & Phân ca trực: Dành riêng cho Giám đốc cơ sở
+                        .requestMatchers(
+                                "/management/**",
+                                "/schedules/assign"
+                        ).hasAnyRole("CENTER_MANAGER", "ADMIN")
 
-                        // 5. Tất cả các trang Web view Thymeleaf còn lại yêu cầu phải đăng nhập
+                        // 4. Phân hệ Tài chính & Thu viện phí (Chốt hóa đơn, chi tiết & xác nhận thanh toán)
+                        // Do Lễ tân kiêm thu ngân thực hiện, Giám đốc có quyền xem & duyệt
+                        .requestMatchers("/billing/**")
+                        .hasAnyRole("RECEPTIONIST", "CENTER_MANAGER", "ADMIN", "ACCOUNTANT")
+
+                        // 5. Phân hệ Tiếp nhận & Quản lý cư dân: Check-in, Chuyển phòng, Xuất viện
+                        // Do Lễ tân chính thực hiện, Giám đốc toàn quyền
+                        .requestMatchers(
+                                "/residents/check-in",
+                                "/residents/transfer-bed",
+                                "/residents/*/check-out"
+                        ).hasAnyRole("RECEPTIONIST", "CENTER_MANAGER", "ADMIN", "MANAGER")
+
+                        // 6. Phân hệ Y tế, Bệnh án & Sinh hiệu
+                        // Bác sĩ (khám & kê đơn) và Điều dưỡng (đo sinh hiệu)
+                        .requestMatchers("/health/**")
+                        .hasAnyRole("DOCTOR", "NURSE", "CENTER_MANAGER", "ADMIN")
+
+                        // 7. Báo cáo & Xử lý Sự cố y tế
+                        // Toàn bộ nhân viên y tế, lễ tân và quản lý
+                        .requestMatchers("/incidents/**")
+                        .hasAnyRole("DOCTOR", "NURSE", "RECEPTIONIST", "CENTER_MANAGER", "ADMIN")
+
+                        // 8. Cổng thông tin dành cho Người thân (Portal)
+                        .requestMatchers("/portal/**")
+                        .hasAnyRole("RELATIVE", "CENTER_MANAGER", "ADMIN")
+
+                        // 9. Xem danh sách cư dân, sơ đồ phòng giường, ca trực cá nhân
+                        // Dành cho toàn bộ nhân viên nội bộ
+                        .requestMatchers(
+                                "/residents/**",
+                                "/rooms/beds/**",
+                                "/schedules/my-schedule",
+                                "/schedules/*/complete"
+                        ).hasAnyRole("RECEPTIONIST", "DOCTOR", "NURSE", "CENTER_MANAGER", "ADMIN", "MANAGER", "STAFF")
+
+                        // 10. Dashboard trang chủ và tất cả các trang giao diện còn lại yêu cầu đăng nhập
                         .anyRequest().authenticated()
                 )
 
-                // Cấu hình Form Login sử dụng Session (phù hợp cho Thymeleaf)
+                // Cấu hình Form Login thuần Thymeleaf với Session và Handler điều hướng
                 .formLogin(form -> form
                         .loginPage("/login")
-                        .defaultSuccessUrl("/", true)
+                        .loginProcessingUrl("/login")
+                        .successHandler(authenticationSuccessHandler)
+                        .failureUrl("/login?error=true")
                         .permitAll()
                 )
 
-                // Hỗ trợ HTTP Basic Authentication cho Postman hoặc cURL
-                .httpBasic(Customizer.withDefaults())
+                // Xử lý khi bị từ chối quyền truy cập (403 Forbidden)
+                .exceptionHandling(ex -> ex
+                        .accessDeniedPage("/403")
+                )
 
-                // Cấu hình Đăng xuất
+                // Cấu hình Đăng xuất (Logout)
                 .logout(logout -> logout
                         .logoutUrl("/logout")
-                        .logoutSuccessUrl("/login?logout")
+                        .logoutSuccessUrl("/login?logout=true")
                         .invalidateHttpSession(true)
                         .deleteCookies("JSESSIONID")
                         .permitAll()

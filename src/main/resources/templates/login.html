@@ -83,6 +83,13 @@
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
 
+        <!-- Success Flash Alert -->
+        <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show d-flex align-items-center mb-3" role="alert">
+            <i class="bi bi-check-circle-fill me-2 fs-5"></i>
+            <div class="small" th:text="${successMessage}">Đăng ký tài khoản thành công!</div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+
         <!-- Logout Alert -->
         <div th:if="${param.logout}" class="alert alert-success alert-dismissible fade show d-flex align-items-center mb-3" role="alert">
             <i class="bi bi-check-circle-fill me-2 fs-5"></i>
@@ -126,6 +133,14 @@
             <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold shadow-sm mb-3">
                 <i class="bi bi-box-arrow-in-right me-1"></i> Đăng nhập hệ thống
             </button>
+
+            <!-- Register Link for Relative -->
+            <div class="text-center mb-2">
+                <span class="text-muted small">Người thân chưa có tài khoản?</span>
+                <a th:href="@{/register}" class="small fw-bold text-decoration-none text-primary ms-1">
+                    <i class="bi bi-person-plus-fill me-1"></i>Đăng ký ngay
+                </a>
+            </div>
         </form>
 
         <!-- Quick Fill Helper for Testing Roles -->
@@ -135,22 +150,19 @@
             </div>
             <div class="d-flex flex-wrap gap-1 justify-content-center">
                 <span class="badge bg-primary-subtle text-primary border border-primary-subtle demo-pill py-1 px-2" onclick="quickFill('manager', '123456')">
-                    <i class="bi bi-person-gear"></i> Manager
+                    <i class="bi bi-person-gear"></i> Giám đốc
+                </span>
+                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle demo-pill py-1 px-2" onclick="quickFill('receptionist', '123456')">
+                    <i class="bi bi-person-badge"></i> Lễ tân
                 </span>
                 <span class="badge bg-success-subtle text-success border border-success-subtle demo-pill py-1 px-2" onclick="quickFill('doctor', '123456')">
-                    <i class="bi bi-heart-pulse"></i> Doctor
+                    <i class="bi bi-heart-pulse"></i> Bác sĩ
                 </span>
                 <span class="badge bg-info-subtle text-info border border-info-subtle demo-pill py-1 px-2" onclick="quickFill('nurse', '123456')">
-                    <i class="bi bi-activity"></i> Nurse
-                </span>
-                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle demo-pill py-1 px-2" onclick="quickFill('accountant', '123456')">
-                    <i class="bi bi-cash-stack"></i> Accountant
+                    <i class="bi bi-activity"></i> Điều dưỡng
                 </span>
                 <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle demo-pill py-1 px-2" onclick="quickFill('relative', '123456')">
-                    <i class="bi bi-people"></i> Relative
-                </span>
-                <span class="badge bg-dark-subtle text-dark border border-dark-subtle demo-pill py-1 px-2" onclick="quickFill('admin', '123456')">
-                    <i class="bi bi-shield-lock"></i> Admin
+                    <i class="bi bi-people"></i> Người thân
                 </span>
             </div>
         </div>

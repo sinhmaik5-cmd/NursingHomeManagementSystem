@@ -2,7 +2,7 @@
 <html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
       th:replace="~{layout :: layout(~{::title}, ~{::content}, 'dashboard')}">
 <head>
-    <title>Tổng Quan Hệ Thống - NHMS Care</title>
+    <title>Tá»•ng Quan Há»‡ Thá»‘ng - NHMS Care</title>
 </head>
 <body>
 <div th:fragment="content">
@@ -10,9 +10,9 @@
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
         <div>
             <h4 class="fw-bold mb-1 text-dark">
-                Xin chào, <span sec:authentication="name" class="text-primary">Người dùng</span> 👋
+                Xin chÃ o, <span sec:authentication="name" class="text-primary">NgÆ°á»i dÃ¹ng</span> ðŸ‘‹
             </h4>
-            <p class="text-muted small mb-0">Hệ thống Quản lý & Chăm sóc Cư dân Viện Dưỡng Lão NHMS Care</p>
+            <p class="text-muted small mb-0">Há»‡ thá»‘ng Quáº£n lÃ½ & ChÄƒm sÃ³c CÆ° dÃ¢n Viá»‡n DÆ°á»¡ng LÃ£o NHMS Care</p>
         </div>
         <div class="d-flex gap-2">
             <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2 d-flex align-items-center">
@@ -28,9 +28,9 @@
         <div class="col-12 col-sm-6 col-xl-3">
             <div class="stat-card">
                 <div>
-                    <span class="text-muted small fw-semibold d-block mb-1">CƯ DÂN LƯU TRÚ</span>
+                    <span class="text-muted small fw-semibold d-block mb-1">CÆ¯ DÃ‚N LÆ¯U TRÃš</span>
                     <h3 class="fw-bold mb-0 text-dark" th:text="${totalResidents}">0</h3>
-                    <small class="text-success fw-semibold"><i class="bi bi-people-fill me-1"></i>Đang chăm sóc</small>
+                    <small class="text-success fw-semibold"><i class="bi bi-people-fill me-1"></i>Äang chÄƒm sÃ³c</small>
                 </div>
                 <div class="stat-icon primary">
                     <i class="bi bi-person-heart"></i>
@@ -42,12 +42,12 @@
         <div class="col-12 col-sm-6 col-xl-3">
             <div class="stat-card">
                 <div>
-                    <span class="text-muted small fw-semibold d-block mb-1">GIƯỜNG ĐANG NẰM</span>
+                    <span class="text-muted small fw-semibold d-block mb-1">GIÆ¯á»œNG ÄANG Náº°M</span>
                     <h3 class="fw-bold mb-0 text-dark">
                         <span th:text="${occupiedBeds}">0</span>/<span th:text="${totalBeds}">0</span>
                     </h3>
                     <small class="text-muted">
-                        Trống: <span class="fw-semibold text-success" th:text="${availableBeds}">0</span> | Bảo trì: <span class="fw-semibold text-warning" th:text="${maintenanceBeds}">0</span>
+                        Trá»‘ng: <span class="fw-semibold text-success" th:text="${availableBeds}">0</span> | Báº£o trÃ¬: <span class="fw-semibold text-warning" th:text="${maintenanceBeds}">0</span>
                     </small>
                 </div>
                 <div class="stat-icon teal">
@@ -60,7 +60,7 @@
         <div class="col-12 col-sm-6 col-xl-3">
             <div class="stat-card">
                 <div>
-                    <span class="text-muted small fw-semibold d-block mb-1">TỶ LỆ LẤP ĐẦY</span>
+                    <span class="text-muted small fw-semibold d-block mb-1">Tá»¶ Lá»† Láº¤P Äáº¦Y</span>
                     <h3 class="fw-bold mb-0 text-dark">
                         <span th:text="${occupancyRate}">0.0</span>%
                     </h3>
@@ -78,14 +78,14 @@
         <div class="col-12 col-sm-6 col-xl-3">
             <div class="stat-card">
                 <div>
-                    <span class="text-muted small fw-semibold d-block mb-1">SỰ CỐ CẦN XỬ LÝ</span>
+                    <span class="text-muted small fw-semibold d-block mb-1">Sá»° Cá» Cáº¦N Xá»¬ LÃ</span>
                     <h3 class="fw-bold mb-0" th:classappend="${pendingIncidents > 0 ? 'text-danger' : 'text-dark'}"
                         th:text="${pendingIncidents}">0</h3>
                     <small th:if="${pendingIncidents > 0}" class="text-danger fw-semibold">
-                        <i class="bi bi-exclamation-circle-fill me-1"></i>Cần kiểm tra ngay
+                        <i class="bi bi-exclamation-circle-fill me-1"></i>Cáº§n kiá»ƒm tra ngay
                     </small>
                     <small th:unless="${pendingIncidents > 0}" class="text-success fw-semibold">
-                        <i class="bi bi-check-circle-fill me-1"></i>Hệ thống ổn định
+                        <i class="bi bi-check-circle-fill me-1"></i>Há»‡ thá»‘ng á»•n Ä‘á»‹nh
                     </small>
                 </div>
                 <div class="stat-icon danger">
@@ -99,93 +99,93 @@
     <div class="nh-card mb-4">
         <div class="nh-card-header">
             <h6 class="fw-bold mb-0 text-dark">
-                <i class="bi bi-grid-fill text-primary me-2"></i>Lối Tắt Chức Năng Theo Vai Trò
+                <i class="bi bi-grid-fill text-primary me-2"></i>Lá»‘i Táº¯t Chá»©c NÄƒng Theo Vai TrÃ²
             </h6>
         </div>
         <div class="nh-card-body">
             <div class="row g-3">
                 <!-- Manager shortcuts -->
-                <div class="col-6 col-md-4 col-xl-2" sec:authorize="hasAnyRole('MANAGER', 'ADMIN')">
+                <div class="col-6 col-md-4 col-xl-2" sec:authorize="hasAnyRole('RECEPTIONIST', 'CENTER_MANAGER', 'ADMIN', 'MANAGER')">
                     <a th:href="@{/residents/check-in}"
                        class="btn btn-light w-100 p-3 text-start border d-flex flex-column gap-2 h-100 hover-shadow">
                         <i class="bi bi-person-plus-fill text-primary fs-3"></i>
                         <div>
-                            <div class="fw-bold text-dark small">Tiếp nhận Cư dân</div>
-                            <small class="text-muted" style="font-size: 0.75rem;">Check-in & cấp giường</small>
+                            <div class="fw-bold text-dark small">Tiáº¿p nháº­n CÆ° dÃ¢n</div>
+                            <small class="text-muted" style="font-size: 0.75rem;">Check-in & cáº¥p giÆ°á»ng</small>
                         </div>
                     </a>
                 </div>
-                <div class="col-6 col-md-4 col-xl-2" sec:authorize="hasAnyRole('MANAGER', 'ADMIN')">
+                <div class="col-6 col-md-4 col-xl-2" sec:authorize="hasAnyRole('RECEPTIONIST', 'CENTER_MANAGER', 'ADMIN', 'MANAGER')">
                     <a th:href="@{/residents}"
                        class="btn btn-light w-100 p-3 text-start border d-flex flex-column gap-2 h-100 hover-shadow">
                         <i class="bi bi-people-fill text-info fs-3"></i>
                         <div>
-                            <div class="fw-bold text-dark small">Danh sách Cư dân</div>
-                            <small class="text-muted" style="font-size: 0.75rem;">Chuyển giường, xuất viện</small>
+                            <div class="fw-bold text-dark small">Danh sÃ¡ch CÆ° dÃ¢n</div>
+                            <small class="text-muted" style="font-size: 0.75rem;">Chuyá»ƒn giÆ°á»ng, xuáº¥t viá»‡n</small>
                         </div>
                     </a>
                 </div>
-                <div class="col-6 col-md-4 col-xl-2" sec:authorize="hasAnyRole('MANAGER', 'STAFF', 'NURSE', 'ADMIN')">
+                <div class="col-6 col-md-4 col-xl-2" sec:authorize="hasAnyRole('RECEPTIONIST', 'NURSE', 'CENTER_MANAGER', 'ADMIN', 'MANAGER', 'STAFF')">
                     <a th:href="@{/rooms/beds}"
                        class="btn btn-light w-100 p-3 text-start border d-flex flex-column gap-2 h-100 hover-shadow">
                         <i class="bi bi-hospital-fill text-success fs-3"></i>
                         <div>
-                            <div class="fw-bold text-dark small">Sơ đồ Phòng Giường</div>
-                            <small class="text-muted" style="font-size: 0.75rem;">Trực quan & dọn dẹp</small>
+                            <div class="fw-bold text-dark small">SÆ¡ Ä‘á»“ PhÃ²ng GiÆ°á»ng</div>
+                            <small class="text-muted" style="font-size: 0.75rem;">Trá»±c quan & dá»n dáº¹p</small>
                         </div>
                     </a>
                 </div>
-                <div class="col-6 col-md-4 col-xl-2" sec:authorize="hasAnyRole('MANAGER', 'ADMIN')">
+                <div class="col-6 col-md-4 col-xl-2" sec:authorize="hasAnyRole('CENTER_MANAGER', 'ADMIN')">
                     <a th:href="@{/schedules/assign}"
                        class="btn btn-light w-100 p-3 text-start border d-flex flex-column gap-2 h-100 hover-shadow">
                         <i class="bi bi-calendar2-check-fill text-warning fs-3"></i>
                         <div>
-                            <div class="fw-bold text-dark small">Phân công Ca trực</div>
-                            <small class="text-muted" style="font-size: 0.75rem;">Lên lịch cho nhân viên</small>
+                            <div class="fw-bold text-dark small">PhÃ¢n cÃ´ng Ca trá»±c</div>
+                            <small class="text-muted" style="font-size: 0.75rem;">LÃªn lá»‹ch cho nhÃ¢n viÃªn</small>
                         </div>
                     </a>
                 </div>
 
                 <!-- Doctor / Nurse shortcuts -->
-                <div class="col-6 col-md-4 col-xl-2" sec:authorize="hasAnyRole('DOCTOR', 'NURSE', 'ADMIN')">
+                <div class="col-6 col-md-4 col-xl-2" sec:authorize="hasAnyRole('DOCTOR', 'NURSE', 'CENTER_MANAGER', 'ADMIN')">
                     <a th:href="@{/health/records/create}"
                        class="btn btn-light w-100 p-3 text-start border d-flex flex-column gap-2 h-100 hover-shadow">
                         <i class="bi bi-clipboard2-pulse-fill text-danger fs-3"></i>
                         <div>
-                            <div class="fw-bold text-dark small">Khám bệnh & Kê đơn</div>
-                            <small class="text-muted" style="font-size: 0.75rem;">Ghi sinh hiệu, xuất kho</small>
+                            <div class="fw-bold text-dark small">KhÃ¡m bá»‡nh & KÃª Ä‘Æ¡n</div>
+                            <small class="text-muted" style="font-size: 0.75rem;">Ghi sinh hiá»‡u, xuáº¥t kho</small>
                         </div>
                     </a>
                 </div>
-                <div class="col-6 col-md-4 col-xl-2" sec:authorize="hasAnyRole('DOCTOR', 'NURSE', 'STAFF', 'ADMIN')">
+                <div class="col-6 col-md-4 col-xl-2" sec:authorize="hasAnyRole('DOCTOR', 'NURSE', 'RECEPTIONIST', 'CENTER_MANAGER', 'ADMIN', 'STAFF')">
                     <a th:href="@{/incidents/report}"
                        class="btn btn-light w-100 p-3 text-start border d-flex flex-column gap-2 h-100 hover-shadow">
                         <i class="bi bi-exclamation-octagon-fill text-danger fs-3"></i>
                         <div>
-                            <div class="fw-bold text-dark small">Báo cáo Sự cố</div>
-                            <small class="text-muted" style="font-size: 0.75rem;">Ghi nhận & xử lý khẩn</small>
+                            <div class="fw-bold text-dark small">BÃ¡o cÃ¡o Sá»± cá»‘</div>
+                            <small class="text-muted" style="font-size: 0.75rem;">Ghi nháº­n & xá»­ lÃ½ kháº©n</small>
                         </div>
                     </a>
                 </div>
-                <div class="col-6 col-md-4 col-xl-2" sec:authorize="hasAnyRole('DOCTOR', 'NURSE', 'STAFF', 'ADMIN')">
+                <div class="col-6 col-md-4 col-xl-2" sec:authorize="hasAnyRole('DOCTOR', 'NURSE', 'RECEPTIONIST', 'CENTER_MANAGER', 'ADMIN', 'STAFF')">
                     <a th:href="@{/schedules/my-schedule}"
                        class="btn btn-light w-100 p-3 text-start border d-flex flex-column gap-2 h-100 hover-shadow">
                         <i class="bi bi-person-badge-fill text-primary fs-3"></i>
                         <div>
-                            <div class="fw-bold text-dark small">Lịch trực của tôi</div>
-                            <small class="text-muted" style="font-size: 0.75rem;">Xác nhận hoàn thành ca</small>
+                            <div class="fw-bold text-dark small">Lá»‹ch trá»±c cá»§a tÃ´i</div>
+                            <small class="text-muted" style="font-size: 0.75rem;">XÃ¡c nháº­n hoÃ n thÃ nh ca</small>
                         </div>
                     </a>
                 </div>
 
                 <!-- Accountant shortcut -->
-                <div class="col-6 col-md-4 col-xl-2" sec:authorize="hasAnyRole('ACCOUNTANT', 'ADMIN')">
+                <div class="col-6 col-md-4 col-xl-2" sec:authorize="hasAnyRole('RECEPTIONIST', 'CENTER_MANAGER', 'ADMIN', 'ACCOUNTANT')">
                     <a th:href="@{/billing/monthly}"
                        class="btn btn-light w-100 p-3 text-start border d-flex flex-column gap-2 h-100 hover-shadow">
                         <i class="bi bi-receipt text-success fs-3"></i>
                         <div>
-                            <div class="fw-bold text-dark small">Chốt Hóa đơn Tháng</div>
-                            <small class="text-muted" style="font-size: 0.75rem;">Phòng + Dịch vụ + Thuốc</small>
+                            <div class="fw-bold text-dark small">Chá»‘t HÃ³a Ä‘Æ¡n ThÃ¡ng</div>
+                            <small class="text-muted" style="font-size: 0.75rem;">PhÃ²ng + Dá»‹ch vá»¥ + Thuá»‘c</small>
                         </div>
                     </a>
                 </div>
@@ -196,8 +196,8 @@
                        class="btn btn-light w-100 p-3 text-start border d-flex flex-column gap-2 h-100 hover-shadow">
                         <i class="bi bi-house-heart-fill text-danger fs-3"></i>
                         <div>
-                            <div class="fw-bold text-dark small">Cổng Người thân</div>
-                            <small class="text-muted" style="font-size: 0.75rem;">Sổ sức khỏe, hóa đơn</small>
+                            <div class="fw-bold text-dark small">Cá»•ng NgÆ°á»i thÃ¢n</div>
+                            <small class="text-muted" style="font-size: 0.75rem;">Sá»• sá»©c khá»e, hÃ³a Ä‘Æ¡n</small>
                         </div>
                     </a>
                 </div>
@@ -209,30 +209,30 @@
     <div class="nh-card">
         <div class="nh-card-header">
             <h6 class="fw-bold mb-0 text-dark">
-                <i class="bi bi-person-lines-fill text-primary me-2"></i>Cư Dân Tiếp Nhận Gần Đây
+                <i class="bi bi-person-lines-fill text-primary me-2"></i>CÆ° DÃ¢n Tiáº¿p Nháº­n Gáº§n ÄÃ¢y
             </h6>
             <a th:href="@{/residents}" class="btn btn-sm btn-outline-primary">
-                Xem tất cả <i class="bi bi-arrow-right ms-1"></i>
+                Xem táº¥t cáº£ <i class="bi bi-arrow-right ms-1"></i>
             </a>
         </div>
         <div class="table-responsive">
             <table class="nh-table">
                 <thead>
                 <tr>
-                    <th>Họ và Tên</th>
-                    <th>Giới tính</th>
-                    <th>Ngày tiếp nhận</th>
-                    <th>Phòng / Giường</th>
-                    <th>Người bảo lãnh</th>
-                    <th>Trạng thái</th>
-                    <th class="text-end">Hành động</th>
+                    <th>Há» vÃ  TÃªn</th>
+                    <th>Giá»›i tÃ­nh</th>
+                    <th>NgÃ y tiáº¿p nháº­n</th>
+                    <th>PhÃ²ng / GiÆ°á»ng</th>
+                    <th>NgÆ°á»i báº£o lÃ£nh</th>
+                    <th>Tráº¡ng thÃ¡i</th>
+                    <th class="text-end">HÃ nh Ä‘á»™ng</th>
                 </tr>
                 </thead>
                 <tbody>
                 <tr th:if="${#lists.isEmpty(recentResidents)}">
                     <td colspan="7" class="text-center py-4 text-muted">
                         <i class="bi bi-inbox fs-3 d-block mb-1"></i>
-                        Chưa có cư dân nào trong hệ thống.
+                        ChÆ°a cÃ³ cÆ° dÃ¢n nÃ o trong há»‡ thá»‘ng.
                     </td>
                 </tr>
                 <tr th:each="res : ${recentResidents}">
@@ -242,9 +242,9 @@
                                 <i class="bi bi-person"></i>
                             </div>
                             <div>
-                                <span class="fw-semibold text-dark" th:text="${res.fullName}">Nguyễn Văn A</span>
+                                <span class="fw-semibold text-dark" th:text="${res.fullName}">Nguyá»…n VÄƒn A</span>
                                 <small class="text-muted d-block" th:if="${res.dateOfBirth != null}"
-                                       th:text="'Sinh năm: ' + ${#temporals.format(res.dateOfBirth, 'yyyy')}">Sinh năm:
+                                       th:text="'Sinh nÄƒm: ' + ${#temporals.format(res.dateOfBirth, 'yyyy')}">Sinh nÄƒm:
                                     1945</small>
                             </div>
                         </div>
@@ -263,7 +263,7 @@
                         <span th:text="${res.bedNumber != null ? res.bedNumber : ''}"></span>
                         </span>
                         <span th:unless="${res.bedId != null}" class="text-muted">
-                                Chưa gán
+                                ChÆ°a gÃ¡n
                         </span>
                     </td>
 
@@ -271,20 +271,20 @@
                         <span th:if="${res.relativeId != null}"
                               th:text="${res.relativeName}"></span>
                         <span th:unless="${res.relativeId != null}"
-                              class="text-muted">Chưa có</span>
+                              class="text-muted">ChÆ°a cÃ³</span>
                     </td>
                     <td>
-                        <span th:if="${res.status == 'ACTIVE'}" class="badge badge-status-available">Đang lưu trú</span>
-                        <span th:if="${res.status == 'DISCHARGED'}" class="badge bg-secondary-subtle text-secondary">Đã xuất viện</span>
+                        <span th:if="${res.status == 'ACTIVE'}" class="badge badge-status-available">Äang lÆ°u trÃº</span>
+                        <span th:if="${res.status == 'DISCHARGED'}" class="badge bg-secondary-subtle text-secondary">ÄÃ£ xuáº¥t viá»‡n</span>
                         <span th:if="${res.status == 'DECEASED'}"
-                              class="badge bg-dark-subtle text-dark">Đã qua đời</span>
+                              class="badge bg-dark-subtle text-dark">ÄÃ£ qua Ä‘á»i</span>
                     </td>
                     <td class="text-end">
                         <a th:href="@{'/health/history/' + ${res.id}}" class="btn btn-sm btn-outline-info"
-                           title="Xem bệnh án">
+                           title="Xem bá»‡nh Ã¡n">
                             <i class="bi bi-heart-pulse"></i>
                         </a>
-                        <a th:href="@{/residents}" class="btn btn-sm btn-outline-secondary" title="Chi tiết">
+                        <a th:href="@{/residents}" class="btn btn-sm btn-outline-secondary" title="Chi tiáº¿t">
                             <i class="bi bi-eye"></i>
                         </a>
                     </td>
