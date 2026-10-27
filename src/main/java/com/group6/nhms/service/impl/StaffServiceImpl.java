@@ -1,0 +1,149 @@
+package com.group6.nhms.service.impl;
+
+import com.group6.nhms.dto.request.StaffAccountCreateRequest;
+import com.group6.nhms.dto.response.StaffResponse;
+import com.group6.nhms.entity.Account;
+import com.group6.nhms.entity.Staff;
+import com.group6.nhms.exception.BadRequestException;
+import com.group6.nhms.exception.ResourceNotFoundException;
+import com.group6.nhms.mapper.StaffMapper;
+import com.group6.nhms.repository.AccountRepository;
+import com.group6.nhms.repository.StaffRepository;
+import com.group6.nhms.service.StaffService;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+
+@Service
+public class StaffServiceImpl implements StaffService {
+
+    private final StaffRepository staffRepository;
+    private final StaffMapper staffMapper;
+    private final AccountRepository accountRepository;
+    private final PasswordEncoder passwordEncoder;
+
+    public StaffServiceImpl(
+            StaffRepository staffRepository,
+            StaffMapper staffMapper,
+            AccountRepository accountRepository,
+            PasswordEncoder passwordEncoder
+    ) {
+        this.staffRepository = staffRepository;
+        this.staffMapper = staffMapper;
+        this.accountRepository = accountRepository;
+        this.passwordEncoder = passwordEncoder;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<StaffResponse> getAllStaff() {
+        return staffRepository.findAll().stream().map(staff -> {
+            StaffResponse res = staffMapper.toResponse(staff);
+            List<Account> accounts = accountRepository.findByReferenceId(staff.getId());
+            if (!accounts.isEmpty()) {
+                Account acc = accounts.get(0);
+                res.setUsername(acc.getUsername());
+                res.setIsActive(acc.getIsActive());
+                res.setAccountId(acc.getId());
+            }
+            return res;
+        }).toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Staff getStaffById(Integer id) {
+        return staffRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy nhân viên ID " + id));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Staff resolveCurrentStaff(Authentication authentication) {
+        if (authentication == null) {
+            return staffRepository.findAll().stream().findFirst().orElse(null);
+        }
+
+        return accountRepository.findByUsername(authentication.getName())
+                .filter(a -> a.getReferenceId() != null)
+                .flatMap(a -> staffRepository.findById(a.getReferenceId()))
+                .orElseGet(() -> staffRepository.findAll().stream().findFirst().orElse(null));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Integer resolveCurrentStaffId(Authentication authentication) {
+        Staff staff = resolveCurrentStaff(authentication);
+        return staff != null ? staff.getId() : 1;
+    }
+
+    @Override
+    @Transactional
+    public Staff createStaffWithAccount(StaffAccountCreateRequest request) {
+        // 1. Kiểm tra mật khẩu khớp nhau
+        if (!request.getPassword().equals(request.getConfirmPassword())) {
+            throw new BadRequestException("Mật khẩu xác nhận không khớp!");
+        }
+
+        // 2. Kiểm tra tên đăng nhập đã tồn tại
+        String cleanUsername = request.getUsername().trim();
+        if (accountRepository.existsByUsername(cleanUsername)) {
+            throw new BadRequestException("Tên đăng nhập '" + cleanUsername + "' đã tồn tại trong hệ thống!");
+        }
+
+        // 3. Khởi tạo và lưu hồ sơ Staff
+        Staff staff = new Staff();
+        staff.setFullName(request.getFullName().trim());
+        staff.setPhone(request.getPhone().trim());
+        staff.setJobTitle(request.getJobTitle().trim());
+        staff.setSpecialization(request.getSpecialization() != null && !request.getSpecialization().isBlank()
+                ? request.getSpecialization().trim() : null);
+        Staff savedStaff = staffRepository.save(staff);
+
+        // 4. Khởi tạo tài khoản Account tương ứng cho nhân viên
+        Account account = new Account();
+        account.setUsername(cleanUsername);
+        account.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+        account.setRole(request.getJobTitle().trim());
+        account.setReferenceId(savedStaff.getId());
+        account.setIsActive(true);
+        accountRepository.save(account);
+
+        return savedStaff;
+    }
+
+    @Override
+    @Transactional
+    public void toggleStaffAccountStatus(Integer staffId, Authentication currentAuth) {
+        List<Account> accounts = accountRepository.findByReferenceId(staffId);
+        if (accounts.isEmpty()) {
+            throw new ResourceNotFoundException("Không tìm thấy tài khoản gắn liền với nhân viên ID " + staffId);
+        }
+
+        for (Account account : accounts) {
+            // Ràng buộc bảo mật: Không được tự khóa tài khoản của chính mình
+            if (currentAuth != null && account.getUsername().equalsIgnoreCase(currentAuth.getName())) {
+                throw new BadRequestException("Bạn không thể tự khóa tài khoản đang đăng nhập của chính mình!");
+            }
+            account.setIsActive(!Boolean.TRUE.equals(account.getIsActive()));
+            accountRepository.save(account);
+        }
+    }
+
+    @Override
+    @Transactional
+    public void resetStaffPassword(Integer staffId, String newPassword) {
+        List<Account> accounts = accountRepository.findByReferenceId(staffId);
+        if (accounts.isEmpty()) {
+            throw new ResourceNotFoundException("Không tìm thấy tài khoản gắn liền với nhân viên ID " + staffId);
+        }
+
+        for (Account account : accounts) {
+            account.setPasswordHash(passwordEncoder.encode(newPassword));
+            accountRepository.save(account);
+        }
+    }
+}

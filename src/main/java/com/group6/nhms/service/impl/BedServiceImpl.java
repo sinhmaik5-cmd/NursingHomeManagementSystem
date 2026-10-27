@@ -77,7 +77,6 @@ public class BedServiceImpl implements BedService {
             throw new BadRequestException("Trạng thái giường không hợp lệ. Giá trị hợp lệ: AVAILABLE, OCCUPIED, MAINTENANCE");
         }
 
-        // Nếu giường đang có người ở (OCCUPIED), không cho phép đổi thủ công thành AVAILABLE hay MAINTENANCE mà phải qua Check-out / Transfer
         if (BedStatus.OCCUPIED.name().equals(bed.getStatus()) && !BedStatus.OCCUPIED.name().equals(newStatus)) {
             boolean hasActiveResident = residentRepository.findByBedId(id).isPresent();
             if (hasActiveResident) {
@@ -85,7 +84,6 @@ public class BedServiceImpl implements BedService {
             }
         }
 
-        // Không cho đổi thủ công sang OCCUPIED (chỉ được gán qua quy trình Check-in hoặc Chuyển giường)
         if (BedStatus.OCCUPIED.name().equals(newStatus) && !BedStatus.OCCUPIED.name().equals(bed.getStatus())) {
             throw new BadRequestException("Không thể tự chuyển giường sang OCCUPIED mà không qua tiếp nhận cư dân (Check-in)");
         }
@@ -101,7 +99,6 @@ public class BedServiceImpl implements BedService {
         Room room = roomRepository.findById(request.getRoomId())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phòng ID " + request.getRoomId()));
 
-        // Nghiệp vụ: Ràng buộc sức chứa phòng (Room.capacity) - Chặn thêm giường nếu đã đạt sức chứa tối đa
         long currentBedCount = bedRepository.countByRoomId(room.getId());
         if (room.getCapacity() != null && currentBedCount >= room.getCapacity()) {
             throw new BadRequestException("Phòng " + room.getRoomNumber() + " đã đạt sức chứa tối đa ("
@@ -115,5 +112,44 @@ public class BedServiceImpl implements BedService {
 
         Bed saved = bedRepository.save(bed);
         return bedMapper.toResponse(saved);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<BedResponse> getAllBeds() {
+        return bedRepository.findAll().stream().map(bedMapper::toResponse).toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public long countTotalBeds() {
+        return bedRepository.count();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public long countOccupiedBeds() {
+        return bedRepository.countByStatus(BedStatus.OCCUPIED.name());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public long countAvailableBeds() {
+        return bedRepository.countByStatus(BedStatus.AVAILABLE.name());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public long countMaintenanceBeds() {
+        return bedRepository.countByStatus(BedStatus.MAINTENANCE.name());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public double getOccupancyRate() {
+        long total = countTotalBeds();
+        long occupied = countOccupiedBeds();
+        double rate = total > 0 ? ((double) occupied / total) * 100.0 : 0.0;
+        return Math.round(rate * 100.0) / 100.0;
     }
 }

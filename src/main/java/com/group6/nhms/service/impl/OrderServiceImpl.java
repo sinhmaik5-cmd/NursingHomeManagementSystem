@@ -16,6 +16,7 @@ import com.group6.nhms.repository.OrderRepository;
 import com.group6.nhms.repository.ResidentRepository;
 import com.group6.nhms.repository.ServiceRepository;
 import com.group6.nhms.service.OrderService;
+import org.springframework.data.domain.Sort;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -100,8 +101,12 @@ public class OrderServiceImpl implements OrderService {
         Resident resident = residentRepository.findById(residentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy cư dân ID " + residentId));
 
+        if (!ResidentStatus.ACTIVE.name().equals(resident.getStatus())) {
+            throw new BadRequestException("Cư dân không ở trạng thái lưu trú");
+        }
+
         if (resident.getBed() == null || resident.getBed().getRoom() == null) {
-            throw new BadRequestException("Cư dân chưa được gán phòng/giường");
+            throw new BadRequestException("Cư dân chưa được gán giường/phòng");
         }
 
         BigDecimal roomPrice = resident.getBed().getRoom().getBasePrice();
@@ -137,23 +142,19 @@ public class OrderServiceImpl implements OrderService {
         LocalDate startDate = LocalDate.of(year, month, 1);
         LocalDate endDate = startDate.plusMonths(1).minusDays(1);
 
-        // Kiểm tra tránh tạo trùng hóa đơn cho cùng 1 tháng
         if (orderRepository.existsByResidentIdAndIssueDateBetween(residentId, startDate, endDate)) {
             throw new BadRequestException("Cư dân đã có hóa đơn trong tháng " + month + "/" + year);
         }
 
-        // 1. Tiền phòng (BasePrice)
         BigDecimal roomPrice = (resident.getBed() != null && resident.getBed().getRoom() != null)
                 ? resident.getBed().getRoom().getBasePrice()
                 : BigDecimal.ZERO;
 
-        // 2. Tiền dịch vụ phát sinh trong tháng
         BigDecimal servicesPrice = orderDetailRepository.sumServicesByResidentIdAndIssueDateBetween(
                 residentId, startDate, endDate
         );
         if (servicesPrice == null) servicesPrice = BigDecimal.ZERO;
 
-        // 3. Tiền thuốc phát sinh trong tháng từ HealthRecordDetail
         Instant startInstant = startDate.atStartOfDay(ZoneId.systemDefault()).toInstant();
         Instant endInstant = endDate.atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toInstant();
         BigDecimal medicationsPrice = healthRecordDetailRepository.sumTotalPriceByResidentIdAndRecordDateBetween(
@@ -161,7 +162,6 @@ public class OrderServiceImpl implements OrderService {
         );
         if (medicationsPrice == null) medicationsPrice = BigDecimal.ZERO;
 
-        // 4. Công thức tổng: TotalAmount = RoomBasePrice + ServicesAmount + MedicationsAmount
         BigDecimal totalAmount = roomPrice.add(servicesPrice).add(medicationsPrice);
 
         Order monthlyOrder = new Order();
@@ -191,10 +191,19 @@ public class OrderServiceImpl implements OrderService {
         Service service = serviceRepository.findById(serviceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy dịch vụ ID " + serviceId));
 
-        // Tìm hoặc tạo order PENDING trong tháng hiện tại cho cư dân
         LocalDate today = LocalDate.now();
-        List<Order> pendingOrders = orderRepository.findByResidentIdAndPaymentStatus(residentId, PaymentStatus.PENDING.name());
-        Order targetOrder = pendingOrders.isEmpty() ? null : pendingOrders.get(0);
+        LocalDate startOfMonth = today.withDayOfMonth(1);
+        LocalDate endOfMonth = today.withDayOfMonth(today.lengthOfMonth());
+
+        List<Order> orders = orderRepository.findByResidentIdAndPaymentStatus(residentId, PaymentStatus.PENDING.name());
+
+        Order targetOrder = null;
+        for (Order o : orders) {
+            if (o.getIssueDate() != null && !o.getIssueDate().isBefore(startOfMonth) && !o.getIssueDate().isAfter(endOfMonth)) {
+                targetOrder = o;
+                break;
+            }
+        }
 
         if (targetOrder == null) {
             targetOrder = new Order();
@@ -215,7 +224,6 @@ public class OrderServiceImpl implements OrderService {
         orderDetail.setAmount(service.getUnitPrice());
         orderDetailRepository.save(orderDetail);
 
-        // Cập nhật lại servicesPrice và totalAmount của order
         BigDecimal currentServices = targetOrder.getServicesPrice() != null ? targetOrder.getServicesPrice() : BigDecimal.ZERO;
         BigDecimal newServices = currentServices.add(service.getUnitPrice() != null ? service.getUnitPrice() : BigDecimal.ZERO);
         targetOrder.setServicesPrice(newServices);
@@ -225,5 +233,46 @@ public class OrderServiceImpl implements OrderService {
 
         Order savedOrder = orderRepository.save(targetOrder);
         return orderMapper.toResponse(savedOrder);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<OrderResponse> getAllOrders(String paymentStatus) {
+        List<Order> orders;
+        if (paymentStatus != null && !paymentStatus.trim().isEmpty()) {
+            orders = orderRepository.findByPaymentStatus(paymentStatus.trim().toUpperCase());
+        } else {
+            orders = orderRepository.findAll(Sort.by(Sort.Direction.DESC, "issueDate", "id"));
+        }
+        return orders.stream().map(orderMapper::toResponse).toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public long countUnpaidOrders() {
+        return orderRepository.countByPaymentStatus(PaymentStatus.PENDING.name());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public long countPaidOrders() {
+        return orderRepository.countByPaymentStatus(PaymentStatus.PAID.name());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public BigDecimal getTotalCollectedRevenue() {
+        return orderRepository.findByPaymentStatus(PaymentStatus.PAID.name())
+                .stream()
+                .map(Order::getTotalAmount)
+                .filter(a -> a != null)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public BigDecimal getRevenueBetweenDates(LocalDate startDate, LocalDate endDate) {
+        BigDecimal revenue = orderRepository.sumRevenueBetweenDates(startDate, endDate);
+        return revenue != null ? revenue : BigDecimal.ZERO;
     }
 }

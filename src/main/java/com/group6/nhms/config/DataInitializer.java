@@ -66,17 +66,27 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     private void initStaffAndAccounts() {
-        // Staff 1: Manager
-        Staff managerStaff = staffRepository.findByJobTitle("MANAGER").stream().findFirst().orElseGet(() -> {
+        // Staff 1: Giám đốc cơ sở (Center Manager)
+        Staff managerStaff = staffRepository.findByJobTitle("CENTER_MANAGER").stream().findFirst().orElseGet(() -> {
             Staff s = new Staff();
             s.setFullName("Trần Quang Huy");
-            s.setJobTitle("MANAGER");
+            s.setJobTitle("CENTER_MANAGER");
             s.setPhone("0912345678");
-            s.setSpecialization("Quản lý viện");
+            s.setSpecialization("Quản lý toàn diện & Điều hành");
             return staffRepository.save(s);
         });
 
-        // Staff 2: Doctor
+        // Staff 2: Lễ tân & Thu phí (Receptionist)
+        Staff receptionistStaff = staffRepository.findByJobTitle("RECEPTIONIST").stream().findFirst().orElseGet(() -> {
+            Staff s = new Staff();
+            s.setFullName("Lê Thu Trang");
+            s.setJobTitle("RECEPTIONIST");
+            s.setPhone("0987654321");
+            s.setSpecialization("Lễ tân & Hành chính thu phí");
+            return staffRepository.save(s);
+        });
+
+        // Staff 3: Bác sĩ (Doctor)
         Staff doctorStaff = staffRepository.findByJobTitle("DOCTOR").stream().findFirst().orElseGet(() -> {
             Staff s = new Staff();
             s.setFullName("BS. Nguyễn Văn Minh");
@@ -86,23 +96,13 @@ public class DataInitializer implements CommandLineRunner {
             return staffRepository.save(s);
         });
 
-        // Staff 3: Nurse
+        // Staff 4: Điều dưỡng (Nurse)
         Staff nurseStaff = staffRepository.findByJobTitle("NURSE").stream().findFirst().orElseGet(() -> {
             Staff s = new Staff();
             s.setFullName("ĐD. Lê Thị Hoa");
             s.setJobTitle("NURSE");
             s.setPhone("0907654321");
-            s.setSpecialization("Chăm sóc phục hồi");
-            return staffRepository.save(s);
-        });
-
-        // Staff 4: Accountant
-        Staff accountantStaff = staffRepository.findByJobTitle("ACCOUNTANT").stream().findFirst().orElseGet(() -> {
-            Staff s = new Staff();
-            s.setFullName("KT. Phạm Thanh Thảo");
-            s.setJobTitle("ACCOUNTANT");
-            s.setPhone("0987654321");
-            s.setSpecialization("Kế toán tài chính");
+            s.setSpecialization("Chăm sóc phục hồi & Vệ sinh giường");
             return staffRepository.save(s);
         });
 
@@ -117,25 +117,26 @@ public class DataInitializer implements CommandLineRunner {
             return relativeRepository.save(r);
         });
 
-        // Create Accounts if not exists
-        createAccountIfNotExists("admin", "123456", RoleEnum.ADMIN.name(), null);
-        createAccountIfNotExists("manager", "123456", RoleEnum.MANAGER.name(), managerStaff.getId());
-        createAccountIfNotExists("doctor", "123456", RoleEnum.DOCTOR.name(), doctorStaff.getId());
-        createAccountIfNotExists("nurse", "123456", RoleEnum.NURSE.name(), nurseStaff.getId());
-        createAccountIfNotExists("accountant", "123456", RoleEnum.ACCOUNTANT.name(), accountantStaff.getId());
-        createAccountIfNotExists("relative", "123456", RoleEnum.RELATIVE.name(), relative.getId());
+        // Khởi tạo hoặc cập nhật tài khoản mẫu với mật khẩu mặc định 123456
+        createOrUpdateAccount("manager", "123456", RoleEnum.CENTER_MANAGER.name(), managerStaff.getId());
+        createOrUpdateAccount("receptionist", "123456", RoleEnum.RECEPTIONIST.name(), receptionistStaff.getId());
+        createOrUpdateAccount("doctor", "123456", RoleEnum.DOCTOR.name(), doctorStaff.getId());
+        createOrUpdateAccount("nurse", "123456", RoleEnum.NURSE.name(), nurseStaff.getId());
+        createOrUpdateAccount("relative", "123456", RoleEnum.RELATIVE.name(), relative.getId());
+        createOrUpdateAccount("admin", "123456", RoleEnum.CENTER_MANAGER.name(), managerStaff.getId());
     }
 
-    private void createAccountIfNotExists(String username, String rawPassword, String role, Integer refId) {
-        if (!accountRepository.existsByUsername(username)) {
-            Account account = new Account();
-            account.setUsername(username);
-            account.setPasswordHash(passwordEncoder.encode(rawPassword));
-            account.setRole(role);
-            account.setReferenceId(refId);
-            account.setIsActive(true);
-            accountRepository.save(account);
-        }
+    private void createOrUpdateAccount(String username, String rawPassword, String role, Integer refId) {
+        Account account = accountRepository.findByUsername(username).orElseGet(() -> {
+            Account a = new Account();
+            a.setUsername(username);
+            return a;
+        });
+        account.setPasswordHash(passwordEncoder.encode(rawPassword));
+        account.setRole(role);
+        account.setReferenceId(refId);
+        account.setIsActive(true);
+        accountRepository.save(account);
     }
 
     private void initRoomsAndBeds() {
@@ -143,60 +144,76 @@ public class DataInitializer implements CommandLineRunner {
             Room r101 = new Room();
             r101.setRoomNumber("P101");
             r101.setRoomType("STANDARD");
+            r101.setBasePrice(new BigDecimal("8000000"));
             r101.setCapacity(2);
-            r101.setBasePrice(new BigDecimal("5000000"));
-            r101.setStatus("AVAILABLE");
-            r101 = roomRepository.save(r101);
+            Room savedR101 = roomRepository.save(r101);
+
+            Bed b1011 = new Bed();
+            b1011.setBedNumber("G01");
+            b1011.setRoom(savedR101);
+            b1011.setStatus(BedStatus.AVAILABLE.name());
+            bedRepository.save(b1011);
+
+            Bed b1012 = new Bed();
+            b1012.setBedNumber("G02");
+            b1012.setRoom(savedR101);
+            b1012.setStatus(BedStatus.AVAILABLE.name());
+            bedRepository.save(b1012);
 
             Room r102 = new Room();
             r102.setRoomNumber("P102");
-            r102.setRoomType("STANDARD");
-            r102.setCapacity(2);
-            r102.setBasePrice(new BigDecimal("5000000"));
-            r102.setStatus("AVAILABLE");
-            r102 = roomRepository.save(r102);
+            r102.setRoomType("VIP");
+            r102.setBasePrice(new BigDecimal("15000000"));
+            r102.setCapacity(1);
+            Room savedR102 = roomRepository.save(r102);
+
+            Bed b1021 = new Bed();
+            b1021.setBedNumber("G01");
+            b1021.setRoom(savedR102);
+            b1021.setStatus(BedStatus.AVAILABLE.name());
+            bedRepository.save(b1021);
 
             Room r201 = new Room();
             r201.setRoomNumber("P201");
-            r201.setRoomType("VIP");
-            r201.setCapacity(1);
+            r201.setRoomType("STANDARD");
             r201.setBasePrice(new BigDecimal("8000000"));
-            r201.setStatus("AVAILABLE");
-            r201 = roomRepository.save(r201);
+            r201.setCapacity(2);
+            Room savedR201 = roomRepository.save(r201);
+
+            Bed b2011 = new Bed();
+            b2011.setBedNumber("G01");
+            b2011.setRoom(savedR201);
+            b2011.setStatus(BedStatus.AVAILABLE.name());
+            bedRepository.save(b2011);
+
+            Bed b2012 = new Bed();
+            b2012.setBedNumber("G02");
+            b2012.setRoom(savedR201);
+            b2012.setStatus(BedStatus.AVAILABLE.name());
+            bedRepository.save(b2012);
 
             Room r202 = new Room();
             r202.setRoomNumber("P202");
-            r202.setRoomType("VIP");
+            r202.setRoomType("SPECIAL_CARE");
+            r202.setBasePrice(new BigDecimal("20000000"));
             r202.setCapacity(1);
-            r202.setBasePrice(new BigDecimal("8000000"));
-            r202.setStatus("AVAILABLE");
-            r202 = roomRepository.save(r202);
+            Room savedR202 = roomRepository.save(r202);
 
-            // Beds
-            createBed(r101, "G101-1", BedStatus.AVAILABLE.name());
-            createBed(r101, "G101-2", BedStatus.AVAILABLE.name());
-            createBed(r102, "G102-1", BedStatus.AVAILABLE.name());
-            createBed(r102, "G102-2", BedStatus.MAINTENANCE.name());
-            createBed(r201, "G201-1", BedStatus.AVAILABLE.name());
-            createBed(r202, "G202-1", BedStatus.MAINTENANCE.name());
+            Bed b2021 = new Bed();
+            b2021.setBedNumber("G01");
+            b2021.setRoom(savedR202);
+            b2021.setStatus(BedStatus.AVAILABLE.name());
+            bedRepository.save(b2021);
         }
-    }
-
-    private void createBed(Room room, String bedNumber, String status) {
-        Bed bed = new Bed();
-        bed.setRoom(room);
-        bed.setBedNumber(bedNumber);
-        bed.setStatus(status);
-        bedRepository.save(bed);
     }
 
     private void initMedications() {
         if (medicationRepository.count() == 0) {
-            saveMed("Amlodipine 5mg", 120, LocalDate.now().plusMonths(18), "Dược Hậu Giang", new BigDecimal("3500"));
-            saveMed("Metformin 500mg", 90, LocalDate.now().plusMonths(12), "Domesco", new BigDecimal("2800"));
-            saveMed("Panadol Extra", 250, LocalDate.now().plusMonths(24), "GSK", new BigDecimal("2000"));
-            saveMed("Berberin 100mg", 80, LocalDate.now().plusMonths(10), "OPC", new BigDecimal("1500"));
-            saveMed("Glucosamine 500mg", 60, LocalDate.now().plusMonths(15), "Nature Bounty", new BigDecimal("6500"));
+            saveMed("Amlodipine 5mg", 150, LocalDate.now().plusMonths(18), "Dược Hậu Giang", new BigDecimal("3500"));
+            saveMed("Metformin 500mg", 200, LocalDate.now().plusMonths(12), "Stada", new BigDecimal("2500"));
+            saveMed("Panadol Extra", 300, LocalDate.now().plusMonths(24), "GSK", new BigDecimal("1800"));
+            saveMed("Losartan 50mg", 80, LocalDate.now().plusMonths(15), "Dược Hà Tây", new BigDecimal("4200"));
+            saveMed("Atorvastatin 10mg", 90, LocalDate.now().plusMonths(8), "Pfizer", new BigDecimal("8500"));
             saveMed("Ginkgo Biloba 120mg", 45, LocalDate.now().plusMonths(20), "Trunature", new BigDecimal("4500"));
         }
     }

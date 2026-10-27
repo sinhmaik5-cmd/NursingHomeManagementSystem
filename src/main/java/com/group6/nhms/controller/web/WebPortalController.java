@@ -5,14 +5,11 @@ import com.group6.nhms.dto.response.IncidentReportResponse;
 import com.group6.nhms.dto.response.OrderResponse;
 import com.group6.nhms.dto.response.ResidentResponse;
 import com.group6.nhms.entity.Relative;
-import com.group6.nhms.entity.Resident;
-import com.group6.nhms.mapper.ResidentMapper;
-import com.group6.nhms.repository.AccountRepository;
-import com.group6.nhms.repository.RelativeRepository;
-import com.group6.nhms.repository.ResidentRepository;
 import com.group6.nhms.service.HealthRecordService;
 import com.group6.nhms.service.IncidentReportService;
 import com.group6.nhms.service.OrderService;
+import com.group6.nhms.service.RelativeService;
+import com.group6.nhms.service.ResidentService;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -26,35 +23,29 @@ import java.util.List;
 @RequestMapping("/portal")
 public class WebPortalController {
 
-    private final RelativeRepository relativeRepository;
-    private final ResidentRepository residentRepository;
-    private final AccountRepository accountRepository;
+    private final RelativeService relativeService;
+    private final ResidentService residentService;
     private final HealthRecordService healthRecordService;
     private final IncidentReportService incidentReportService;
     private final OrderService orderService;
-    private final ResidentMapper residentMapper;
 
     public WebPortalController(
-            RelativeRepository relativeRepository,
-            ResidentRepository residentRepository,
-            AccountRepository accountRepository,
+            RelativeService relativeService,
+            ResidentService residentService,
             HealthRecordService healthRecordService,
             IncidentReportService incidentReportService,
-            OrderService orderService,
-            ResidentMapper residentMapper
+            OrderService orderService
     ) {
-        this.relativeRepository = relativeRepository;
-        this.residentRepository = residentRepository;
-        this.accountRepository = accountRepository;
+        this.relativeService = relativeService;
+        this.residentService = residentService;
         this.healthRecordService = healthRecordService;
         this.incidentReportService = incidentReportService;
         this.orderService = orderService;
-        this.residentMapper = residentMapper;
     }
 
     @GetMapping("/dashboard")
     public String portalDashboard(Authentication authentication, Model model) {
-        Relative relative = resolveRelative(authentication);
+        Relative relative = relativeService.resolveCurrentRelative(authentication);
 
         List<ResidentResponse> residentResponses = new ArrayList<>();
         HealthRecordResponse latestRecord = null;
@@ -62,15 +53,11 @@ public class WebPortalController {
         List<OrderResponse> residentOrders = new ArrayList<>();
 
         if (relative != null) {
-            List<Resident> residents = residentRepository.findByRelativeId(relative.getId());
-            if (residents.isEmpty()) {
+            residentResponses = residentService.getResidentsByRelative(relative.getId());
+            if (residentResponses.isEmpty()) {
                 // Fallback for demo if relative doesn't have a linked resident yet
-                residents = residentRepository.findAll();
+                residentResponses = residentService.getAllResidents(null, null);
             }
-
-            residentResponses = residents.stream()
-                    .map(residentMapper::toResponse)
-                    .toList();
 
             if (!residentResponses.isEmpty()) {
                 Integer primaryResidentId = residentResponses.get(0).getId();
@@ -93,16 +80,5 @@ public class WebPortalController {
         model.addAttribute("activeMenu", "portal-dashboard");
 
         return "portal/dashboard";
-    }
-
-    private Relative resolveRelative(Authentication authentication) {
-        if (authentication == null) {
-            return relativeRepository.findAll().stream().findFirst().orElse(null);
-        }
-
-        return accountRepository.findByUsername(authentication.getName())
-                .filter(a -> a.getReferenceId() != null)
-                .flatMap(a -> relativeRepository.findById(a.getReferenceId()))
-                .orElseGet(() -> relativeRepository.findAll().stream().findFirst().orElse(null));
     }
 }
