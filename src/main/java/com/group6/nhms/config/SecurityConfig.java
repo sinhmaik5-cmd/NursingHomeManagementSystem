@@ -34,6 +34,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // 1. Tài nguyên tĩnh giao diện (CSS, JS, Fonts, Images, Icons)
                         .requestMatchers(
+                                "/",
                                 "/css/**",
                                 "/js/**",
                                 "/images/**",
