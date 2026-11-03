@@ -3,6 +3,7 @@ package com.group6.nhms.config;
 import com.group6.nhms.security.CustomAuthenticationSuccessHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -32,7 +33,7 @@ public class SecurityConfig {
 
                 // Phân quyền đường dẫn Web MVC Thymeleaf theo vai trò nghiệp vụ
                 .authorizeHttpRequests(auth -> auth
-                        // 1. Tài nguyên tĩnh giao diện (CSS, JS, Fonts, Images, Icons)
+                        // 1. Tài nguyên tĩnh giao diện (CSS, JS, Fonts, Images, Icons) và Landing page
                         .requestMatchers(
                                 "/",
                                 "/css/**",
@@ -51,7 +52,11 @@ public class SecurityConfig {
                                 "/schedules/assign"
                         ).hasAnyRole("CENTER_MANAGER", "ADMIN")
 
-                        // 4. Phân hệ Tài chính & Thu viện phí (Chốt hóa đơn, chi tiết & xác nhận thanh toán)
+                        // 4. Cho phép Người thân (RELATIVE) xem chi tiết hóa đơn của người nhà (GET /billing/orders/*)
+                        .requestMatchers(HttpMethod.GET, "/billing/orders/*")
+                        .hasAnyRole("RECEPTIONIST", "CENTER_MANAGER", "ADMIN", "ACCOUNTANT", "RELATIVE")
+
+                        // Phân hệ Tài chính & Thu viện phí nội bộ (Chốt hóa đơn, xác nhận thanh toán POST /pay)
                         // Do Lễ tân kiêm thu ngân thực hiện, Giám đốc có quyền xem & duyệt
                         .requestMatchers("/billing/**")
                         .hasAnyRole("RECEPTIONIST", "CENTER_MANAGER", "ADMIN", "ACCOUNTANT")
