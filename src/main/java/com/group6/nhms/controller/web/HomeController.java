@@ -4,6 +4,7 @@ import com.group6.nhms.dto.response.ResidentResponse;
 import com.group6.nhms.service.BedService;
 import com.group6.nhms.service.IncidentReportService;
 import com.group6.nhms.service.ResidentService;
+import org.springframework.security.core.Authentication; // Đã thêm thư viện Authentication
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -28,7 +29,18 @@ public class HomeController {
     }
 
     @GetMapping("/")
-    public String index(Model model) {
+    public String index(Authentication authentication, Model model) {
+        // 1. Khách chưa đăng nhập -> Hiển thị trang chủ công khai (Landing Page có nút Login góc phải)
+        if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getName())) {
+            return "landing";
+        }
+
+        // 2. Người dùng là Thân nhân (RELATIVE) -> Chuyển hướng thẳng vào Cổng Portal
+        if (authentication.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_RELATIVE"))) {
+            return "redirect:/portal/dashboard";
+        }
+
+        // 3. Quản lý / Nhân viên -> Hiển thị Dashboard thống kê nội bộ (index.html) như cũ
         long totalResidents = residentService.countActiveResidents();
         long totalBeds = bedService.countTotalBeds();
         long occupiedBeds = bedService.countOccupiedBeds();
