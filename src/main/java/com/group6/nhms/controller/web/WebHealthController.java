@@ -145,13 +145,20 @@ public class WebHealthController {
         return "redirect:/health/history?residentId=" + residentId;
     }
 
-    // 5. Hủy phiếu khám & Hoàn trả tồn kho
+    // 5. Hủy phiếu khám & Hoàn trả tồn kho (Chỉ Bác sĩ, Giám đốc cơ sở & Quản trị viên)
     @PostMapping("/records/{id}/cancel")
     public String cancelHealthRecord(
             @PathVariable Integer id,
             @RequestParam Integer residentId,
+            Authentication authentication,
             RedirectAttributes redirectAttributes
     ) {
+        if (authentication != null && authentication.getAuthorities().stream().noneMatch(a ->
+                a.getAuthority().equals("ROLE_DOCTOR") || a.getAuthority().equals("ROLE_CENTER_MANAGER") || a.getAuthority().equals("ROLE_ADMIN"))) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Bạn không có quyền hủy phiếu khám và hoàn kho thuốc.");
+            return "redirect:/health/history?residentId=" + residentId;
+        }
+
         try {
             healthRecordService.cancelHealthRecord(id);
             redirectAttributes.addFlashAttribute("successMessage",

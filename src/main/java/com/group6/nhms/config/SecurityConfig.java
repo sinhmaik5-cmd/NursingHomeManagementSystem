@@ -69,10 +69,18 @@ public class SecurityConfig {
                                 "/residents/*/check-out"
                         ).hasAnyRole("RECEPTIONIST", "CENTER_MANAGER", "ADMIN", "MANAGER")
 
+                        // Hủy phiếu khám & hoàn trả kho thuốc: Chỉ Bác sĩ, Giám đốc cơ sở & Quản trị viên
+                        .requestMatchers("/health/records/*/cancel")
+                        .hasAnyRole("DOCTOR", "CENTER_MANAGER", "ADMIN")
+
                         // 6. Phân hệ Y tế, Bệnh án & Sinh hiệu
                         // Bác sĩ (khám & kê đơn) và Điều dưỡng (đo sinh hiệu)
                         .requestMatchers("/health/**")
                         .hasAnyRole("DOCTOR", "NURSE", "CENTER_MANAGER", "ADMIN")
+
+                        // Xử lý sự cố y tế: Chỉ Bác sĩ, Giám đốc cơ sở & Quản trị viên
+                        .requestMatchers("/incidents/*/resolve")
+                        .hasAnyRole("DOCTOR", "CENTER_MANAGER", "ADMIN")
 
                         // 7. Báo cáo & Xử lý Sự cố y tế
                         // Toàn bộ nhân viên y tế, lễ tân và quản lý
