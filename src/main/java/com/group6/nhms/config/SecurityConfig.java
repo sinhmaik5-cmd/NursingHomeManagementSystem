@@ -54,12 +54,12 @@ public class SecurityConfig {
 
                         // 4. Cho phép Người thân (RELATIVE) xem chi tiết hóa đơn của người nhà (GET /billing/orders/*)
                         .requestMatchers(HttpMethod.GET, "/billing/orders/*")
-                        .hasAnyRole("RECEPTIONIST", "CENTER_MANAGER", "ADMIN", "ACCOUNTANT", "RELATIVE")
+                        .hasAnyRole("RECEPTIONIST", "CENTER_MANAGER", "ADMIN", "RELATIVE")
 
                         // Phân hệ Tài chính & Thu viện phí nội bộ (Chốt hóa đơn, xác nhận thanh toán POST /pay)
                         // Do Lễ tân kiêm thu ngân thực hiện, Giám đốc có quyền xem & duyệt
                         .requestMatchers("/billing/**")
-                        .hasAnyRole("RECEPTIONIST", "CENTER_MANAGER", "ADMIN", "ACCOUNTANT")
+                        .hasAnyRole("RECEPTIONIST", "CENTER_MANAGER", "ADMIN")
 
                         // 5. Phân hệ Tiếp nhận & Quản lý cư dân: Check-in, Chuyển phòng, Xuất viện
                         // Do Lễ tân chính thực hiện, Giám đốc toàn quyền
@@ -67,7 +67,7 @@ public class SecurityConfig {
                                 "/residents/check-in",
                                 "/residents/transfer-bed",
                                 "/residents/*/check-out"
-                        ).hasAnyRole("RECEPTIONIST", "CENTER_MANAGER", "ADMIN", "MANAGER")
+                        ).hasAnyRole("RECEPTIONIST", "CENTER_MANAGER", "ADMIN")
 
                         // Cho phép Người thân (RELATIVE) xem lịch sử bệnh án & khám bệnh của người nhà mình
                         .requestMatchers(HttpMethod.GET, "/health/history", "/health/history/*")
@@ -101,7 +101,7 @@ public class SecurityConfig {
                                 "/rooms/beds/**",
                                 "/schedules/my-schedule",
                                 "/schedules/*/complete"
-                        ).hasAnyRole("RECEPTIONIST", "DOCTOR", "NURSE", "CENTER_MANAGER", "ADMIN", "MANAGER", "STAFF")
+                        ).hasAnyRole("RECEPTIONIST", "DOCTOR", "NURSE", "CENTER_MANAGER", "ADMIN")
 
                         // 10. Dashboard trang chủ và tất cả các trang giao diện còn lại yêu cầu đăng nhập
                         .anyRequest().authenticated()

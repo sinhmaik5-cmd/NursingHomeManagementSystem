@@ -157,7 +157,7 @@
                                         th:data-title="${inc.title}"
                                         th:data-name="${inc.residentName}"
                                         onclick="openResolveModal(this)"
-                                        sec:authorize="hasAnyRole('DOCTOR', 'NURSE', 'MANAGER', 'CENTER_MANAGER', 'ADMIN')">
+                                        sec:authorize="hasAnyRole('DOCTOR', 'NURSE', 'CENTER_MANAGER', 'ADMIN')">
                                     <i class="bi bi-check2-circle me-1"></i> Xử lý
                                 </button>
                                 <span th:unless="${inc.status == 'PENDING'}" class="text-muted small">

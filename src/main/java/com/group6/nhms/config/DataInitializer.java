@@ -54,6 +54,7 @@ public class DataInitializer implements CommandLineRunner {
     @Override
     public void run(String... args) {
         try {
+            cleanupLegacyRoles();
             initStaffAndAccounts();
             initRoomsAndBeds();
             initMedications();
@@ -63,6 +64,17 @@ public class DataInitializer implements CommandLineRunner {
         } catch (Exception e) {
             log.warn("Data initialization encountered a non-fatal error: {}", e.getMessage());
         }
+    }
+
+    private void cleanupLegacyRoles() {
+        accountRepository.findAll().stream()
+                .filter(a -> "ACCOUNTANT".equalsIgnoreCase(a.getRole()) || "MANAGER".equalsIgnoreCase(a.getRole()))
+                .forEach(accountRepository::delete);
+        staffRepository.findAll().stream()
+                .filter(s -> "ACCOUNTANT".equalsIgnoreCase(s.getJobTitle()) || "MANAGER".equalsIgnoreCase(s.getJobTitle()))
+                .forEach(s -> {
+                    try { staffRepository.delete(s); } catch (Exception ignored) {}
+                });
     }
 
     private void initStaffAndAccounts() {

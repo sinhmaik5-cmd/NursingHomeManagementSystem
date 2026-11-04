@@ -43,9 +43,14 @@ public class StaffServiceImpl implements StaffService {
     public List<StaffResponse> getAllStaff() {
         return staffRepository.findAll().stream().map(staff -> {
             StaffResponse res = staffMapper.toResponse(staff);
-            List<Account> accounts = accountRepository.findByReferenceId(staff.getId());
+            List<Account> accounts = accountRepository.findByReferenceId(staff.getId()).stream()
+                    .filter(acc -> !RoleEnum.RELATIVE.name().equalsIgnoreCase(acc.getRole()))
+                    .toList();
             if (!accounts.isEmpty()) {
-                Account acc = accounts.get(0);
+                Account acc = accounts.stream()
+                        .filter(a -> staff.getJobTitle() != null && staff.getJobTitle().equalsIgnoreCase(a.getRole()))
+                        .findFirst()
+                        .orElse(accounts.get(0));
                 res.setUsername(acc.getUsername());
                 res.setIsActive(acc.getIsActive());
                 res.setAccountId(acc.getId());

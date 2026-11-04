@@ -61,12 +61,9 @@
                         <span sec:authorize="hasRole('ADMIN')">Quản trị viên</span>
                         <span sec:authorize="hasRole('CENTER_MANAGER')">Giám đốc cơ sở</span>
                         <span sec:authorize="hasRole('RECEPTIONIST')">Lễ tân &amp; Thu phí</span>
-                        <span sec:authorize="hasRole('MANAGER')">Quản lý</span>
                         <span sec:authorize="hasRole('DOCTOR')">Bác sĩ</span>
                         <span sec:authorize="hasRole('NURSE')">Điều dưỡng</span>
-                        <span sec:authorize="hasRole('ACCOUNTANT')">Kế toán</span>
                         <span sec:authorize="hasRole('RELATIVE')">Người thân</span>
-                        <span sec:authorize="hasRole('STAFF') and !hasRole('MANAGER') and !hasRole('DOCTOR') and !hasRole('NURSE') and !hasRole('ACCOUNTANT')">Nhân viên</span>
                     </small>
                 </div>
             </a>
