@@ -54,6 +54,7 @@ public class RelativeServiceImpl implements RelativeService {
         }
 
         return accountRepository.findByUsername(authentication.getName())
+                .filter(account -> RoleEnum.RELATIVE.name().equals(account.getRole()))
                 .filter(a -> a.getReferenceId() != null)
                 .flatMap(a -> relativeRepository.findById(a.getReferenceId()))
                 .orElse(null);

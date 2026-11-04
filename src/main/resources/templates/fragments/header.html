@@ -59,6 +59,8 @@
                     <div class="fw-semibold small lh-1" sec:authentication="name">Tài khoản</div>
                     <small class="text-muted" style="font-size: 0.75rem;">
                         <span sec:authorize="hasRole('ADMIN')">Quản trị viên</span>
+                        <span sec:authorize="hasRole('CENTER_MANAGER')">Giám đốc cơ sở</span>
+                        <span sec:authorize="hasRole('RECEPTIONIST')">Lễ tân &amp; Thu phí</span>
                         <span sec:authorize="hasRole('MANAGER')">Quản lý</span>
                         <span sec:authorize="hasRole('DOCTOR')">Bác sĩ</span>
                         <span sec:authorize="hasRole('NURSE')">Điều dưỡng</span>
