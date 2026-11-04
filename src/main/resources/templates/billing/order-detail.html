@@ -18,7 +18,10 @@
             <button onclick="window.print()" class="btn btn-outline-secondary btn-sm">
                 <i class="bi bi-printer me-1"></i> In Hóa Đơn
             </button>
-            <a th:href="@{/billing/monthly}" class="btn btn-light btn-sm">
+            <a th:href="@{/portal/dashboard}" class="btn btn-light btn-sm" sec:authorize="hasRole('RELATIVE')">
+                <i class="bi bi-arrow-left me-1"></i> Quay lại cổng người thân
+            </a>
+            <a th:href="@{/billing/monthly}" class="btn btn-light btn-sm" sec:authorize="!hasRole('RELATIVE')">
                 <i class="bi bi-arrow-left me-1"></i> Quay lại danh sách
             </a>
         </div>
@@ -186,6 +189,7 @@
                 <form th:if="${order.paymentStatus == 'PENDING' or order.paymentStatus == 'UNPAID'}"
                       th:action="@{'/billing/orders/' + ${order.id} + '/pay'}" method="post" class="m-0">
                     <button type="submit" class="btn btn-success px-4 fw-bold shadow-sm"
+                            sec:authorize="hasAnyRole('RECEPTIONIST', 'CENTER_MANAGER', 'ADMIN')"
                             onclick="return confirm('Xác nhận đã nhận đủ tiền và hoàn tất thanh toán hóa đơn này?')">
                         <i class="bi bi-check-circle-fill me-1"></i> Xác Nhận Thanh Toán (PAID)
                     </button>

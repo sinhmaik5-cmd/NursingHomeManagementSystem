@@ -50,13 +50,14 @@ public class RelativeServiceImpl implements RelativeService {
     @Transactional(readOnly = true)
     public Relative resolveCurrentRelative(Authentication authentication) {
         if (authentication == null) {
-            return relativeRepository.findAll().stream().findFirst().orElse(null);
+            return null;
         }
 
         return accountRepository.findByUsername(authentication.getName())
+                .filter(account -> RoleEnum.RELATIVE.name().equals(account.getRole()))
                 .filter(a -> a.getReferenceId() != null)
                 .flatMap(a -> relativeRepository.findById(a.getReferenceId()))
-                .orElseGet(() -> relativeRepository.findAll().stream().findFirst().orElse(null));
+                .orElse(null);
     }
 
     @Override
