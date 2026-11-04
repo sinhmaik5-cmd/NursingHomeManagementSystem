@@ -6,6 +6,7 @@ import com.group6.nhms.entity.Relative;
 import com.group6.nhms.service.OrderService;
 import com.group6.nhms.service.RelativeService;
 import com.group6.nhms.service.ResidentService;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -86,18 +87,23 @@ public class WebBillingController {
     public String orderDetail(@PathVariable Integer id, Authentication authentication, Model model) {
         OrderResponse order = orderService.getOrderById(id);
         ResidentResponse resident = null;
-        if (order.getResidentId() != null) {
+
+        boolean isRelative = authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_RELATIVE"));
+        if (isRelative) {
+            Relative currentRelative = relativeService.resolveCurrentRelative(authentication);
+            if (currentRelative == null || order.getResidentId() == null) {
+                throw new AccessDeniedException("Bạn không có quyền xem hóa đơn này");
+            }
+
+            resident = residentService.getResidentById(order.getResidentId());
+            if (resident.getRelativeId() == null || !resident.getRelativeId().equals(currentRelative.getId())) {
+                throw new AccessDeniedException("Bạn không có quyền xem hóa đơn này");
+            }
+        } else if (order.getResidentId() != null) {
             try {
                 resident = residentService.getResidentById(order.getResidentId());
             } catch (Exception ignored) {
-            }
-        }
-
-        // Bảo mật kiểm soát truy cập (IDOR): Nếu là Người thân (RELATIVE), chỉ được xem hóa đơn của người nhà mình
-        if (authentication != null && authentication.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_RELATIVE"))) {
-            Relative currentRelative = relativeService.resolveCurrentRelative(authentication);
-            if (currentRelative == null || resident == null || resident.getRelativeId() == null || !resident.getRelativeId().equals(currentRelative.getId())) {
-                return "redirect:/portal/dashboard";
             }
         }
 

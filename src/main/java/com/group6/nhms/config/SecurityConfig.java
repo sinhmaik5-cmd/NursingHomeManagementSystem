@@ -52,12 +52,11 @@ public class SecurityConfig {
                                 "/schedules/assign"
                         ).hasAnyRole("CENTER_MANAGER", "ADMIN")
 
-                        // 4. Cho phép Người thân (RELATIVE) xem chi tiết hóa đơn của người nhà (GET /billing/orders/*)
+                        // Người thân chỉ được vào GET chi tiết hóa đơn; chủ sở hữu được kiểm tra trong controller.
                         .requestMatchers(HttpMethod.GET, "/billing/orders/*")
                         .hasAnyRole("RECEPTIONIST", "CENTER_MANAGER", "ADMIN", "ACCOUNTANT", "RELATIVE")
 
-                        // Phân hệ Tài chính & Thu viện phí nội bộ (Chốt hóa đơn, xác nhận thanh toán POST /pay)
-                        // Do Lễ tân kiêm thu ngân thực hiện, Giám đốc có quyền xem & duyệt
+                        // Các chức năng tài chính còn lại chỉ dành cho nhân viên nội bộ.
                         .requestMatchers("/billing/**")
                         .hasAnyRole("RECEPTIONIST", "CENTER_MANAGER", "ADMIN", "ACCOUNTANT")
 
