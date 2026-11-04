@@ -166,7 +166,7 @@ public class OrderServiceImpl implements OrderService {
 
         Order monthlyOrder = new Order();
         monthlyOrder.setResident(resident);
-        monthlyOrder.setIssueDate(LocalDate.now());
+        monthlyOrder.setIssueDate(startDate);
         monthlyOrder.setDueDate(LocalDate.now().plusDays(10));
         monthlyOrder.setPaymentStatus(PaymentStatus.PENDING.name());
         monthlyOrder.setRoomPrice(roomPrice);

@@ -3,6 +3,7 @@ package com.group6.nhms.config;
 import com.group6.nhms.security.CustomAuthenticationSuccessHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -32,7 +33,7 @@ public class SecurityConfig {
 
                 // Phân quyền đường dẫn Web MVC Thymeleaf theo vai trò nghiệp vụ
                 .authorizeHttpRequests(auth -> auth
-                        // 1. Tài nguyên tĩnh giao diện (CSS, JS, Fonts, Images, Icons)
+                        // 1. Tài nguyên tĩnh giao diện (CSS, JS, Fonts, Images, Icons) và Landing page
                         .requestMatchers(
                                 "/",
                                 "/css/**",
@@ -51,8 +52,11 @@ public class SecurityConfig {
                                 "/schedules/assign"
                         ).hasAnyRole("CENTER_MANAGER", "ADMIN")
 
-                        // 4. Phân hệ Tài chính & Thu viện phí (Chốt hóa đơn, chi tiết & xác nhận thanh toán)
-                        // Do Lễ tân kiêm thu ngân thực hiện, Giám đốc có quyền xem & duyệt
+                        // Người thân chỉ được vào GET chi tiết hóa đơn; chủ sở hữu được kiểm tra trong controller.
+                        .requestMatchers(HttpMethod.GET, "/billing/orders/*")
+                        .hasAnyRole("RECEPTIONIST", "CENTER_MANAGER", "ADMIN", "ACCOUNTANT", "RELATIVE")
+
+                        // Các chức năng tài chính còn lại chỉ dành cho nhân viên nội bộ.
                         .requestMatchers("/billing/**")
                         .hasAnyRole("RECEPTIONIST", "CENTER_MANAGER", "ADMIN", "ACCOUNTANT")
 
@@ -64,10 +68,18 @@ public class SecurityConfig {
                                 "/residents/*/check-out"
                         ).hasAnyRole("RECEPTIONIST", "CENTER_MANAGER", "ADMIN", "MANAGER")
 
+                        // Hủy phiếu khám & hoàn trả kho thuốc: Chỉ Bác sĩ, Giám đốc cơ sở & Quản trị viên
+                        .requestMatchers("/health/records/*/cancel")
+                        .hasAnyRole("DOCTOR", "CENTER_MANAGER", "ADMIN")
+
                         // 6. Phân hệ Y tế, Bệnh án & Sinh hiệu
                         // Bác sĩ (khám & kê đơn) và Điều dưỡng (đo sinh hiệu)
                         .requestMatchers("/health/**")
                         .hasAnyRole("DOCTOR", "NURSE", "CENTER_MANAGER", "ADMIN")
+
+                        // Xử lý sự cố y tế: Chỉ Bác sĩ, Giám đốc cơ sở & Quản trị viên
+                        .requestMatchers("/incidents/*/resolve")
+                        .hasAnyRole("DOCTOR", "CENTER_MANAGER", "ADMIN")
 
                         // 7. Báo cáo & Xử lý Sự cố y tế
                         // Toàn bộ nhân viên y tế, lễ tân và quản lý

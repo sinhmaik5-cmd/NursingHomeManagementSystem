@@ -152,4 +152,32 @@ class NursingHomeManagementSystemApplicationTests {
         Authentication nurseSelfAuth = new UsernamePasswordAuthenticationToken(uniqueNurse, "n/a", Collections.emptyList());
         assertThrows(BadRequestException.class, () -> staffService.toggleStaffAccountStatus(nurse.getId(), nurseSelfAuth));
     }
+
+    @Test
+    @Transactional
+    void testCreateStaffInvalidRoleThrows() {
+        StaffAccountCreateRequest request = new StaffAccountCreateRequest();
+        request.setFullName("Nguyen Van Test");
+        request.setPhone("0901112222");
+        request.setJobTitle("INVALID_ROLE");
+        request.setUsername("test_invalid_role");
+        request.setPassword("123456");
+        request.setConfirmPassword("123456");
+
+        assertThrows(BadRequestException.class, () -> staffService.createStaffWithAccount(request));
+    }
+
+    @Test
+    @Transactional
+    void testCreateStaffRelativeRoleThrows() {
+        StaffAccountCreateRequest request = new StaffAccountCreateRequest();
+        request.setFullName("Nguyen Van Test");
+        request.setPhone("0901112222");
+        request.setJobTitle("RELATIVE");
+        request.setUsername("test_relative_staff");
+        request.setPassword("123456");
+        request.setConfirmPassword("123456");
+
+        assertThrows(BadRequestException.class, () -> staffService.createStaffWithAccount(request));
+    }
 }

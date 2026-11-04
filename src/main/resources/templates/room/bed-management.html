@@ -15,7 +15,7 @@
             <p class="text-muted small mb-0">Theo dõi trạng thái thời gian thực các phòng và giường, hỗ trợ nhân viên cập nhật giường sau khi dọn dẹp khử trùng</p>
         </div>
         <div class="d-flex gap-2">
-            <a th:href="@{/residents/check-in}" class="btn btn-primary btn-sm" sec:authorize="hasAnyRole('MANAGER', 'ADMIN')">
+            <a th:href="@{/residents/check-in}" class="btn btn-primary btn-sm" sec:authorize="hasAnyRole('RECEPTIONIST', 'CENTER_MANAGER', 'ADMIN')">
                 <i class="bi bi-person-plus-fill me-1"></i> Tiếp nhận Cư dân mới
             </a>
         </div>

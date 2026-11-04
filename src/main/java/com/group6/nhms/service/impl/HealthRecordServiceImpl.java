@@ -73,6 +73,11 @@ public class HealthRecordServiceImpl implements HealthRecordService {
         Staff staff = staffRepository.findById(staffId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy nhân viên/bác sĩ ID " + staffId));
 
+        if ("NURSE".equalsIgnoreCase(staff.getJobTitle())
+                && request.getMedications() != null && !request.getMedications().isEmpty()) {
+            throw new BadRequestException("Điều dưỡng không được kê đơn hoặc xuất kho thuốc");
+        }
+
         HealthRecord record = new HealthRecord();
         record.setResident(resident);
         record.setStaff(staff);

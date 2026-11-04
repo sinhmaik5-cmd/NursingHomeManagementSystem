@@ -7,6 +7,7 @@ import com.group6.nhms.dto.response.ResidentResponse;
 import com.group6.nhms.service.HealthRecordService;
 import com.group6.nhms.service.ResidentService;
 import com.group6.nhms.service.StaffService;
+import com.group6.nhms.exception.BadRequestException;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -38,26 +39,36 @@ public class WebHealthController {
     @GetMapping("/records/create")
     public String showCreateHealthRecord(
             @RequestParam(required = false) Integer residentId,
+            Authentication authentication,
             Model model
     ) {
         List<ResidentResponse> residents = residentService.getAllResidents(null, "ACTIVE");
         List<MedicationResponse> availableMeds = healthRecordService.getAvailableMedications();
         List<MedicationResponse> lowStockMeds = healthRecordService.getLowStockMedications();
 
+        boolean isNurse = authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_NURSE"));
+
         HealthRecordCreateRequest recordRequest = new HealthRecordCreateRequest();
         if (residentId != null) {
             recordRequest.setResidentId(residentId);
         }
 
-        // Initialize 1 empty medication item
-        List<HealthRecordCreateRequest.MedicationItemRequest> meds = new ArrayList<>();
-        meds.add(new HealthRecordCreateRequest.MedicationItemRequest());
-        recordRequest.setMedications(meds);
+        if (!isNurse) {
+            // Bác sĩ: khởi tạo sẵn 1 dòng chọn thuốc mẫu
+            List<HealthRecordCreateRequest.MedicationItemRequest> meds = new ArrayList<>();
+            meds.add(new HealthRecordCreateRequest.MedicationItemRequest());
+            recordRequest.setMedications(meds);
+        } else {
+            // Điều dưỡng: không yêu cầu kê thuốc
+            recordRequest.setMedications(new ArrayList<>());
+        }
 
         model.addAttribute("recordRequest", recordRequest);
         model.addAttribute("residents", residents);
         model.addAttribute("availableMeds", availableMeds);
         model.addAttribute("lowStockMeds", lowStockMeds);
+        model.addAttribute("isNurse", isNurse);
         model.addAttribute("activeMenu", "record-create");
 
         return "health/record-create";
@@ -71,7 +82,16 @@ public class WebHealthController {
             RedirectAttributes redirectAttributes
     ) {
         try {
-            if (request.getMedications() != null) {
+            boolean isNurse = authentication != null && authentication.getAuthorities().stream()
+                    .anyMatch(a -> a.getAuthority().equals("ROLE_NURSE"));
+
+            if (isNurse) {
+                if (request.getMedications() != null && !request.getMedications().isEmpty()) {
+                    throw new BadRequestException("Điều dưỡng không được kê đơn hoặc xuất kho thuốc");
+                }
+                request.setMedications(new ArrayList<>());
+                request.setDiagnosis(null);
+            } else if (request.getMedications() != null) {
                 request.setMedications(request.getMedications().stream()
                         .filter(m -> m.getMedicationId() != null && m.getQuantityRequested() != null && m.getQuantityRequested() > 0)
                         .toList());
@@ -79,11 +99,14 @@ public class WebHealthController {
 
             Integer staffId = staffService.resolveCurrentStaffId(authentication);
             HealthRecordResponse res = healthRecordService.createHealthRecord(request, staffId);
-            redirectAttributes.addFlashAttribute("successMessage",
-                    "Đã lưu phiếu khám và xuất kho đơn thuốc thành công cho cư dân " + res.getResidentName() + "!");
+            String successMsg = isNurse
+                    ? "Đã lưu chỉ số sinh tồn và theo dõi chăm sóc thành công cho cư dân " + res.getResidentName() + "!"
+                    : "Đã lưu phiếu khám và xuất kho đơn thuốc thành công cho cư dân " + res.getResidentName() + "!";
+
+            redirectAttributes.addFlashAttribute("successMessage", successMsg);
             return "redirect:/health/history?residentId=" + request.getResidentId();
         } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("errorMessage", "Lỗi tạo hồ sơ khám bệnh: " + e.getMessage());
+            redirectAttributes.addFlashAttribute("errorMessage", "Lỗi tạo hồ sơ sức khỏe: " + e.getMessage());
             return "redirect:/health/records/create" + (request.getResidentId() != null ? "?residentId=" + request.getResidentId() : "");
         }
     }
@@ -126,13 +149,20 @@ public class WebHealthController {
         return "redirect:/health/history?residentId=" + residentId;
     }
 
-    // 5. Hủy phiếu khám & Hoàn trả tồn kho
+    // 5. Hủy phiếu khám & Hoàn trả tồn kho (Chỉ Bác sĩ, Giám đốc cơ sở & Quản trị viên)
     @PostMapping("/records/{id}/cancel")
     public String cancelHealthRecord(
             @PathVariable Integer id,
             @RequestParam Integer residentId,
+            Authentication authentication,
             RedirectAttributes redirectAttributes
     ) {
+        if (authentication != null && authentication.getAuthorities().stream().noneMatch(a ->
+                a.getAuthority().equals("ROLE_DOCTOR") || a.getAuthority().equals("ROLE_CENTER_MANAGER") || a.getAuthority().equals("ROLE_ADMIN"))) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Bạn không có quyền hủy phiếu khám và hoàn kho thuốc.");
+            return "redirect:/health/history?residentId=" + residentId;
+        }
+
         try {
             healthRecordService.cancelHealthRecord(id);
             redirectAttributes.addFlashAttribute("successMessage",

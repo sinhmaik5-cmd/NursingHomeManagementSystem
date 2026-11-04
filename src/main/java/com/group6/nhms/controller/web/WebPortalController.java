@@ -54,10 +54,6 @@ public class WebPortalController {
 
         if (relative != null) {
             residentResponses = residentService.getResidentsByRelative(relative.getId());
-            if (residentResponses.isEmpty()) {
-                // Fallback for demo if relative doesn't have a linked resident yet
-                residentResponses = residentService.getAllResidents(null, null);
-            }
 
             if (!residentResponses.isEmpty()) {
                 Integer primaryResidentId = residentResponses.get(0).getId();
