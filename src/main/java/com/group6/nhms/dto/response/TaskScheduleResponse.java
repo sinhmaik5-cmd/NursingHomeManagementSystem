@@ -12,12 +12,13 @@ public class TaskScheduleResponse {
     private String roomNumber;
     private LocalDate workDate;
     private String shift;
+    private String status;
     private String note;
 
     public TaskScheduleResponse() {
     }
 
-    public TaskScheduleResponse(Integer id, Integer staffId, String staffName, String role, Integer roomId, String roomNumber, LocalDate workDate, String shift, String note) {
+    public TaskScheduleResponse(Integer id, Integer staffId, String staffName, String role, Integer roomId, String roomNumber, LocalDate workDate, String shift, String status, String note) {
         this.id = id;
         this.staffId = staffId;
         this.staffName = staffName;
@@ -26,6 +27,7 @@ public class TaskScheduleResponse {
         this.roomNumber = roomNumber;
         this.workDate = workDate;
         this.shift = shift;
+        this.status = status;
         this.note = note;
     }
 
@@ -52,6 +54,9 @@ public class TaskScheduleResponse {
 
     public String getShift() { return shift; }
     public void setShift(String shift) { this.shift = shift; }
+
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
 
     public String getNote() { return note; }
     public void setNote(String note) { this.note = note; }

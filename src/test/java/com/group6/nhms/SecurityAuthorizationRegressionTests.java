@@ -226,7 +226,7 @@ class SecurityAuthorizationRegressionTests {
     }
 
     private WebHealthController healthController() {
-        return new WebHealthController(healthRecordService, residentService, staffService);
+        return new WebHealthController(healthRecordService, residentService, staffService, relativeService);
     }
 
     private HealthRecordServiceImpl healthRecordService() {

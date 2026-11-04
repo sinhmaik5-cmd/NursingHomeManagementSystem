@@ -13,12 +13,13 @@ public class IncidentReportResponse {
     private String description;
     private String severityLevel;
     private String status; // PENDING, PROCESSING, RESOLVED
+    private String actionTaken;
     private LocalDateTime createdDate;
 
     public IncidentReportResponse() {
     }
 
-    public IncidentReportResponse(Integer id, Integer residentId, String residentName, String roomNumber, String reportedByStaffName, String title, String description, String severityLevel, String status, LocalDateTime createdDate) {
+    public IncidentReportResponse(Integer id, Integer residentId, String residentName, String roomNumber, String reportedByStaffName, String title, String description, String severityLevel, String status, String actionTaken, LocalDateTime createdDate) {
         this.id = id;
         this.residentId = residentId;
         this.residentName = residentName;
@@ -28,6 +29,7 @@ public class IncidentReportResponse {
         this.description = description;
         this.severityLevel = severityLevel;
         this.status = status;
+        this.actionTaken = actionTaken;
         this.createdDate = createdDate;
     }
 
@@ -57,6 +59,9 @@ public class IncidentReportResponse {
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+
+    public String getActionTaken() { return actionTaken; }
+    public void setActionTaken(String actionTaken) { this.actionTaken = actionTaken; }
 
     public LocalDateTime getCreatedDate() { return createdDate; }
     public void setCreatedDate(LocalDateTime createdDate) { this.createdDate = createdDate; }

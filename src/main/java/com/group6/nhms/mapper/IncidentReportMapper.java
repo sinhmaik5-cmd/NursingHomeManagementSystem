@@ -21,9 +21,23 @@ public class IncidentReportMapper {
     public IncidentReportResponse toResponse(IncidentReport entity) {
         if (entity == null) return null;
 
-        IncidentReportResponse response = modelMapper.map(entity, IncidentReportResponse.class);
+        IncidentReportResponse response = new IncidentReportResponse();
+        response.setId(entity.getId());
+        response.setSeverityLevel(entity.getSeverityLevel());
+        response.setStatus(entity.getStatus());
+        response.setActionTaken(entity.getActionTaken());
 
-        // Ánh xạ thời gian IncidentTime (Instant) sang LocalDateTime
+        // Tách "[Title] Description" từ cột Description
+        String rawDesc = entity.getDescription();
+        if (rawDesc != null && rawDesc.startsWith("[") && rawDesc.contains("]")) {
+            int closeIdx = rawDesc.indexOf("]");
+            response.setTitle(rawDesc.substring(1, closeIdx).trim());
+            response.setDescription(rawDesc.substring(closeIdx + 1).trim());
+        } else {
+            response.setTitle("Sự cố y tế");
+            response.setDescription(rawDesc);
+        }
+
         if (entity.getIncidentTime() != null) {
             response.setCreatedDate(LocalDateTime.ofInstant(entity.getIncidentTime(), ZoneId.systemDefault()));
         }
@@ -36,13 +50,9 @@ public class IncidentReportMapper {
             }
         }
 
-        // Lấy tên Y tế/Nhân viên báo cáo sự cố qua reporterStaff
         if (entity.getReporterStaff() != null) {
             response.setReportedByStaffName(entity.getReporterStaff().getFullName());
         }
-
-        response.setSeverityLevel(entity.getSeverityLevel());
-        response.setStatus(entity.getStatus());
 
         return response;
     }
