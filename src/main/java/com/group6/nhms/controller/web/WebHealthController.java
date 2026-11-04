@@ -7,6 +7,7 @@ import com.group6.nhms.dto.response.ResidentResponse;
 import com.group6.nhms.service.HealthRecordService;
 import com.group6.nhms.service.ResidentService;
 import com.group6.nhms.service.StaffService;
+import com.group6.nhms.exception.BadRequestException;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -85,8 +86,11 @@ public class WebHealthController {
                     .anyMatch(a -> a.getAuthority().equals("ROLE_NURSE"));
 
             if (isNurse) {
-                // Điều dưỡng chỉ ghi nhận chỉ số sinh hiệu và chăm sóc, tuyệt đối không xuất kho thuốc
+                if (request.getMedications() != null && !request.getMedications().isEmpty()) {
+                    throw new BadRequestException("Điều dưỡng không được kê đơn hoặc xuất kho thuốc");
+                }
                 request.setMedications(new ArrayList<>());
+                request.setDiagnosis(null);
             } else if (request.getMedications() != null) {
                 request.setMedications(request.getMedications().stream()
                         .filter(m -> m.getMedicationId() != null && m.getQuantityRequested() != null && m.getQuantityRequested() > 0)
