@@ -54,11 +54,11 @@ public class SecurityConfig {
 
                         // Người thân chỉ được vào GET chi tiết hóa đơn; chủ sở hữu được kiểm tra trong controller.
                         .requestMatchers(HttpMethod.GET, "/billing/orders/*")
-                        .hasAnyRole("RECEPTIONIST", "CENTER_MANAGER", "ADMIN", "ACCOUNTANT", "RELATIVE")
+                        .hasAnyRole("RECEPTIONIST", "CENTER_MANAGER", "ADMIN", "RELATIVE")
 
                         // Các chức năng tài chính còn lại chỉ dành cho nhân viên nội bộ.
                         .requestMatchers("/billing/**")
-                        .hasAnyRole("RECEPTIONIST", "CENTER_MANAGER", "ADMIN", "ACCOUNTANT")
+                        .hasAnyRole("RECEPTIONIST", "CENTER_MANAGER", "ADMIN")
 
                         // 5. Phân hệ Tiếp nhận & Quản lý cư dân: Check-in, Chuyển phòng, Xuất viện
                         // Do Lễ tân chính thực hiện, Giám đốc toàn quyền
@@ -66,7 +66,7 @@ public class SecurityConfig {
                                 "/residents/check-in",
                                 "/residents/transfer-bed",
                                 "/residents/*/check-out"
-                        ).hasAnyRole("RECEPTIONIST", "CENTER_MANAGER", "ADMIN", "MANAGER")
+                        ).hasAnyRole("RECEPTIONIST", "CENTER_MANAGER", "ADMIN")
 
                         // Hủy phiếu khám & hoàn trả kho thuốc: Chỉ Bác sĩ, Giám đốc cơ sở & Quản trị viên
                         .requestMatchers("/health/records/*/cancel")
@@ -97,7 +97,7 @@ public class SecurityConfig {
                                 "/rooms/beds/**",
                                 "/schedules/my-schedule",
                                 "/schedules/*/complete"
-                        ).hasAnyRole("RECEPTIONIST", "DOCTOR", "NURSE", "CENTER_MANAGER", "ADMIN", "MANAGER", "STAFF")
+                        ).hasAnyRole("RECEPTIONIST", "DOCTOR", "NURSE", "CENTER_MANAGER", "ADMIN")
 
                         // 10. Dashboard trang chủ và tất cả các trang giao diện còn lại yêu cầu đăng nhập
                         .anyRequest().authenticated()
