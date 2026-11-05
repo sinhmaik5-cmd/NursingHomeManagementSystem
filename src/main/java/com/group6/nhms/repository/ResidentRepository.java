@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Collection;
 import java.util.Optional;
 
 @Repository
@@ -16,6 +17,8 @@ public interface ResidentRepository extends JpaRepository<Resident, Integer> {
 
     // Tìm các cư dân do 1 người thân bảo lãnh (dùng cho Relative Portal)
     List<Resident> findByRelativeId(Integer relativeId);
+
+    List<Resident> findByRelativeIdAndIdIn(Integer relativeId, Collection<Integer> ids);
 
     // Lấy danh sách cư dân theo trạng thái (ACTIVE, DISCHARGED, DECEASED)
     List<Resident> findByStatus(String status);

@@ -13,6 +13,7 @@ public class IncidentReportResponse {
     private String description;
     private String severityLevel;
     private String status; // PENDING, PROCESSING, RESOLVED
+    private String actionTaken;
     private LocalDateTime createdDate;
 
     public IncidentReportResponse() {
@@ -57,6 +58,9 @@ public class IncidentReportResponse {
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+
+    public String getActionTaken() { return actionTaken; }
+    public void setActionTaken(String actionTaken) { this.actionTaken = actionTaken; }
 
     public LocalDateTime getCreatedDate() { return createdDate; }
     public void setCreatedDate(LocalDateTime createdDate) { this.createdDate = createdDate; }

@@ -21,8 +21,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class IncidentReportServiceImpl implements IncidentReportService {
@@ -102,6 +104,29 @@ public class IncidentReportServiceImpl implements IncidentReportService {
                 .stream()
                 .map(incidentReportMapper::toResponse)
                 .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<Integer, List<IncidentReportResponse>> getResidentIncidentsByResidentIds(
+            Integer relativeId,
+            List<Integer> residentIds
+    ) {
+        if (residentIds.isEmpty()) {
+            return Map.of();
+        }
+
+        HashSet<Integer> requestedResidentIds = new HashSet<>(residentIds);
+        List<Resident> linkedResidents = residentRepository.findByRelativeIdAndIdIn(
+                relativeId, requestedResidentIds);
+        if (linkedResidents.size() != requestedResidentIds.size()) {
+            throw new BadRequestException("Bạn không có quyền xem thông tin sự cố của một hoặc nhiều cư dân");
+        }
+
+        List<Integer> linkedResidentIds = linkedResidents.stream().map(Resident::getId).toList();
+        return incidentReportRepository.findByResidentIdIn(linkedResidentIds).stream()
+                .map(incidentReportMapper::toResponse)
+                .collect(Collectors.groupingBy(IncidentReportResponse::getResidentId));
     }
 
     @Override

@@ -5,6 +5,7 @@ import com.group6.nhms.dto.response.HealthRecordResponse;
 import com.group6.nhms.dto.response.MedicationResponse;
 
 import java.util.List;
+import java.util.Map;
 
 public interface HealthRecordService {
 
@@ -14,6 +15,8 @@ public interface HealthRecordService {
     );
 
     List<HealthRecordResponse> getRecordsByResident(Integer residentId);
+
+    Map<Integer, HealthRecordResponse> getLatestRecordsByResidents(List<Integer> residentIds);
 
     HealthRecordResponse getRecordById(Integer id);
 

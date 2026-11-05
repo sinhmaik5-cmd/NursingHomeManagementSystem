@@ -121,25 +121,25 @@
                             </td>
                         </tr>
                         <tr th:each="sc : ${schedules}">
-                            <td class="small fw-semibold" th:text="${#temporals.format(sc.shiftDate, 'dd/MM/yyyy')}">23/10/2026</td>
+                            <td class="small fw-semibold" th:text="${#temporals.format(sc.workDate, 'dd/MM/yyyy')}">23/10/2026</td>
                             <td>
-                                <span th:if="${sc.shiftType == 'MORNING'}" class="badge bg-warning-subtle text-warning-emphasis">Sáng (6h-14h)</span>
-                                <span th:if="${sc.shiftType == 'AFTERNOON'}" class="badge bg-info-subtle text-info-emphasis">Chiều (14h-22h)</span>
-                                <span th:if="${sc.shiftType == 'NIGHT'}" class="badge bg-dark-subtle text-dark">Đêm (22h-6h)</span>
+                                <span th:if="${sc.shift == 'MORNING'}" class="badge bg-warning-subtle text-warning-emphasis">Sáng (6h-14h)</span>
+                                <span th:if="${sc.shift == 'AFTERNOON'}" class="badge bg-info-subtle text-info-emphasis">Chiều (14h-22h)</span>
+                                <span th:if="${sc.shift == 'NIGHT'}" class="badge bg-dark-subtle text-dark">Đêm (22h-6h)</span>
                             </td>
                             <td>
-                                <span class="fw-bold text-dark small" th:text="${sc.staff != null ? sc.staff.fullName : 'Nhân viên'}">Lê Thị Hoa</span>
-                                <small class="text-muted d-block" th:if="${sc.staff != null}" th:text="${sc.staff.jobTitle}">NURSE</small>
+                                <span class="fw-bold text-dark small" th:text="${sc.staffName != null ? sc.staffName : 'Nhân viên'}">Lê Thị Hoa</span>
+                                <small class="text-muted d-block" th:if="${sc.role != null}" th:text="${sc.role}">NURSE</small>
                             </td>
                             <td>
-                                <span class="badge bg-light text-dark border" th:text="${sc.room != null ? sc.room.roomNumber : '-'}">P101</span>
+                                <span class="badge bg-light text-dark border" th:text="${sc.roomNumber != null ? sc.roomNumber : '-'}">P101</span>
                             </td>
                             <td>
                                 <span th:if="${sc.status == 'ASSIGNED'}" class="badge bg-primary-subtle text-primary">ASSIGNED</span>
                                 <span th:if="${sc.status == 'COMPLETED'}" class="badge badge-status-available">COMPLETED</span>
                                 <span th:if="${sc.status == 'CANCELLED'}" class="badge bg-secondary-subtle text-secondary">CANCELLED</span>
                             </td>
-                            <td class="small text-muted text-truncate" style="max-width: 140px;" th:text="${sc.task != null ? sc.task : '-'}">
+                            <td class="small text-muted text-truncate" style="max-width: 140px;" th:text="${sc.note != null ? sc.note : '-'}">
                                 Đo sinh hiệu
                             </td>
                         </tr>

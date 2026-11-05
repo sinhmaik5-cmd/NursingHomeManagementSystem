@@ -12,6 +12,7 @@ public class TaskScheduleResponse {
     private String roomNumber;
     private LocalDate workDate;
     private String shift;
+    private String status;
     private String note;
 
     public TaskScheduleResponse() {
@@ -52,6 +53,9 @@ public class TaskScheduleResponse {
 
     public String getShift() { return shift; }
     public void setShift(String shift) { this.shift = shift; }
+
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
 
     public String getNote() { return note; }
     public void setNote(String note) { this.note = note; }

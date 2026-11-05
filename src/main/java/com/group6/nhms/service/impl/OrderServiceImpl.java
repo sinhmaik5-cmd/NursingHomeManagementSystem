@@ -25,6 +25,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @org.springframework.stereotype.Service
 public class OrderServiceImpl implements OrderService {
@@ -59,6 +61,18 @@ public class OrderServiceImpl implements OrderService {
                 .stream()
                 .map(orderMapper::toResponse)
                 .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<Integer, List<OrderResponse>> getOrdersByResidents(List<Integer> residentIds) {
+        if (residentIds.isEmpty()) {
+            return Map.of();
+        }
+
+        return orderRepository.findByResidentIdInOrderByIssueDateDesc(residentIds).stream()
+                .map(orderMapper::toResponse)
+                .collect(Collectors.groupingBy(OrderResponse::getResidentId));
     }
 
     @Override

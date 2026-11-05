@@ -19,6 +19,11 @@ public interface IncidentReportService {
             Integer residentId
     );
 
+    Map<Integer, List<IncidentReportResponse>> getResidentIncidentsByResidentIds(
+            Integer relativeId,
+            List<Integer> residentIds
+    );
+
     IncidentReportResponse resolveIncident(Integer incidentId, String actionTaken);
 
     List<IncidentReportResponse> getAllIncidents(String status);

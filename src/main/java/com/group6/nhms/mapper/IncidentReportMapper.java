@@ -43,6 +43,7 @@ public class IncidentReportMapper {
 
         response.setSeverityLevel(entity.getSeverityLevel());
         response.setStatus(entity.getStatus());
+        response.setActionTaken(entity.getActionTaken());
 
         return response;
     }

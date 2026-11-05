@@ -26,7 +26,10 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class HealthRecordServiceImpl implements HealthRecordService {
@@ -148,6 +151,31 @@ public class HealthRecordServiceImpl implements HealthRecordService {
         }
 
         return responses;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<Integer, HealthRecordResponse> getLatestRecordsByResidents(List<Integer> residentIds) {
+        if (residentIds.isEmpty()) {
+            return Map.of();
+        }
+
+        List<HealthRecord> records = healthRecordRepository.findByResidentIdInOrderByRecordDateDesc(residentIds);
+        if (records.isEmpty()) {
+            return Map.of();
+        }
+
+        List<Integer> recordIds = records.stream().map(HealthRecord::getId).toList();
+        Map<Integer, List<HealthRecordDetail>> detailsByRecordId =
+                healthRecordDetailRepository.findByHealthRecordIdIn(recordIds).stream()
+                        .collect(Collectors.groupingBy(detail -> detail.getHealthRecord().getId()));
+
+        Map<Integer, HealthRecordResponse> latestRecords = new LinkedHashMap<>();
+        for (HealthRecord record : records) {
+            latestRecords.computeIfAbsent(record.getResident().getId(), residentId ->
+                    buildRecordResponse(record, detailsByRecordId.getOrDefault(record.getId(), List.of())));
+        }
+        return latestRecords;
     }
 
     @Override

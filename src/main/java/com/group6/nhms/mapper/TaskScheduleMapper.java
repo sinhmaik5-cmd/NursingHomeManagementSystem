@@ -22,6 +22,7 @@ public class TaskScheduleMapper {
 
         response.setWorkDate(entity.getShiftDate());
         response.setShift(entity.getShiftType());
+        response.setStatus(entity.getStatus());
         response.setNote(entity.getTask());
 
         if (entity.getStaff() != null) {

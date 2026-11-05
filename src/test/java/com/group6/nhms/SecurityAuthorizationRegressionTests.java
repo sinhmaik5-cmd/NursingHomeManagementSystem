@@ -122,6 +122,30 @@ class SecurityAuthorizationRegressionTests {
     }
 
     @Test
+    void relativeCannotViewHealthHistoryForUnlinkedResident() {
+        when(relativeService.resolveCurrentRelative(relativeAuthentication())).thenReturn(relativeWithId(4));
+        when(residentService.getResidentsByRelative(4)).thenReturn(List.of(residentLinkedTo(12, 4)));
+
+        assertThrows(AccessDeniedException.class, () -> healthController().showHealthHistory(
+                13, relativeAuthentication(), new ExtendedModelMap()));
+        verify(healthRecordService, never()).getRecordsByResident(13);
+    }
+
+    @Test
+    void relativeHealthHistoryLoadsOnlyLinkedResidents() {
+        ResidentResponse linkedResident = residentLinkedTo(12, 4);
+        when(relativeService.resolveCurrentRelative(relativeAuthentication())).thenReturn(relativeWithId(4));
+        when(residentService.getResidentsByRelative(4)).thenReturn(List.of(linkedResident));
+        when(healthRecordService.getRecordsByResident(12)).thenReturn(List.of());
+        ExtendedModelMap model = new ExtendedModelMap();
+
+        assertEquals("health/history", healthController().showHealthHistory(
+                12, relativeAuthentication(), model));
+        assertEquals(List.of(linkedResident), model.get("residents"));
+        assertSame(linkedResident, model.get("selectedResident"));
+    }
+
+    @Test
     void relativeWithNoAccountAssociationIsDeniedWithoutLoadingResident() {
         when(orderService.getOrderById(8)).thenReturn(orderForResident(12));
         when(relativeService.resolveCurrentRelative(relativeAuthentication())).thenReturn(null);
@@ -192,6 +216,27 @@ class SecurityAuthorizationRegressionTests {
     }
 
     @Test
+    void doctorCanCreateHealthRecordWithoutMedicationOrStockDeduction() {
+        Resident resident = new Resident();
+        resident.setStatus("ACTIVE");
+        Staff doctor = new Staff();
+        doctor.setJobTitle("DOCTOR");
+        when(residentRepository.findById(12)).thenReturn(Optional.of(resident));
+        when(staffRepository.findById(3)).thenReturn(Optional.of(doctor));
+        when(healthRecordRepository.save(any(HealthRecord.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        when(healthRecordMapper.toResponse(any(HealthRecord.class))).thenReturn(new HealthRecordResponse());
+        HealthRecordCreateRequest request = new HealthRecordCreateRequest();
+        request.setResidentId(12);
+        request.setMedications(List.of());
+
+        healthRecordService().createHealthRecord(request, 3);
+
+        verify(healthRecordRepository).save(any(HealthRecord.class));
+        verifyNoInteractions(medicationRepository, healthRecordDetailRepository);
+    }
+
+    @Test
     void relativeResolutionDoesNotFallBackToAnotherRelativeForNonRelativeAccount() {
         Account manager = new Account();
         manager.setRole("CENTER_MANAGER");
@@ -226,7 +271,7 @@ class SecurityAuthorizationRegressionTests {
     }
 
     private WebHealthController healthController() {
-        return new WebHealthController(healthRecordService, residentService, staffService);
+        return new WebHealthController(healthRecordService, residentService, staffService, relativeService);
     }
 
     private HealthRecordServiceImpl healthRecordService() {

@@ -14,7 +14,7 @@
 
     <div class="d-flex align-items-center gap-3">
         <!-- Quick Notification / Status -->
-        <div class="dropdown">
+        <div class="dropdown" sec:authorize="hasAnyRole('DOCTOR', 'NURSE', 'RECEPTIONIST', 'CENTER_MANAGER', 'ADMIN')">
             <button class="btn btn-sm btn-light position-relative rounded-pill px-3 py-1" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                 <i class="bi bi-bell me-1 text-muted"></i>
                 <span class="small text-muted">Thông báo</span>
@@ -61,12 +61,9 @@
                         <span sec:authorize="hasRole('ADMIN')">Quản trị viên</span>
                         <span sec:authorize="hasRole('CENTER_MANAGER')">Giám đốc cơ sở</span>
                         <span sec:authorize="hasRole('RECEPTIONIST')">Lễ tân &amp; Thu phí</span>
-                        <span sec:authorize="hasRole('MANAGER')">Quản lý</span>
                         <span sec:authorize="hasRole('DOCTOR')">Bác sĩ</span>
                         <span sec:authorize="hasRole('NURSE')">Điều dưỡng</span>
-                        <span sec:authorize="hasRole('ACCOUNTANT')">Kế toán</span>
                         <span sec:authorize="hasRole('RELATIVE')">Người thân</span>
-                        <span sec:authorize="hasRole('STAFF') and !hasRole('MANAGER') and !hasRole('DOCTOR') and !hasRole('NURSE') and !hasRole('ACCOUNTANT')">Nhân viên</span>
                     </small>
                 </div>
             </a>

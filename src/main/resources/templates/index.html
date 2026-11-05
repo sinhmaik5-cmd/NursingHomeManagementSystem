@@ -23,7 +23,7 @@
     </div>
 
     <!-- Top Summary Stat Cards -->
-    <div class="row g-3 mb-4">
+    <div class="row g-3 mb-4" sec:authorize="hasAnyRole('RECEPTIONIST', 'DOCTOR', 'NURSE', 'CENTER_MANAGER', 'ADMIN')">
         <!-- Total Active Residents -->
         <div class="col-12 col-sm-6 col-xl-3">
             <div class="stat-card">
@@ -105,7 +105,7 @@
         <div class="nh-card-body">
             <div class="row g-3">
                 <!-- Manager shortcuts -->
-                <div class="col-6 col-md-4 col-xl-2" sec:authorize="hasAnyRole('RECEPTIONIST', 'CENTER_MANAGER', 'ADMIN', 'MANAGER')">
+                <div class="col-6 col-md-4 col-xl-2" sec:authorize="hasAnyRole('RECEPTIONIST', 'CENTER_MANAGER', 'ADMIN')">
                     <a th:href="@{/residents/check-in}"
                        class="btn btn-light w-100 p-3 text-start border d-flex flex-column gap-2 h-100 hover-shadow">
                         <i class="bi bi-person-plus-fill text-primary fs-3"></i>
@@ -115,7 +115,7 @@
                         </div>
                     </a>
                 </div>
-                <div class="col-6 col-md-4 col-xl-2" sec:authorize="hasAnyRole('RECEPTIONIST', 'CENTER_MANAGER', 'ADMIN', 'MANAGER')">
+                <div class="col-6 col-md-4 col-xl-2" sec:authorize="hasAnyRole('RECEPTIONIST', 'DOCTOR', 'NURSE', 'CENTER_MANAGER', 'ADMIN')">
                     <a th:href="@{/residents}"
                        class="btn btn-light w-100 p-3 text-start border d-flex flex-column gap-2 h-100 hover-shadow">
                         <i class="bi bi-people-fill text-info fs-3"></i>
@@ -125,7 +125,7 @@
                         </div>
                     </a>
                 </div>
-                <div class="col-6 col-md-4 col-xl-2" sec:authorize="hasAnyRole('RECEPTIONIST', 'NURSE', 'CENTER_MANAGER', 'ADMIN', 'MANAGER', 'STAFF')">
+                <div class="col-6 col-md-4 col-xl-2" sec:authorize="hasAnyRole('RECEPTIONIST', 'DOCTOR', 'NURSE', 'CENTER_MANAGER', 'ADMIN')">
                     <a th:href="@{/rooms/beds}"
                        class="btn btn-light w-100 p-3 text-start border d-flex flex-column gap-2 h-100 hover-shadow">
                         <i class="bi bi-hospital-fill text-success fs-3"></i>
@@ -146,6 +146,17 @@
                     </a>
                 </div>
 
+                <div class="col-6 col-md-4 col-xl-2" sec:authorize="hasAnyRole('CENTER_MANAGER', 'ADMIN')">
+                    <a th:href="@{/management/staff}"
+                       class="btn btn-light w-100 p-3 text-start border d-flex flex-column gap-2 h-100 hover-shadow">
+                        <i class="bi bi-person-badge-fill text-primary fs-3"></i>
+                        <div>
+                            <div class="fw-bold text-dark small">Quản lý Nhân sự</div>
+                            <small class="text-muted" style="font-size: 0.75rem;">Tài khoản và trạng thái</small>
+                        </div>
+                    </a>
+                </div>
+
                 <!-- Doctor / Nurse shortcuts -->
                 <div class="col-6 col-md-4 col-xl-2" sec:authorize="hasAnyRole('DOCTOR', 'NURSE', 'CENTER_MANAGER', 'ADMIN')">
                     <a th:href="@{/health/records/create}"
@@ -157,7 +168,7 @@
                         </div>
                     </a>
                 </div>
-                <div class="col-6 col-md-4 col-xl-2" sec:authorize="hasAnyRole('DOCTOR', 'NURSE', 'RECEPTIONIST', 'CENTER_MANAGER', 'ADMIN', 'STAFF')">
+                <div class="col-6 col-md-4 col-xl-2" sec:authorize="hasAnyRole('DOCTOR', 'NURSE', 'RECEPTIONIST', 'CENTER_MANAGER', 'ADMIN')">
                     <a th:href="@{/incidents/report}"
                        class="btn btn-light w-100 p-3 text-start border d-flex flex-column gap-2 h-100 hover-shadow">
                         <i class="bi bi-exclamation-octagon-fill text-danger fs-3"></i>
@@ -167,7 +178,7 @@
                         </div>
                     </a>
                 </div>
-                <div class="col-6 col-md-4 col-xl-2" sec:authorize="hasAnyRole('DOCTOR', 'NURSE', 'RECEPTIONIST', 'CENTER_MANAGER', 'ADMIN', 'STAFF')">
+                <div class="col-6 col-md-4 col-xl-2" sec:authorize="hasAnyRole('DOCTOR', 'NURSE', 'RECEPTIONIST', 'CENTER_MANAGER', 'ADMIN')">
                     <a th:href="@{/schedules/my-schedule}"
                        class="btn btn-light w-100 p-3 text-start border d-flex flex-column gap-2 h-100 hover-shadow">
                         <i class="bi bi-person-badge-fill text-primary fs-3"></i>
@@ -179,7 +190,7 @@
                 </div>
 
                 <!-- Accountant shortcut -->
-                <div class="col-6 col-md-4 col-xl-2" sec:authorize="hasAnyRole('RECEPTIONIST', 'CENTER_MANAGER', 'ADMIN', 'ACCOUNTANT')">
+                <div class="col-6 col-md-4 col-xl-2" sec:authorize="hasAnyRole('RECEPTIONIST', 'CENTER_MANAGER', 'ADMIN')">
                     <a th:href="@{/billing/monthly}"
                        class="btn btn-light w-100 p-3 text-start border d-flex flex-column gap-2 h-100 hover-shadow">
                         <i class="bi bi-receipt text-success fs-3"></i>
@@ -191,7 +202,7 @@
                 </div>
 
                 <!-- Relative shortcut -->
-                <div class="col-6 col-md-4 col-xl-2" sec:authorize="hasAnyRole('RELATIVE', 'ADMIN')">
+                <div class="col-6 col-md-4 col-xl-2" sec:authorize="hasRole('RELATIVE')">
                     <a th:href="@{/portal/dashboard}"
                        class="btn btn-light w-100 p-3 text-start border d-flex flex-column gap-2 h-100 hover-shadow">
                         <i class="bi bi-house-heart-fill text-danger fs-3"></i>
@@ -206,7 +217,7 @@
     </div>
 
     <!-- Recent Residents Table -->
-    <div class="nh-card">
+    <div class="nh-card" sec:authorize="hasAnyRole('RECEPTIONIST', 'DOCTOR', 'NURSE', 'CENTER_MANAGER', 'ADMIN')">
         <div class="nh-card-header">
             <h6 class="fw-bold mb-0 text-dark">
                 <i class="bi bi-person-lines-fill text-primary me-2"></i>Cư Dân Tiếp Nhận Gần Đây
@@ -280,7 +291,9 @@
                               class="badge bg-dark-subtle text-dark">Đã qua đời</span>
                     </td>
                     <td class="text-end">
-                        <a th:href="@{'/health/history/' + ${res.id}}" class="btn btn-sm btn-outline-info"
+                        <a th:href="@{/health/history(residentId=${res.id})}"
+                           sec:authorize="hasAnyRole('DOCTOR', 'NURSE', 'CENTER_MANAGER', 'ADMIN')"
+                           class="btn btn-sm btn-outline-info"
                            title="Xem bệnh án">
                             <i class="bi bi-heart-pulse"></i>
                         </a>

@@ -21,18 +21,6 @@
         </div>
     </div>
 
-    <!-- Alert Messages -->
-    <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show d-flex align-items-center mb-4" role="alert">
-        <i class="bi bi-check-circle-fill me-2 fs-5"></i>
-        <div th:text="${successMessage}">Thao tác thành công!</div>
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-    <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show d-flex align-items-center mb-4" role="alert">
-        <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
-        <div th:text="${errorMessage}">Đã xảy ra lỗi!</div>
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-
     <!-- Overview Stats -->
     <div class="row g-3 mb-4">
         <div class="col-6 col-md-3">
@@ -141,7 +129,7 @@
                             <i class="bi bi-person-badge-fill me-1"></i>Lễ tân & Thu phí
                         </span>
                         <span th:if="${st.jobTitle != 'CENTER_MANAGER' and st.jobTitle != 'DOCTOR' and st.jobTitle != 'NURSE' and st.jobTitle != 'RECEPTIONIST'}"
-                              class="badge bg-secondary-subtle text-secondary px-2 py-1" th:text="${st.jobTitle}">STAFF</span>
+                              class="badge bg-secondary-subtle text-secondary px-2 py-1">Nhân viên</span>
                     </td>
                     <td>
                         <span th:text="${st.specialization != null and !st.specialization.isBlank() ? st.specialization : 'Chưa cập nhật'}" class="text-dark small">Nội tổng quát</span>
@@ -164,7 +152,8 @@
                     <td class="text-end pe-3">
                         <div class="d-inline-flex gap-1" th:if="${st.username != null}">
                             <!-- Toggle Active/Lock Button -->
-                            <form th:action="@{'/management/staff/' + ${st.id} + '/toggle-status'}" method="post" class="d-inline"
+                            <form th:if="${st.username != #authentication.name or st.isActive != true}"
+                                  th:action="@{'/management/staff/' + ${st.id} + '/toggle-status'}" method="post" class="d-inline"
                                   onsubmit="return confirm('Bạn có chắc chắn muốn thay đổi trạng thái tài khoản của nhân viên này?');">
                                 <button type="submit" class="btn btn-sm"
                                         th:classappend="${st.isActive == true ? 'btn-outline-danger' : 'btn-outline-success'}"
@@ -190,8 +179,7 @@
     </div>
 
     <!-- Modal: Thêm Nhân Viên Mới -->
-    <div class="modal fade" id="createStaffModal" tabindex="-1" aria-labelledby="createStaffModalLabel" aria-hidden="true"
-         th:classappend="${showCreateModal == true ? 'show d-block' : ''}">
+    <div class="modal fade" id="createStaffModal" tabindex="-1" aria-labelledby="createStaffModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content border-0 shadow-lg rounded-4">
                 <div class="modal-header bg-primary text-white p-3 px-4 rounded-top-4">
@@ -273,6 +261,12 @@
             </div>
         </div>
     </div>
+
+    <script th:if="${showCreateModal == true}">
+        document.addEventListener('DOMContentLoaded', function () {
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('createStaffModal')).show();
+        });
+    </script>
 
     <!-- Script validation -->
     <script>
