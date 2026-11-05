@@ -19,7 +19,7 @@ public class IncidentReportResponse {
     public IncidentReportResponse() {
     }
 
-    public IncidentReportResponse(Integer id, Integer residentId, String residentName, String roomNumber, String reportedByStaffName, String title, String description, String severityLevel, String status, LocalDateTime createdDate) {
+    public IncidentReportResponse(Integer id, Integer residentId, String residentName, String roomNumber, String reportedByStaffName, String title, String description, String severityLevel, String status, String actionTaken, LocalDateTime createdDate) {
         this.id = id;
         this.residentId = residentId;
         this.residentName = residentName;
@@ -29,6 +29,7 @@ public class IncidentReportResponse {
         this.description = description;
         this.severityLevel = severityLevel;
         this.status = status;
+        this.actionTaken = actionTaken;
         this.createdDate = createdDate;
     }
 

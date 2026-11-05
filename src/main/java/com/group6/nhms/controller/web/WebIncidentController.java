@@ -71,13 +71,20 @@ public class WebIncidentController {
         return "redirect:/incidents/report";
     }
 
-    // 3. Cập nhật phương án xử lý (PENDING -> RESOLVED)
+    // 3. Cập nhật phương án xử lý (PENDING -> RESOLVED) - Chỉ Bác sĩ, Giám đốc cơ sở & Quản trị viên
     @PostMapping("/{id}/resolve")
     public String processResolveIncident(
             @PathVariable Integer id,
             @RequestParam String actionTaken,
+            Authentication authentication,
             RedirectAttributes redirectAttributes
     ) {
+        if (authentication != null && authentication.getAuthorities().stream().noneMatch(a ->
+                a.getAuthority().equals("ROLE_DOCTOR") || a.getAuthority().equals("ROLE_CENTER_MANAGER") || a.getAuthority().equals("ROLE_ADMIN"))) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Bạn không có quyền cập nhật phương án xử lý sự cố.");
+            return "redirect:/incidents/report";
+        }
+
         try {
             IncidentReportResponse res = incidentReportService.resolveIncident(id, actionTaken);
             redirectAttributes.addFlashAttribute("successMessage",

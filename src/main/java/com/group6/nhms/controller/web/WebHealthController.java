@@ -4,13 +4,10 @@ import com.group6.nhms.dto.request.HealthRecordCreateRequest;
 import com.group6.nhms.dto.response.HealthRecordResponse;
 import com.group6.nhms.dto.response.MedicationResponse;
 import com.group6.nhms.dto.response.ResidentResponse;
-import com.group6.nhms.entity.Relative;
 import com.group6.nhms.service.HealthRecordService;
-import com.group6.nhms.service.RelativeService;
 import com.group6.nhms.service.ResidentService;
 import com.group6.nhms.service.StaffService;
 import com.group6.nhms.exception.BadRequestException;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -27,18 +24,15 @@ public class WebHealthController {
     private final HealthRecordService healthRecordService;
     private final ResidentService residentService;
     private final StaffService staffService;
-    private final RelativeService relativeService;
 
     public WebHealthController(
             HealthRecordService healthRecordService,
             ResidentService residentService,
-            StaffService staffService,
-            RelativeService relativeService
+            StaffService staffService
     ) {
         this.healthRecordService = healthRecordService;
         this.residentService = residentService;
         this.staffService = staffService;
-        this.relativeService = relativeService;
     }
 
     // 1. Giao diện khám bệnh & Kê đơn thuốc
@@ -121,32 +115,17 @@ public class WebHealthController {
     @GetMapping("/history")
     public String showHealthHistory(
             @RequestParam(required = false) Integer residentId,
-            Authentication authentication,
             Model model
     ) {
-        boolean isRelative = authentication != null && authentication.getAuthorities().stream()
-                .anyMatch(authority -> authority.getAuthority().equals("ROLE_RELATIVE"));
-        List<ResidentResponse> residents;
-        if (isRelative) {
-            Relative relative = relativeService.resolveCurrentRelative(authentication);
-            if (relative == null) {
-                throw new AccessDeniedException("Không tìm thấy người thân gắn với tài khoản hiện tại");
-            }
-            residents = residentService.getResidentsByRelative(relative.getId());
-        } else {
-            residents = residentService.getAllResidents(null, null);
-        }
+        List<ResidentResponse> residents = residentService.getAllResidents(null, null);
 
         ResidentResponse selectedResident = null;
         List<HealthRecordResponse> records = List.of();
 
         if (residentId != null) {
-            selectedResident = residents.stream()
-                    .filter(resident -> residentId.equals(resident.getId()))
-                    .findFirst()
-                    .orElse(null);
-            if (isRelative && selectedResident == null) {
-                throw new AccessDeniedException("Bạn không có quyền xem bệnh án của cư dân này");
+            try {
+                selectedResident = residentService.getResidentById(residentId);
+            } catch (Exception ignored) {
             }
         } else if (!residents.isEmpty()) {
             selectedResident = residents.get(0);

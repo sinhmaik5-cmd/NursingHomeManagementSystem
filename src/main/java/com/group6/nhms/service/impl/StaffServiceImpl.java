@@ -4,6 +4,7 @@ import com.group6.nhms.dto.request.StaffAccountCreateRequest;
 import com.group6.nhms.dto.response.StaffResponse;
 import com.group6.nhms.entity.Account;
 import com.group6.nhms.entity.Staff;
+import com.group6.nhms.enums.RoleEnum;
 import com.group6.nhms.exception.BadRequestException;
 import com.group6.nhms.exception.ResourceNotFoundException;
 import com.group6.nhms.mapper.StaffMapper;
@@ -42,9 +43,14 @@ public class StaffServiceImpl implements StaffService {
     public List<StaffResponse> getAllStaff() {
         return staffRepository.findAll().stream().map(staff -> {
             StaffResponse res = staffMapper.toResponse(staff);
-            List<Account> accounts = accountRepository.findByReferenceId(staff.getId());
+            List<Account> accounts = accountRepository.findByReferenceId(staff.getId()).stream()
+                    .filter(acc -> !RoleEnum.RELATIVE.name().equalsIgnoreCase(acc.getRole()))
+                    .toList();
             if (!accounts.isEmpty()) {
-                Account acc = accounts.get(0);
+                Account acc = accounts.stream()
+                        .filter(a -> staff.getJobTitle() != null && staff.getJobTitle().equalsIgnoreCase(a.getRole()))
+                        .findFirst()
+                        .orElse(accounts.get(0));
                 res.setUsername(acc.getUsername());
                 res.setIsActive(acc.getIsActive());
                 res.setAccountId(acc.getId());
@@ -64,20 +70,20 @@ public class StaffServiceImpl implements StaffService {
     @Transactional(readOnly = true)
     public Staff resolveCurrentStaff(Authentication authentication) {
         if (authentication == null) {
-            return staffRepository.findAll().stream().findFirst().orElse(null);
+            return null;
         }
 
         return accountRepository.findByUsername(authentication.getName())
                 .filter(a -> a.getReferenceId() != null)
                 .flatMap(a -> staffRepository.findById(a.getReferenceId()))
-                .orElseGet(() -> staffRepository.findAll().stream().findFirst().orElse(null));
+                .orElse(null);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Integer resolveCurrentStaffId(Authentication authentication) {
         Staff staff = resolveCurrentStaff(authentication);
-        return staff != null ? staff.getId() : 1;
+        return staff != null ? staff.getId() : null;
     }
 
     @Override
@@ -94,20 +100,32 @@ public class StaffServiceImpl implements StaffService {
             throw new BadRequestException("Tên đăng nhập '" + cleanUsername + "' đã tồn tại trong hệ thống!");
         }
 
-        // 3. Khởi tạo và lưu hồ sơ Staff
+        // 3. Kiểm tra tính hợp lệ của vai trò nhân sự
+        RoleEnum roleEnum;
+        try {
+            roleEnum = RoleEnum.valueOf(request.getJobTitle().trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException("Vai trò '" + request.getJobTitle() + "' không hợp lệ!");
+        }
+
+        if (roleEnum == RoleEnum.RELATIVE) {
+            throw new BadRequestException("Không thể cấp vai trò Người thân (RELATIVE) cho nhân viên nội bộ!");
+        }
+
+        // 4. Khởi tạo và lưu hồ sơ Staff
         Staff staff = new Staff();
         staff.setFullName(request.getFullName().trim());
         staff.setPhone(request.getPhone().trim());
-        staff.setJobTitle(request.getJobTitle().trim());
+        staff.setJobTitle(roleEnum.name());
         staff.setSpecialization(request.getSpecialization() != null && !request.getSpecialization().isBlank()
                 ? request.getSpecialization().trim() : null);
         Staff savedStaff = staffRepository.save(staff);
 
-        // 4. Khởi tạo tài khoản Account tương ứng cho nhân viên
+        // 5. Khởi tạo tài khoản Account tương ứng cho nhân viên
         Account account = new Account();
         account.setUsername(cleanUsername);
         account.setPasswordHash(passwordEncoder.encode(request.getPassword()));
-        account.setRole(request.getJobTitle().trim());
+        account.setRole(roleEnum.name());
         account.setReferenceId(savedStaff.getId());
         account.setIsActive(true);
         accountRepository.save(account);

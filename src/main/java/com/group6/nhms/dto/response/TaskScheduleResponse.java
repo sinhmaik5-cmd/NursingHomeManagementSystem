@@ -18,7 +18,7 @@ public class TaskScheduleResponse {
     public TaskScheduleResponse() {
     }
 
-    public TaskScheduleResponse(Integer id, Integer staffId, String staffName, String role, Integer roomId, String roomNumber, LocalDate workDate, String shift, String note) {
+    public TaskScheduleResponse(Integer id, Integer staffId, String staffName, String role, Integer roomId, String roomNumber, LocalDate workDate, String shift, String status, String note) {
         this.id = id;
         this.staffId = staffId;
         this.staffName = staffName;
@@ -27,6 +27,7 @@ public class TaskScheduleResponse {
         this.roomNumber = roomNumber;
         this.workDate = workDate;
         this.shift = shift;
+        this.status = status;
         this.note = note;
     }
 

@@ -60,14 +60,6 @@ public class SecurityConfig {
                         .requestMatchers("/billing/**")
                         .hasAnyRole("RECEPTIONIST", "CENTER_MANAGER", "ADMIN", "ACCOUNTANT")
 
-                        // Only nurses and center managers may confirm a bed's cleaning.
-                        .requestMatchers(HttpMethod.POST, "/rooms/beds/*/status")
-                        .hasAnyRole("NURSE", "CENTER_MANAGER", "ADMIN")
-
-                        // Incident reporting is available to staff, but resolution is restricted.
-                        .requestMatchers(HttpMethod.POST, "/incidents/*/resolve")
-                        .hasAnyRole("DOCTOR", "CENTER_MANAGER", "ADMIN")
-
                         // 5. Phân hệ Tiếp nhận & Quản lý cư dân: Check-in, Chuyển phòng, Xuất viện
                         // Do Lễ tân chính thực hiện, Giám đốc toàn quyền
                         .requestMatchers(
@@ -78,8 +70,6 @@ public class SecurityConfig {
 
                         // 6. Phân hệ Y tế, Bệnh án & Sinh hiệu
                         // Bác sĩ (khám & kê đơn) và Điều dưỡng (đo sinh hiệu)
-                        .requestMatchers(HttpMethod.GET, "/health/history", "/health/history/*")
-                        .hasAnyRole("DOCTOR", "NURSE", "CENTER_MANAGER", "ADMIN", "RELATIVE")
                         .requestMatchers("/health/**")
                         .hasAnyRole("DOCTOR", "NURSE", "CENTER_MANAGER", "ADMIN")
 

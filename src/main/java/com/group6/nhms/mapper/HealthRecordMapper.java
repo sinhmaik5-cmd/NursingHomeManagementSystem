@@ -22,9 +22,14 @@ public class HealthRecordMapper {
     public HealthRecordResponse toResponse(HealthRecord entity) {
         if (entity == null) return null;
 
-        HealthRecordResponse response = modelMapper.map(entity, HealthRecordResponse.class);
+        HealthRecordResponse response = new HealthRecordResponse();
+        response.setId(entity.getId());
+        response.setBloodPressure(entity.getBloodPressure());
+        response.setHeartRate(entity.getHeartRate());
+        response.setBloodSugar(entity.getBloodSugar());
+        response.setTemperature(entity.getTemperature());
+        response.setDiagnosis(entity.getNotes()); // Map cột Notes sang Diagnosis
 
-        // Chuyển Instant sang LocalDateTime để hiển thị trên DTO Response
         if (entity.getRecordDate() != null) {
             response.setRecordDate(LocalDateTime.ofInstant(entity.getRecordDate(), ZoneId.systemDefault()));
         }
@@ -38,10 +43,7 @@ public class HealthRecordMapper {
             response.setStaffName(entity.getStaff().getFullName());
         }
 
-        if (response.getMedications() == null) {
-            response.setMedications(new ArrayList<>());
-        }
-
+        response.setMedications(new ArrayList<>());
         return response;
     }
 
