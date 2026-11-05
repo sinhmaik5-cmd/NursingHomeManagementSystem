@@ -5,10 +5,13 @@ import com.group6.nhms.dto.response.OrderResponse;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 public interface OrderService {
 
     List<OrderResponse> getOrdersByResident(Integer residentId);
+
+    Map<Integer, List<OrderResponse>> getOrdersByResidents(List<Integer> residentIds);
 
     List<OrderResponse> getUnpaidOrders(Integer residentId);
 

@@ -169,7 +169,7 @@
                                 <!-- Row 0 Default -->
                                 <tr class="med-row">
                                     <td>
-                                        <select class="form-select form-select-sm med-select" name="medications[0].medicationId" required onchange="checkStock(this)">
+                                        <select class="form-select form-select-sm med-select" name="medications[0].medicationId" onchange="checkStock(this)">
                                             <option value="" disabled selected>-- Chọn thuốc --</option>
                                             <option th:each="med : ${availableMeds}"
                                                     th:value="${med.id}"
@@ -267,7 +267,14 @@
             row.remove();
             reindexRows();
         } else {
-            alert('Đơn thuốc cần có ít nhất 1 loại thuốc hoặc bạn có thể xóa nội dung.');
+            const select = row.querySelector('.med-select');
+            const quantity = row.querySelector('.med-qty');
+            const dosage = row.querySelector('input[type="text"]');
+            const warning = row.querySelector('.stock-warning');
+            if (select) select.value = '';
+            if (quantity) quantity.value = '1';
+            if (dosage) dosage.value = '';
+            if (warning) warning.classList.add('d-none');
         }
     }
 

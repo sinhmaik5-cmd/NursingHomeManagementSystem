@@ -4,11 +4,10 @@ import com.group6.nhms.dto.request.HealthRecordCreateRequest;
 import com.group6.nhms.dto.response.HealthRecordResponse;
 import com.group6.nhms.dto.response.MedicationResponse;
 import com.group6.nhms.dto.response.ResidentResponse;
-import com.group6.nhms.entity.Relative;
 import com.group6.nhms.service.HealthRecordService;
-import com.group6.nhms.service.RelativeService;
 import com.group6.nhms.service.ResidentService;
 import com.group6.nhms.service.StaffService;
+import com.group6.nhms.exception.BadRequestException;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -25,18 +24,15 @@ public class WebHealthController {
     private final HealthRecordService healthRecordService;
     private final ResidentService residentService;
     private final StaffService staffService;
-    private final RelativeService relativeService;
 
     public WebHealthController(
             HealthRecordService healthRecordService,
             ResidentService residentService,
-            StaffService staffService,
-            RelativeService relativeService
+            StaffService staffService
     ) {
         this.healthRecordService = healthRecordService;
         this.residentService = residentService;
         this.staffService = staffService;
-        this.relativeService = relativeService;
     }
 
     // 1. Giao diện khám bệnh & Kê đơn thuốc
@@ -85,17 +81,17 @@ public class WebHealthController {
             Authentication authentication,
             RedirectAttributes redirectAttributes
     ) {
-        boolean isNurse = authentication != null && authentication.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_NURSE"));
-
-        // Điều dưỡng cố tình gửi kèm danh sách thuốc sẽ bị từ chối ngay trước khi tạo bệnh án
-        if (isNurse && request.getMedications() != null && !request.getMedications().isEmpty()) {
-            redirectAttributes.addFlashAttribute("errorMessage", "Điều dưỡng không được kê đơn hoặc xuất kho thuốc");
-            return "redirect:/health/records/create" + (request.getResidentId() != null ? "?residentId=" + request.getResidentId() : "");
-        }
-
         try {
-            if (request.getMedications() != null) {
+            boolean isNurse = authentication != null && authentication.getAuthorities().stream()
+                    .anyMatch(a -> a.getAuthority().equals("ROLE_NURSE"));
+
+            if (isNurse) {
+                if (request.getMedications() != null && !request.getMedications().isEmpty()) {
+                    throw new BadRequestException("Điều dưỡng không được kê đơn hoặc xuất kho thuốc");
+                }
+                request.setMedications(new ArrayList<>());
+                request.setDiagnosis(null);
+            } else if (request.getMedications() != null) {
                 request.setMedications(request.getMedications().stream()
                         .filter(m -> m.getMedicationId() != null && m.getQuantityRequested() != null && m.getQuantityRequested() > 0)
                         .toList());
@@ -115,47 +111,23 @@ public class WebHealthController {
         }
     }
 
-    // 3. Giao diện xem lịch sử bệnh án & Đơn thuốc (Có kiểm soát IDOR cho Người thân)
+    // 3. Giao diện xem lịch sử bệnh án & Đơn thuốc
     @GetMapping("/history")
     public String showHealthHistory(
             @RequestParam(required = false) Integer residentId,
-            Authentication authentication,
             Model model
     ) {
-        boolean isRelative = authentication != null && authentication.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_RELATIVE"));
-
-        List<ResidentResponse> residents;
-        if (isRelative) {
-            Relative relative = relativeService.resolveCurrentRelative(authentication);
-            if (relative != null) {
-                residents = residentService.getResidentsByRelative(relative.getId());
-            } else {
-                residents = List.of();
-            }
-        } else {
-            residents = residentService.getAllResidents(null, null);
-        }
+        List<ResidentResponse> residents = residentService.getAllResidents(null, null);
 
         ResidentResponse selectedResident = null;
         List<HealthRecordResponse> records = List.of();
 
         if (residentId != null) {
             try {
-                ResidentResponse r = residentService.getResidentById(residentId);
-                // IDOR Protection: Người thân chỉ xem được lịch sử của cư dân mình bảo lãnh
-                if (isRelative) {
-                    if (residents.stream().anyMatch(myRes -> myRes.getId().equals(r.getId()))) {
-                        selectedResident = r;
-                    }
-                } else {
-                    selectedResident = r;
-                }
+                selectedResident = residentService.getResidentById(residentId);
             } catch (Exception ignored) {
             }
-        }
-
-        if (selectedResident == null && !residents.isEmpty()) {
+        } else if (!residents.isEmpty()) {
             selectedResident = residents.get(0);
         }
 
@@ -166,7 +138,6 @@ public class WebHealthController {
         model.addAttribute("residents", residents);
         model.addAttribute("selectedResident", selectedResident);
         model.addAttribute("records", records);
-        model.addAttribute("isRelative", isRelative);
         model.addAttribute("activeMenu", "health-history");
 
         return "health/history";
@@ -178,20 +149,13 @@ public class WebHealthController {
         return "redirect:/health/history?residentId=" + residentId;
     }
 
-    // 5. Hủy phiếu khám & Hoàn trả tồn kho (Chỉ Bác sĩ, Giám đốc cơ sở & Quản trị viên)
+    // 5. Hủy phiếu khám & Hoàn trả tồn kho
     @PostMapping("/records/{id}/cancel")
     public String cancelHealthRecord(
             @PathVariable Integer id,
             @RequestParam Integer residentId,
-            Authentication authentication,
             RedirectAttributes redirectAttributes
     ) {
-        if (authentication != null && authentication.getAuthorities().stream().noneMatch(a ->
-                a.getAuthority().equals("ROLE_DOCTOR") || a.getAuthority().equals("ROLE_CENTER_MANAGER") || a.getAuthority().equals("ROLE_ADMIN"))) {
-            redirectAttributes.addFlashAttribute("errorMessage", "Bạn không có quyền hủy phiếu khám và hoàn kho thuốc.");
-            return "redirect:/health/history?residentId=" + residentId;
-        }
-
         try {
             healthRecordService.cancelHealthRecord(id);
             redirectAttributes.addFlashAttribute("successMessage",

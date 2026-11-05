@@ -52,14 +52,13 @@ public class SecurityConfig {
                                 "/schedules/assign"
                         ).hasAnyRole("CENTER_MANAGER", "ADMIN")
 
-                        // 4. Cho phép Người thân (RELATIVE) xem chi tiết hóa đơn của người nhà (GET /billing/orders/*)
+                        // Người thân chỉ được vào GET chi tiết hóa đơn; chủ sở hữu được kiểm tra trong controller.
                         .requestMatchers(HttpMethod.GET, "/billing/orders/*")
-                        .hasAnyRole("RECEPTIONIST", "CENTER_MANAGER", "ADMIN", "RELATIVE")
+                        .hasAnyRole("RECEPTIONIST", "CENTER_MANAGER", "ADMIN", "ACCOUNTANT", "RELATIVE")
 
-                        // Phân hệ Tài chính & Thu viện phí nội bộ (Chốt hóa đơn, xác nhận thanh toán POST /pay)
-                        // Do Lễ tân kiêm thu ngân thực hiện, Giám đốc có quyền xem & duyệt
+                        // Các chức năng tài chính còn lại chỉ dành cho nhân viên nội bộ.
                         .requestMatchers("/billing/**")
-                        .hasAnyRole("RECEPTIONIST", "CENTER_MANAGER", "ADMIN")
+                        .hasAnyRole("RECEPTIONIST", "CENTER_MANAGER", "ADMIN", "ACCOUNTANT")
 
                         // 5. Phân hệ Tiếp nhận & Quản lý cư dân: Check-in, Chuyển phòng, Xuất viện
                         // Do Lễ tân chính thực hiện, Giám đốc toàn quyền
@@ -67,23 +66,12 @@ public class SecurityConfig {
                                 "/residents/check-in",
                                 "/residents/transfer-bed",
                                 "/residents/*/check-out"
-                        ).hasAnyRole("RECEPTIONIST", "CENTER_MANAGER", "ADMIN")
+                        ).hasAnyRole("RECEPTIONIST", "CENTER_MANAGER", "ADMIN", "MANAGER")
 
-                        // Cho phép Người thân (RELATIVE) xem lịch sử bệnh án & khám bệnh của người nhà mình
-                        .requestMatchers(HttpMethod.GET, "/health/history", "/health/history/*")
-                        .hasAnyRole("DOCTOR", "NURSE", "CENTER_MANAGER", "ADMIN", "RELATIVE")
-
-                        // Hủy phiếu khám & hoàn trả kho thuốc: Chỉ Bác sĩ, Giám đốc cơ sở & Quản trị viên
-                        .requestMatchers("/health/records/*/cancel")
-                        .hasAnyRole("DOCTOR", "CENTER_MANAGER", "ADMIN")
-
-                        // 6. Phân hệ Y tế, Bệnh án & Sinh hiệu: Bác sĩ (khám & kê đơn) và Điều dưỡng (đo sinh hiệu)
+                        // 6. Phân hệ Y tế, Bệnh án & Sinh hiệu
+                        // Bác sĩ (khám & kê đơn) và Điều dưỡng (đo sinh hiệu)
                         .requestMatchers("/health/**")
                         .hasAnyRole("DOCTOR", "NURSE", "CENTER_MANAGER", "ADMIN")
-
-                        // Xử lý sự cố y tế: Chỉ Bác sĩ, Giám đốc cơ sở & Quản trị viên
-                        .requestMatchers("/incidents/*/resolve")
-                        .hasAnyRole("DOCTOR", "CENTER_MANAGER", "ADMIN")
 
                         // 7. Báo cáo & Xử lý Sự cố y tế
                         // Toàn bộ nhân viên y tế, lễ tân và quản lý
@@ -101,7 +89,7 @@ public class SecurityConfig {
                                 "/rooms/beds/**",
                                 "/schedules/my-schedule",
                                 "/schedules/*/complete"
-                        ).hasAnyRole("RECEPTIONIST", "DOCTOR", "NURSE", "CENTER_MANAGER", "ADMIN")
+                        ).hasAnyRole("RECEPTIONIST", "DOCTOR", "NURSE", "CENTER_MANAGER", "ADMIN", "MANAGER", "STAFF")
 
                         // 10. Dashboard trang chủ và tất cả các trang giao diện còn lại yêu cầu đăng nhập
                         .anyRequest().authenticated()

@@ -74,11 +74,14 @@
                     </div>
 
                     <div>
-                        <span th:if="${sc.note != null and #strings.contains(sc.note, 'COMPLETED')}" class="badge badge-status-available">
+                        <span th:if="${sc.status == 'COMPLETED'}" class="badge badge-status-available">
                             <i class="bi bi-check-circle-fill me-1"></i>ĐÃ HOÀN THÀNH
                         </span>
-                        <span th:unless="${sc.note != null and #strings.contains(sc.note, 'COMPLETED')}" class="badge bg-primary-subtle text-primary">
+                        <span th:if="${sc.status == 'ASSIGNED'}" class="badge bg-primary-subtle text-primary">
                             <i class="bi bi-hourglass-split me-1"></i>ĐANG THỰC HIỆN
+                        </span>
+                        <span th:if="${sc.status == 'CANCELLED'}" class="badge bg-secondary-subtle text-secondary">
+                            <i class="bi bi-x-circle me-1"></i>ĐÃ HỦY
                         </span>
                     </div>
                 </div>
@@ -106,12 +109,18 @@
 
                     <!-- Complete button form -->
                     <div class="pt-2 border-top">
-                        <form th:action="@{'/schedules/' + ${sc.id} + '/complete'}" method="post" class="m-0">
+                        <form th:if="${sc.status == 'ASSIGNED'}" th:action="@{'/schedules/' + ${sc.id} + '/complete'}" method="post" class="m-0">
                             <button type="submit" class="btn btn-success w-100 py-2 fw-semibold shadow-sm"
                                     onclick="return confirm('Bạn xác nhận đã hoàn tất mọi nhiệm vụ trong ca trực này?')">
                                 <i class="bi bi-check2-circle me-1"></i> Xác Nhận Hoàn Thành Ca Trực
                             </button>
                         </form>
+                        <button th:if="${sc.status == 'COMPLETED'}" type="button" class="btn btn-secondary w-100 py-2" disabled>
+                            <i class="bi bi-check-all me-1"></i>Ca Trực Đã Hoàn Tất
+                        </button>
+                        <button th:if="${sc.status == 'CANCELLED'}" type="button" class="btn btn-secondary w-100 py-2" disabled>
+                            <i class="bi bi-x-circle me-1"></i>Ca Trực Đã Hủy
+                        </button>
                     </div>
                 </div>
             </div>

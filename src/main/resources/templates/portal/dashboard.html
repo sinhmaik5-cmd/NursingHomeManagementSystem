@@ -30,7 +30,7 @@
     </div>
 
     <!-- Main Content for Residents -->
-    <div th:each="res : ${residents}" class="mb-5">
+    <div th:each="portal : ${residentPortals}" th:with="res=${portal.resident}" class="mb-5">
         <!-- 1. Resident Profile Card -->
         <div class="nh-card p-4 mb-4 bg-white border">
             <div class="row align-items-center">
@@ -73,63 +73,62 @@
                         <h6 class="fw-bold mb-0 text-dark">
                             <i class="bi bi-activity text-danger me-2"></i>Sổ Theo Dõi Sức Khỏe Gần Nhất
                         </h6>
-                        <span class="small text-muted" th:if="${latestRecord != null}"
-                              th:text="'Lần khám: ' + ${#temporals.format(latestRecord.recordDate, 'dd/MM/yyyy HH:mm')}">
+                        <span class="small text-muted" th:if="${portal.latestRecord != null}"
+                              th:text="'Lần khám: ' + ${#temporals.format(portal.latestRecord.recordDate, 'dd/MM/yyyy HH:mm')}">
                             23/10/2026 09:30
                         </span>
+                        <a class="btn btn-sm btn-outline-primary"
+                           th:href="@{/health/history(residentId=${res.id})}"
+                           sec:authorize="hasRole('RELATIVE')">Xem toàn bộ lịch sử</a>
                     </div>
 
                     <div class="nh-card-body p-4">
-                        <div th:if="${latestRecord == null}" class="text-center py-4 text-muted">
+                        <div th:if="${portal.latestRecord == null}" class="text-center py-4 text-muted">
                             <i class="bi bi-clipboard2-pulse fs-2 text-muted d-block mb-1"></i>
                             <small>Chưa có dữ liệu khám sức khỏe gần đây.</small>
                         </div>
 
-                        <div th:if="${latestRecord != null}">
+                        <div th:if="${portal.latestRecord != null}">
                             <!-- Vitals Grid -->
                             <div class="row g-3 mb-4">
                                 <div class="col-6 col-sm-3">
                                     <div class="p-3 border rounded bg-light text-center">
                                         <small class="text-muted d-block" style="font-size: 0.75rem;">Huyết áp</small>
-                                        <h5 class="fw-bold text-dark mb-0" th:text="${latestRecord.bloodPressure != null ? latestRecord.bloodPressure : '-'}">120/80</h5>
-                                        <span class="badge bg-success-subtle text-success small" style="font-size: 0.68rem;">Ổn định</span>
+                                        <h5 class="fw-bold text-dark mb-0" th:text="${portal.latestRecord.bloodPressure != null ? portal.latestRecord.bloodPressure : '-'}">120/80</h5>
                                     </div>
                                 </div>
                                 <div class="col-6 col-sm-3">
                                     <div class="p-3 border rounded bg-light text-center">
                                         <small class="text-muted d-block" style="font-size: 0.75rem;">Nhịp tim</small>
-                                        <h5 class="fw-bold text-danger mb-0" th:text="${latestRecord.heartRate != null ? latestRecord.heartRate + ' bpm' : '-'}">75 bpm</h5>
-                                        <span class="badge bg-success-subtle text-success small" style="font-size: 0.68rem;">Bình thường</span>
+                                        <h5 class="fw-bold text-danger mb-0" th:text="${portal.latestRecord.heartRate != null ? portal.latestRecord.heartRate + ' bpm' : '-'}">75 bpm</h5>
                                     </div>
                                 </div>
                                 <div class="col-6 col-sm-3">
                                     <div class="p-3 border rounded bg-light text-center">
                                         <small class="text-muted d-block" style="font-size: 0.75rem;">Nhiệt độ</small>
-                                        <h5 class="fw-bold text-warning-emphasis mb-0" th:text="${latestRecord.temperature != null ? latestRecord.temperature + ' °C' : '-'}">36.8 °C</h5>
-                                        <span class="badge bg-success-subtle text-success small" style="font-size: 0.68rem;">Không sốt</span>
+                                        <h5 class="fw-bold text-warning-emphasis mb-0" th:text="${portal.latestRecord.temperature != null ? portal.latestRecord.temperature + ' °C' : '-'}">36.8 °C</h5>
                                     </div>
                                 </div>
                                 <div class="col-6 col-sm-3">
                                     <div class="p-3 border rounded bg-light text-center">
                                         <small class="text-muted d-block" style="font-size: 0.75rem;">Đường huyết</small>
-                                        <h5 class="fw-bold text-info-emphasis mb-0" th:text="${latestRecord.bloodSugar != null ? latestRecord.bloodSugar + ' mmol/L' : '-'}">5.6</h5>
-                                        <span class="badge bg-success-subtle text-success small" style="font-size: 0.68rem;">Kiểm soát tốt</span>
+                                        <h5 class="fw-bold text-info-emphasis mb-0" th:text="${portal.latestRecord.bloodSugar != null ? portal.latestRecord.bloodSugar + ' mmol/L' : '-'}">5.6</h5>
                                     </div>
                                 </div>
                             </div>
 
                             <div class="mb-3">
                                 <span class="small fw-bold text-muted d-block mb-1">Chẩn đoán của Bác sĩ:</span>
-                                <div class="p-2 bg-light rounded border text-dark fw-semibold small" th:text="${latestRecord.diagnosis}">
+                                <div class="p-2 bg-light rounded border text-dark fw-semibold small" th:text="${portal.latestRecord.diagnosis}">
                                     Tăng huyết áp nhẹ, sức khỏe tổng quát ổn định
                                 </div>
                             </div>
 
                             <!-- Medication pills prescribed -->
-                            <div th:if="${not #lists.isEmpty(latestRecord.medications)}">
+                            <div th:if="${not #lists.isEmpty(portal.latestRecord.medications)}">
                                 <span class="small fw-bold text-muted d-block mb-2">Thuốc cụ đang dùng hàng ngày:</span>
                                 <div class="d-flex flex-wrap gap-2">
-                                    <div th:each="m : ${latestRecord.medications}" class="border rounded p-2 bg-light small">
+                                    <div th:each="m : ${portal.latestRecord.medications}" class="border rounded p-2 bg-light small">
                                         <i class="bi bi-capsule text-success me-1"></i>
                                         <strong th:text="${m.medicationName}">Amlodipine 5mg</strong>:
                                         <span class="text-muted" th:text="${m.dosage}">1v sau ăn sáng</span>
@@ -148,18 +147,18 @@
                         <h6 class="fw-bold mb-0 text-dark">
                             <i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>Cảnh Báo Sự Cố & An Toàn
                         </h6>
-                        <span class="badge bg-danger-subtle text-danger" th:text="${#lists.size(residentIncidents)} + ' sự việc'">0</span>
+                        <span class="badge bg-danger-subtle text-danger" th:text="${#lists.size(portal.incidents)} + ' sự việc'">0</span>
                     </div>
 
                     <div class="nh-card-body p-3">
-                        <div th:if="${#lists.isEmpty(residentIncidents)}" class="text-center py-4 text-muted">
+                        <div th:if="${#lists.isEmpty(portal.incidents)}" class="text-center py-4 text-muted">
                             <i class="bi bi-shield-check fs-1 text-success d-block mb-2"></i>
                             <h6 class="fw-bold text-dark">Không có sự cố nào!</h6>
                             <p class="small mb-0">Cụ đang được chăm sóc an toàn tuyệt đối tại viện.</p>
                         </div>
 
-                        <div th:unless="${#lists.isEmpty(residentIncidents)}" class="d-flex flex-column gap-3">
-                            <div th:each="inc : ${residentIncidents}" class="p-3 rounded border"
+                        <div th:unless="${#lists.isEmpty(portal.incidents)}" class="d-flex flex-column gap-3">
+                            <div th:each="inc : ${portal.incidents}" class="p-3 rounded border"
                                  th:classappend="${inc.severityLevel == 'CRITICAL' ? 'border-danger bg-danger-subtle' : 'bg-light'}">
                                 <div class="d-flex justify-content-between align-items-start mb-1">
                                     <h6 class="fw-bold mb-0 text-dark" th:text="${inc.title}">Trượt chân ngã</h6>
@@ -172,7 +171,7 @@
                                 <p class="small text-dark mb-2" th:text="${inc.description}">Cụ trượt chân nhẹ khi đi từ giường sang ghế, điều dưỡng đã đỡ kịp thời.</p>
                                 <div class="small p-2 bg-white rounded border">
                                     <strong class="text-success"><i class="bi bi-check-circle me-1"></i>Xử lý:</strong>
-                                    <span class="text-muted" th:text="${inc.status == 'RESOLVED' ? 'Đã kiểm tra sơ bộ không tổn thương xương, đã chườm ấm và cho cụ nghỉ.' : 'Đang được nhân viên y tế theo dõi sát sao.'}">
+                                    <span class="text-muted" th:text="${inc.status == 'RESOLVED' ? (inc.actionTaken != null and !inc.actionTaken.isBlank() ? inc.actionTaken : 'Chưa có thông tin xử lý.') : 'Đang được nhân viên y tế theo dõi sát sao.'}">
                                         Đã xử lý xong.
                                     </span>
                                 </div>
@@ -206,12 +205,12 @@
                             </tr>
                             </thead>
                             <tbody>
-                            <tr th:if="${#lists.isEmpty(residentOrders)}">
+                            <tr th:if="${#lists.isEmpty(portal.orders)}">
                                 <td colspan="9" class="text-center py-4 text-muted">
                                     Chưa có hóa đơn nào phát sinh.
                                 </td>
                             </tr>
-                            <tr th:each="ord : ${residentOrders}">
+                            <tr th:each="ord : ${portal.orders}">
                                 <td class="fw-bold text-muted" th:text="'#HĐ-' + ${ord.id}">#HĐ-1</td>
                                 <td th:text="${ord.issueDate != null ? #temporals.format(ord.issueDate, 'dd/MM/yyyy') : '-'}">01/10/2026</td>
                                 <td class="text-end" th:text="${ord.roomPrice != null ? #numbers.formatDecimal(ord.roomPrice, 0, 'COMMA', 0, 'POINT') + 'đ' : '0đ'}">5,000,000đ</td>

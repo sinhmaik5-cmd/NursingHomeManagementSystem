@@ -13,6 +13,8 @@ public interface HealthRecordRepository extends JpaRepository<HealthRecord, Inte
     // Lấy toàn bộ lịch sử khám của 1 cư dân, sắp xếp từ mới nhất đến cũ nhất
     List<HealthRecord> findByResidentIdOrderByRecordDateDesc(Integer residentId);
 
+    List<HealthRecord> findByResidentIdInOrderByRecordDateDesc(List<Integer> residentIds);
+
     // Lấy lịch sử khám của 1 cư dân trong khoảng thời gian
     List<HealthRecord> findByResidentIdAndRecordDateBetween(Integer residentId, Instant start, Instant end);
 

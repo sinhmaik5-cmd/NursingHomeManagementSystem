@@ -14,11 +14,15 @@
             </h4>
             <p class="text-muted small mb-0">Theo dõi tiến trình sức khỏe, biến động sinh hiệu và lịch sử dùng thuốc của cư dân</p>
         </div>
-        <div class="d-flex gap-2" sec:authorize="hasAnyRole('DOCTOR', 'NURSE', 'ADMIN')">
+        <div class="d-flex gap-2" sec:authorize="hasAnyRole('DOCTOR', 'NURSE', 'CENTER_MANAGER', 'ADMIN')">
             <a th:href="@{/health/records/create}" class="btn btn-primary btn-sm shadow-sm">
                 <i class="bi bi-plus-circle-fill me-1"></i> Khám bệnh & Kê đơn mới
             </a>
         </div>
+        <a th:href="@{/portal/dashboard}" class="btn btn-outline-secondary btn-sm"
+           sec:authorize="hasRole('RELATIVE')">
+            <i class="bi bi-arrow-left me-1"></i>Quay lại Cổng người thân
+        </a>
     </div>
 
     <!-- Resident Filter Card -->
@@ -78,7 +82,7 @@
                 </div>
             </div>
 
-            <div class="col-12 col-md-4 text-md-end mt-3 mt-md-0" sec:authorize="hasAnyRole('DOCTOR', 'NURSE', 'ADMIN')">
+            <div class="col-12 col-md-4 text-md-end mt-3 mt-md-0" sec:authorize="hasAnyRole('DOCTOR', 'NURSE', 'CENTER_MANAGER', 'ADMIN')">
                 <a th:href="@{'/health/records/create?residentId=' + ${selectedResident.id}}" class="btn btn-outline-success">
                     <i class="bi bi-plus-lg me-1"></i> Khám cho cụ này
                 </a>
@@ -96,7 +100,7 @@
             <i class="bi bi-folder-x fs-1 d-block mb-2 text-muted"></i>
             <h6>Chưa có phiếu khám sức khỏe nào cho cư dân này.</h6>
             <p class="small mb-3">Bác sĩ hoặc điều dưỡng có thể bắt đầu khám và lưu sinh hiệu ngay bây giờ.</p>
-            <a th:href="@{'/health/records/create?residentId=' + ${selectedResident.id}}" class="btn btn-sm btn-primary" sec:authorize="hasAnyRole('DOCTOR', 'NURSE', 'ADMIN')">
+            <a th:href="@{/health/records/create(residentId=${selectedResident.id})}" class="btn btn-sm btn-primary" sec:authorize="hasAnyRole('DOCTOR', 'NURSE', 'CENTER_MANAGER', 'ADMIN')">
                 <i class="bi bi-clipboard2-pulse me-1"></i> Tạo phiếu khám đầu tiên
             </a>
         </div>
@@ -116,7 +120,7 @@
                         </span>
                     </div>
 
-                    <div sec:authorize="hasAnyRole('DOCTOR', 'ADMIN')">
+                    <div sec:authorize="hasAnyRole('DOCTOR', 'CENTER_MANAGER', 'ADMIN')">
                         <form th:action="@{'/health/records/' + ${rec.id} + '/cancel'}" method="post" class="m-0"
                               th:data-resident-id="${selectedResident.id}">
                             <input type="hidden" name="residentId" th:value="${selectedResident.id}">

@@ -16,6 +16,8 @@ public interface HealthRecordDetailRepository extends JpaRepository<HealthRecord
     // Lấy chi tiết đơn thuốc theo hồ sơ khám bệnh
     List<HealthRecordDetail> findByHealthRecordId(Integer healthRecordId);
 
+    List<HealthRecordDetail> findByHealthRecordIdIn(List<Integer> healthRecordIds);
+
     // Lấy tất cả lịch sử kê đơn của 1 cư dân trong khoảng thời gian (phục vụ chốt tiền thuốc cuối tháng)
     @Query("SELECT d FROM HealthRecordDetail d WHERE d.healthRecord.resident.id = :residentId AND d.healthRecord.recordDate BETWEEN :startDate AND :endDate")
     List<HealthRecordDetail> findByResidentIdAndRecordDateBetween(

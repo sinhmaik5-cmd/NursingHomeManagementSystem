@@ -19,6 +19,8 @@ public interface OrderRepository extends JpaRepository<Order, Integer> {
     // Lấy lịch sử hóa đơn của 1 cư dân sắp xếp theo ngày phát hành mới nhất
     List<Order> findByResidentIdOrderByIssueDateDesc(Integer residentId);
 
+    List<Order> findByResidentIdInOrderByIssueDateDesc(List<Integer> residentIds);
+
     // Lấy các hóa đơn theo cư dân và trạng thái thanh toán (PENDING, PAID, CANCELLED)
     List<Order> findByResidentIdAndPaymentStatus(Integer residentId, String paymentStatus);
 

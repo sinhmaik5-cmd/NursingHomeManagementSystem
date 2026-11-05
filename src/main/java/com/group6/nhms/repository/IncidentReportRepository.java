@@ -15,6 +15,8 @@ public interface IncidentReportRepository extends JpaRepository<IncidentReport, 
     // 1. Phục vụ Cổng thông tin người nhà: Tìm tất cả sự cố liên quan đến 1 cư dân
     List<IncidentReport> findByResidentId(Integer residentId);
 
+    List<IncidentReport> findByResidentIdIn(List<Integer> residentIds);
+
     // 2. Phục vụ Admin/Quản lý: Tìm các sự cố chưa được xử lý (Status = 'PENDING') để giải quyết gấp
     List<IncidentReport> findByStatus(String status);
 

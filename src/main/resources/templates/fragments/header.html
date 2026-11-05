@@ -14,7 +14,7 @@
 
     <div class="d-flex align-items-center gap-3">
         <!-- Quick Notification / Status -->
-        <div class="dropdown">
+        <div class="dropdown" sec:authorize="hasAnyRole('DOCTOR', 'NURSE', 'RECEPTIONIST', 'CENTER_MANAGER', 'ADMIN')">
             <button class="btn btn-sm btn-light position-relative rounded-pill px-3 py-1" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                 <i class="bi bi-bell me-1 text-muted"></i>
                 <span class="small text-muted">Thông báo</span>

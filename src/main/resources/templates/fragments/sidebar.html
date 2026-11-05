@@ -36,7 +36,7 @@
         </div>
 
         <!-- Phân hệ Tiếp nhận & Hành chính (Receptionist, Center Manager & Admin) -->
-        <div sec:authorize="hasAnyRole('RECEPTIONIST', 'CENTER_MANAGER', 'ADMIN')">
+        <div sec:authorize="hasAnyRole('RECEPTIONIST', 'CENTER_MANAGER', 'ADMIN', 'MANAGER')">
             <div class="sidebar-heading">Tiếp nhận & Cư dân</div>
             <a th:href="@{/residents/check-in}" class="sidebar-nav-link" th:classappend="${activeMenu == 'check-in' ? 'active' : ''}">
                 <i class="bi bi-person-plus-fill"></i>
@@ -70,7 +70,7 @@
         </div>
 
         <!-- Lịch trực cá nhân (Dành cho toàn bộ nhân viên nội bộ) -->
-        <div sec:authorize="hasAnyRole('DOCTOR', 'NURSE', 'RECEPTIONIST', 'CENTER_MANAGER', 'ADMIN', 'STAFF')">
+        <div sec:authorize="hasAnyRole('DOCTOR', 'NURSE', 'RECEPTIONIST', 'CENTER_MANAGER', 'ADMIN', 'MANAGER', 'STAFF')">
             <div class="sidebar-heading">Ca trực</div>
             <a th:href="@{/schedules/my-schedule}" class="sidebar-nav-link" th:classappend="${activeMenu == 'my-schedule' ? 'active' : ''}">
                 <i class="bi bi-person-workspace"></i>
@@ -79,7 +79,7 @@
         </div>
 
         <!-- Phân hệ Tài chính & Thu phí (Receptionist, Center Manager & Admin) -->
-        <div sec:authorize="hasAnyRole('RECEPTIONIST', 'CENTER_MANAGER', 'ADMIN')">
+        <div sec:authorize="hasAnyRole('RECEPTIONIST', 'CENTER_MANAGER', 'ACCOUNTANT', 'ADMIN')">
             <div class="sidebar-heading">Tài chính & Thu phí</div>
             <a th:href="@{/billing/monthly}" class="sidebar-nav-link" th:classappend="${activeMenu == 'billing-monthly' ? 'active' : ''}">
                 <i class="bi bi-receipt"></i>
@@ -109,6 +109,7 @@
                 <span sec:authorize="hasRole('RECEPTIONIST')">Lễ tân & Thu phí</span>
                 <span sec:authorize="hasRole('DOCTOR')">Bác sĩ chuyên khoa</span>
                 <span sec:authorize="hasRole('NURSE')">Điều dưỡng viên</span>
+                <span sec:authorize="hasRole('ACCOUNTANT')">Kế toán</span>
                 <span sec:authorize="hasRole('RELATIVE')">Người thân</span>
             </div>
         </div>

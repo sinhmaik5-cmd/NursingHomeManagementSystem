@@ -3,6 +3,7 @@ package com.group6.nhms.controller.web;
 import com.group6.nhms.dto.response.HealthRecordResponse;
 import com.group6.nhms.dto.response.IncidentReportResponse;
 import com.group6.nhms.dto.response.OrderResponse;
+import com.group6.nhms.dto.response.ResidentPortalResponse;
 import com.group6.nhms.dto.response.ResidentResponse;
 import com.group6.nhms.entity.Relative;
 import com.group6.nhms.service.HealthRecordService;
@@ -16,8 +17,8 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Controller
 @RequestMapping("/portal")
@@ -47,32 +48,35 @@ public class WebPortalController {
     public String portalDashboard(Authentication authentication, Model model) {
         Relative relative = relativeService.resolveCurrentRelative(authentication);
 
-        List<ResidentResponse> residentResponses = new ArrayList<>();
-        HealthRecordResponse latestRecord = null;
-        List<IncidentReportResponse> residentIncidents = new ArrayList<>();
-        List<OrderResponse> residentOrders = new ArrayList<>();
+        List<ResidentResponse> residentResponses = List.of();
+        List<ResidentPortalResponse> residentPortals = List.of();
 
         if (relative != null) {
             residentResponses = residentService.getResidentsByRelative(relative.getId());
+            List<Integer> residentIds = residentResponses.stream()
+                    .map(ResidentResponse::getId)
+                    .toList();
+            Map<Integer, HealthRecordResponse> latestRecords =
+                    healthRecordService.getLatestRecordsByResidents(residentIds);
+            Map<Integer, List<IncidentReportResponse>> incidents =
+                    incidentReportService.getResidentIncidentsByResidentIds(relative.getId(), residentIds);
+            Map<Integer, List<OrderResponse>> orders = orderService.getOrdersByResidents(residentIds);
 
-            if (!residentResponses.isEmpty()) {
-                Integer primaryResidentId = residentResponses.get(0).getId();
-
-                List<HealthRecordResponse> records = healthRecordService.getRecordsByResident(primaryResidentId);
-                if (!records.isEmpty()) {
-                    latestRecord = records.get(0);
-                }
-
-                residentIncidents = incidentReportService.getResidentIncidents(relative.getId(), primaryResidentId);
-                residentOrders = orderService.getOrdersByResident(primaryResidentId);
-            }
+            residentPortals = residentResponses.stream()
+                    .map(resident -> {
+                        Integer residentId = resident.getId();
+                        return new ResidentPortalResponse(
+                                resident,
+                                latestRecords.get(residentId),
+                                incidents.getOrDefault(residentId, List.of()),
+                                orders.getOrDefault(residentId, List.of()));
+                    })
+                    .toList();
         }
 
         model.addAttribute("relative", relative);
         model.addAttribute("residents", residentResponses);
-        model.addAttribute("latestRecord", latestRecord);
-        model.addAttribute("residentIncidents", residentIncidents);
-        model.addAttribute("residentOrders", residentOrders);
+        model.addAttribute("residentPortals", residentPortals);
         model.addAttribute("activeMenu", "portal-dashboard");
 
         return "portal/dashboard";

@@ -126,11 +126,12 @@
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end shadow-sm">
                                 <li>
-                                    <a class="dropdown-item py-2" th:href="@{'/health/history/' + ${r.id}}">
+                                    <a class="dropdown-item py-2" th:href="@{/health/history(residentId=${r.id})}"
+                                       sec:authorize="hasAnyRole('DOCTOR', 'NURSE', 'CENTER_MANAGER', 'ADMIN')">
                                         <i class="bi bi-journal-medical text-primary me-2"></i>Xem lịch sử bệnh án
                                     </a>
                                 </li>
-                                <li sec:authorize="hasAnyRole('DOCTOR', 'NURSE', 'ADMIN')">
+                                <li sec:authorize="hasAnyRole('DOCTOR', 'NURSE', 'CENTER_MANAGER', 'ADMIN')">
                                     <a class="dropdown-item py-2" th:href="@{'/health/records/create?residentId=' + ${r.id}}">
                                         <i class="bi bi-clipboard2-pulse text-success me-2"></i>Khám bệnh & Kê đơn
                                     </a>
