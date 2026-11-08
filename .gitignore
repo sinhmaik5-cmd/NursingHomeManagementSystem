@@ -31,3 +31,9 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Logs & Crash Dumps ###
+*.log
+hs_err_pid*
+replay_pid*
+

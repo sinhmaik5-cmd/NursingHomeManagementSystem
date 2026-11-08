@@ -26,6 +26,15 @@ public interface BedRepository extends JpaRepository<Bed, Integer> {
     // Đếm số giường trong một phòng (để kiểm tra không vượt quá Capacity)
     long countByRoomId(Integer roomId);
 
+    // Kiểm tra tên giường đã tồn tại trong phòng chưa
+    boolean existsByRoomIdAndBedNumber(Integer roomId, String bedNumber);
+
+    // Kiểm tra trùng tên giường khi cập nhật trong cùng một phòng
+    boolean existsByRoomIdAndBedNumberAndIdNot(Integer roomId, String bedNumber, Integer id);
+
+    // Xóa các giường thuộc một phòng
+    void deleteByRoomId(Integer roomId);
+
     // Đếm số giường theo trạng thái (phục vụ tính tỷ lệ lấp đầy Occupancy Rate)
     long countByStatus(String status);
 

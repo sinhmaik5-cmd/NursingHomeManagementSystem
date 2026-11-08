@@ -1,7 +1,7 @@
 package com.group6.nhms;
 
-import com.group6.nhms.controller.web.WebBillingController;
-import com.group6.nhms.controller.web.WebHealthController;
+import com.group6.nhms.controller.WebBillingController;
+import com.group6.nhms.controller.WebHealthController;
 import com.group6.nhms.dto.request.HealthRecordCreateRequest;
 import com.group6.nhms.dto.response.HealthRecordResponse;
 import com.group6.nhms.dto.response.OrderResponse;

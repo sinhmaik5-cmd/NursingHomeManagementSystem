@@ -36,7 +36,7 @@ public interface OrderRepository extends JpaRepository<Order, Integer> {
     // Kiểm tra xem cư dân đã được tạo hóa đơn trong khoảng thời gian này chưa (tránh tạo trùng hóa đơn tháng)
     boolean existsByResidentIdAndIssueDateBetween(Integer residentId, LocalDate startDate, LocalDate endDate);
 
-    // Thống kê tổng doanh thu từ các hóa đơn đã thanh toán (PAID) trong khoảng thời gian (Dashboard Admin)
+    // Thống kê tổng doanh thu từ các hóa đơn đã thanh toán (PAID) trong khoảng thời gian (Dashboard Giám đốc)
     @Query("SELECT COALESCE(SUM(o.totalAmount), 0) FROM Order o WHERE o.paymentStatus = 'PAID' AND o.issueDate BETWEEN :startDate AND :endDate")
     BigDecimal sumRevenueBetweenDates(
             @Param("startDate") LocalDate startDate,

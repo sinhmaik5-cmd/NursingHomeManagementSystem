@@ -16,6 +16,9 @@ public interface RoomRepository extends JpaRepository<Room, Integer> {
     // Kiểm tra số phòng đã tồn tại chưa (khi tạo phòng mới)
     boolean existsByRoomNumber(String roomNumber);
 
+    // Kiểm tra trùng số phòng khi cập nhật
+    boolean existsByRoomNumberAndIdNot(String roomNumber, Integer id);
+
     // Lọc phòng theo trạng thái (AVAILABLE, OCCUPIED, MAINTENANCE)
     List<Room> findByStatus(String status);
 

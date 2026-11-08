@@ -77,11 +77,58 @@ class NursingHomeManagementSystemApplicationTests {
         RelativeRegisterRequest request = new RelativeRegisterRequest();
         request.setFullName("Phạm Thị Mai");
         request.setPhoneNumber("0988776655");
+        request.setEmail("mai.pham@test.com");
         request.setUsername("testuser_mismatch");
         request.setPassword("password123");
         request.setConfirmPassword("different123");
 
         assertThrows(BadRequestException.class, () -> relativeService.registerRelative(request));
+    }
+
+    @Test
+    @Transactional
+    void testRegisterRelativeInvalidVietnamPhoneThrows() {
+        RelativeRegisterRequest request = new RelativeRegisterRequest();
+        request.setFullName("Trần Văn Test");
+        request.setPhoneNumber("0123456789");
+        request.setEmail("test@gmail.com");
+        request.setUsername("testuser_invalid_phone");
+        request.setPassword("password123");
+        request.setConfirmPassword("password123");
+
+        assertThrows(BadRequestException.class, () -> relativeService.registerRelative(request));
+    }
+
+    @Test
+    @Transactional
+    void testRegisterRelativeInvalidEmailThrows() {
+        RelativeRegisterRequest request = new RelativeRegisterRequest();
+        request.setFullName("Trần Văn Test");
+        request.setPhoneNumber("0912345678");
+        request.setEmail("not-an-email");
+        request.setUsername("testuser_invalid_email");
+        request.setPassword("password123");
+        request.setConfirmPassword("password123");
+
+        assertThrows(BadRequestException.class, () -> relativeService.registerRelative(request));
+    }
+
+    @Test
+    @Transactional
+    void testRegisterRelativeInternationalVNPhoneSucceeds() {
+        String uniqueUser = "rel_plus84_" + System.currentTimeMillis();
+        RelativeRegisterRequest request = new RelativeRegisterRequest();
+        request.setFullName("Lê Thị Hương");
+        request.setPhoneNumber("+84912345678");
+        request.setEmail("huong.le@example.com");
+        request.setUsername(uniqueUser);
+        request.setPassword("password123");
+        request.setConfirmPassword("password123");
+
+        Relative saved = relativeService.registerRelative(request);
+        assertNotNull(saved.getId());
+        assertEquals("+84912345678", saved.getPhoneNumber());
+        assertEquals("huong.le@example.com", saved.getEmail());
     }
 
     @Test

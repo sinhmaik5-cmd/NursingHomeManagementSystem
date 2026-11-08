@@ -1,6 +1,6 @@
 package com.group6.nhms;
 
-import com.group6.nhms.controller.web.WebPortalController;
+import com.group6.nhms.controller.WebPortalController;
 import com.group6.nhms.dto.response.HealthRecordResponse;
 import com.group6.nhms.dto.response.IncidentReportResponse;
 import com.group6.nhms.dto.response.OrderResponse;
@@ -73,6 +73,62 @@ class WebPortalControllerTest {
         assertSame(secondIncident, secondPortal.getIncidents().get(0));
         assertSame(secondOrder, secondPortal.getOrders().get(0));
         verify(incidentReportService).getResidentIncidentsByResidentIds(7, List.of(10, 20));
+    }
+
+    @Test
+    void portalIncidentsLoadsIncidentsForSelectedResident() {
+        Authentication authentication = mock(Authentication.class);
+        Relative relative = new Relative();
+        relative.setId(7);
+        ResidentResponse resident = resident(10);
+        IncidentReportResponse incident = new IncidentReportResponse();
+        incident.setStatus("PENDING");
+
+        when(relativeService.resolveCurrentRelative(authentication)).thenReturn(relative);
+        when(residentService.getResidentsByRelative(7)).thenReturn(List.of(resident));
+        when(incidentReportService.getResidentIncidentsByResidentIds(7, List.of(10)))
+                .thenReturn(Map.of(10, List.of(incident)));
+        ExtendedModelMap model = new ExtendedModelMap();
+
+        String view = controller().portalIncidents(10, null, "newest", authentication, model);
+
+        assertEquals("portal/incidents", view);
+        assertEquals(resident, model.get("selectedResident"));
+        List<?> incidents = (List<?>) model.get("incidents");
+        assertEquals(1, incidents.size());
+        assertEquals("portal-incidents", model.get("activeMenu"));
+    }
+
+    @Test
+    void portalBillsLoadsOrdersForSelectedResident() {
+        Authentication authentication = mock(Authentication.class);
+        Relative relative = new Relative();
+        relative.setId(7);
+        ResidentResponse resident = resident(10);
+        OrderResponse order1 = new OrderResponse();
+        order1.setId(101);
+        order1.setPaymentStatus("UNPAID");
+        order1.setTotalAmount(new java.math.BigDecimal("5000000"));
+        OrderResponse order2 = new OrderResponse();
+        order2.setId(102);
+        order2.setPaymentStatus("PAID");
+        order2.setTotalAmount(new java.math.BigDecimal("3000000"));
+
+        when(relativeService.resolveCurrentRelative(authentication)).thenReturn(relative);
+        when(residentService.getResidentsByRelative(7)).thenReturn(List.of(resident));
+        when(orderService.getOrdersByResident(10)).thenReturn(List.of(order1, order2));
+        ExtendedModelMap model = new ExtendedModelMap();
+
+        String view = controller().portalBills(10, null, authentication, model);
+
+        assertEquals("portal/bills", view);
+        assertEquals(resident, model.get("selectedResident"));
+        List<?> orders = (List<?>) model.get("orders");
+        assertEquals(2, orders.size());
+        assertEquals(1L, model.get("unpaidCount"));
+        assertEquals(1L, model.get("paidCount"));
+        assertEquals(new java.math.BigDecimal("5000000"), model.get("totalUnpaidAmount"));
+        assertEquals("portal-bills", model.get("activeMenu"));
     }
 
     private WebPortalController controller() {

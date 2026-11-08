@@ -2,6 +2,7 @@ package com.group6.nhms.service.impl;
 
 import com.group6.nhms.dto.request.BedCreateRequest;
 import com.group6.nhms.dto.request.BedStatusUpdateRequest;
+import com.group6.nhms.dto.request.BedUpdateRequest;
 import com.group6.nhms.dto.response.BedResponse;
 import com.group6.nhms.entity.Bed;
 import com.group6.nhms.entity.Room;
@@ -95,9 +96,67 @@ public class BedServiceImpl implements BedService {
 
     @Override
     @Transactional
+    public BedResponse updateBed(Integer id, BedUpdateRequest request) {
+        Bed bed = bedRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy giường ID " + id));
+
+        String bedNumber = request.getBedNumber() != null ? request.getBedNumber().trim() : "";
+        if (bedNumber.isBlank()) {
+            throw new BadRequestException("Mã số giường không được để trống");
+        }
+
+        if (bedRepository.existsByRoomIdAndBedNumberAndIdNot(bed.getRoom().getId(), bedNumber, id)) {
+            throw new BadRequestException("Giường '" + bedNumber + "' đã tồn tại trong phòng " + bed.getRoom().getRoomNumber());
+        }
+
+        String targetStatus;
+        try {
+            targetStatus = BedStatus.valueOf(request.getStatus().trim().toUpperCase()).name();
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException("Trạng thái giường không hợp lệ. Giá trị hợp lệ: AVAILABLE, OCCUPIED, MAINTENANCE");
+        }
+
+        boolean hasActiveResident = residentRepository.findByBedId(id).isPresent();
+
+        if (hasActiveResident) {
+            if (!BedStatus.OCCUPIED.name().equals(targetStatus)) {
+                throw new BadRequestException("Giường " + bed.getBedNumber() + " đang có cư dân lưu trú, không thể chuyển sang trạng thái " + targetStatus + ". Vui lòng chuyển giường hoặc làm thủ tục xuất viện trước.");
+            }
+        } else {
+            if (BedStatus.OCCUPIED.name().equals(targetStatus) && !BedStatus.OCCUPIED.name().equals(bed.getStatus())) {
+                throw new BadRequestException("Không thể tự chuyển giường sang OCCUPIED khi chưa tiếp nhận cư dân (vui lòng sử dụng tính năng Check-in).");
+            }
+        }
+
+        bed.setBedNumber(bedNumber);
+        bed.setStatus(targetStatus);
+
+        Bed saved = bedRepository.save(bed);
+        return bedMapper.toResponse(saved);
+    }
+
+    @Override
+    @Transactional
+    public void deleteBed(Integer id) {
+        Bed bed = bedRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy giường ID " + id));
+
+        if (BedStatus.OCCUPIED.name().equals(bed.getStatus()) || residentRepository.findByBedId(id).isPresent()) {
+            throw new BadRequestException("Không thể xóa giường " + bed.getBedNumber() + " vì đang có cư dân lưu trú (OCCUPIED)! Vui lòng chuyển giường hoặc xuất viện trước.");
+        }
+
+        bedRepository.delete(bed);
+    }
+
+    @Override
+    @Transactional
     public BedResponse createBed(BedCreateRequest request) {
         Room room = roomRepository.findById(request.getRoomId())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phòng ID " + request.getRoomId()));
+
+        if ("CLINIC".equalsIgnoreCase(room.getRoomType()) || "RECEPTION".equalsIgnoreCase(room.getRoomType())) {
+            throw new BadRequestException("Phòng khám Bác sĩ và Quầy Lễ tân không sử dụng giường lưu trú của cư dân!");
+        }
 
         long currentBedCount = bedRepository.countByRoomId(room.getId());
         if (room.getCapacity() != null && currentBedCount >= room.getCapacity()) {
@@ -105,8 +164,17 @@ public class BedServiceImpl implements BedService {
                     + room.getCapacity() + " giường), không thể thêm giường mới");
         }
 
+        String bedNum = request.getBedNumber() != null ? request.getBedNumber().trim() : "";
+        if (bedNum.isBlank()) {
+            throw new BadRequestException("Mã số giường không được để trống");
+        }
+
+        if (bedRepository.existsByRoomIdAndBedNumber(room.getId(), bedNum)) {
+            throw new BadRequestException("Giường '" + bedNum + "' đã tồn tại trong phòng " + room.getRoomNumber());
+        }
+
         Bed bed = new Bed();
-        bed.setBedNumber(request.getBedNumber());
+        bed.setBedNumber(bedNum);
         bed.setRoom(room);
         bed.setStatus(BedStatus.AVAILABLE.name());
 

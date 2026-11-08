@@ -17,7 +17,7 @@ public interface IncidentReportRepository extends JpaRepository<IncidentReport, 
 
     List<IncidentReport> findByResidentIdIn(List<Integer> residentIds);
 
-    // 2. Phục vụ Admin/Quản lý: Tìm các sự cố chưa được xử lý (Status = 'PENDING') để giải quyết gấp
+    // 2. Phục vụ Giám đốc cơ sở: Tìm các sự cố chưa được xử lý (Status = 'PENDING') để giải quyết gấp
     List<IncidentReport> findByStatus(String status);
 
     // 3. Phục vụ Thống kê/Cảnh báo: Lọc các sự cố theo mức độ nghiêm trọng (VD: 'CRITICAL', 'HIGH')
@@ -29,7 +29,7 @@ public interface IncidentReportRepository extends JpaRepository<IncidentReport, 
     // 5. Đếm số sự cố theo trạng thái
     long countByStatus(String status);
 
-    // 6. Thống kê số lượng sự cố theo mức độ nghiêm trọng trong khoảng thời gian (Dashboard Admin)
+    // 6. Thống kê số lượng sự cố theo mức độ nghiêm trọng trong khoảng thời gian (Dashboard Giám đốc)
     @Query("SELECT COUNT(i) FROM IncidentReport i WHERE i.severityLevel = :severityLevel AND i.incidentTime BETWEEN :startDate AND :endDate")
     long countBySeverityLevelAndIncidentTimeBetween(
             @Param("severityLevel") String severityLevel,

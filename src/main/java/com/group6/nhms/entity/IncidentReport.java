@@ -15,13 +15,25 @@ public class IncidentReport {
     @Column(name = "ID", nullable = false)
     private Integer id;
 
-    @NotNull
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "Resident_ID", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "Resident_ID")
     private Resident resident;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "Room_ID")
+    private Room room;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "Bed_ID")
+    private Bed bed;
+
+    @Size(max = 150)
+    @Nationalized
+    @Column(name = "Location", length = 150)
+    private String location;
+
     @NotNull
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "Reporter_Staff_ID", nullable = false)
     private Staff reporterStaff;
 
@@ -108,6 +120,13 @@ public class IncidentReport {
     public String getStatus() {
         return status;
     }
+
+    public Room getRoom() { return room; }
+    public void setRoom(Room room) { this.room = room; }
+    public Bed getBed() { return bed; }
+    public void setBed(Bed bed) { this.bed = bed; }
+    public String getLocation() { return location; }
+    public void setLocation(String location) { this.location = location; }
 
     public void setStatus(String status) {
         this.status = status;

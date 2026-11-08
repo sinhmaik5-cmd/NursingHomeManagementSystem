@@ -24,4 +24,7 @@ public interface TaskScheduleRepository extends JpaRepository<TaskSchedule, Inte
 
     // Lấy toàn bộ lịch phân công của 1 nhân viên
     List<TaskSchedule> findByStaffId(Integer staffId);
+
+    // Xóa lịch làm việc theo phòng khi phòng bị xóa
+    void deleteByRoomId(Integer roomId);
 }

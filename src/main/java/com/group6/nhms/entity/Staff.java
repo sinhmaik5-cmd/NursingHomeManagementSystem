@@ -31,6 +31,14 @@ public class Staff {
     private String phone;
 
     @Size(max = 100)
+    @Column(name = "Email", length = 100)
+    private String email;
+
+    @Size(max = 20)
+    @Column(name = "CitizenID", length = 20)
+    private String citizenId;
+
+    @Size(max = 100)
     @Nationalized
     @Column(name = "Specialization", length = 100)
     private String specialization;
@@ -65,6 +73,22 @@ public class Staff {
 
     public void setPhone(String phone) {
         this.phone = phone;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getCitizenId() {
+        return citizenId;
+    }
+
+    public void setCitizenId(String citizenId) {
+        this.citizenId = citizenId;
     }
 
     public String getSpecialization() {

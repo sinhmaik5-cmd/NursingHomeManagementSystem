@@ -6,6 +6,7 @@ import com.group6.nhms.dto.response.MedicationResponse;
 import com.group6.nhms.entity.HealthRecord;
 import com.group6.nhms.entity.HealthRecordDetail;
 import com.group6.nhms.entity.Medication;
+import com.group6.nhms.entity.Order;
 import com.group6.nhms.entity.Resident;
 import com.group6.nhms.entity.Staff;
 import com.group6.nhms.enums.ResidentStatus;
@@ -16,15 +17,19 @@ import com.group6.nhms.mapper.MedicationMapper;
 import com.group6.nhms.repository.HealthRecordDetailRepository;
 import com.group6.nhms.repository.HealthRecordRepository;
 import com.group6.nhms.repository.MedicationRepository;
+import com.group6.nhms.repository.OrderRepository;
 import com.group6.nhms.repository.ResidentRepository;
 import com.group6.nhms.repository.StaffRepository;
 import com.group6.nhms.service.HealthRecordService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -41,6 +46,7 @@ public class HealthRecordServiceImpl implements HealthRecordService {
     private final StaffRepository staffRepository;
     private final HealthRecordMapper healthRecordMapper;
     private final MedicationMapper medicationMapper;
+    private final OrderRepository orderRepository;
 
     public HealthRecordServiceImpl(
             HealthRecordRepository healthRecordRepository,
@@ -51,6 +57,21 @@ public class HealthRecordServiceImpl implements HealthRecordService {
             HealthRecordMapper healthRecordMapper,
             MedicationMapper medicationMapper
     ) {
+        this(healthRecordRepository, healthRecordDetailRepository, medicationRepository,
+                residentRepository, staffRepository, healthRecordMapper, medicationMapper, null);
+    }
+
+    @Autowired
+    public HealthRecordServiceImpl(
+            HealthRecordRepository healthRecordRepository,
+            HealthRecordDetailRepository healthRecordDetailRepository,
+            MedicationRepository medicationRepository,
+            ResidentRepository residentRepository,
+            StaffRepository staffRepository,
+            HealthRecordMapper healthRecordMapper,
+            MedicationMapper medicationMapper,
+            @Autowired(required = false) OrderRepository orderRepository
+    ) {
         this.healthRecordRepository = healthRecordRepository;
         this.healthRecordDetailRepository = healthRecordDetailRepository;
         this.medicationRepository = medicationRepository;
@@ -58,6 +79,7 @@ public class HealthRecordServiceImpl implements HealthRecordService {
         this.staffRepository = staffRepository;
         this.healthRecordMapper = healthRecordMapper;
         this.medicationMapper = medicationMapper;
+        this.orderRepository = orderRepository;
     }
 
     @Override
@@ -196,16 +218,52 @@ public class HealthRecordServiceImpl implements HealthRecordService {
 
         List<HealthRecordDetail> details = healthRecordDetailRepository.findByHealthRecordId(recordId);
 
+        BigDecimal totalRefund = BigDecimal.ZERO;
         for (HealthRecordDetail detail : details) {
+            if (detail.getTotalPrice() != null && detail.getTotalPrice().compareTo(BigDecimal.ZERO) > 0) {
+                totalRefund = totalRefund.add(detail.getTotalPrice());
+            }
+
             Medication medication = medicationRepository.findByIdForUpdate(detail.getMedication().getId())
                     .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thuốc ID " + detail.getMedication().getId()));
 
             medication.setQuantityInStock(medication.getQuantityInStock() + detail.getQuantity());
             medicationRepository.save(medication);
+
+            detail.setTotalPrice(BigDecimal.ZERO);
+            String currentDosage = detail.getDosage() != null ? detail.getDosage() : "";
+            if (!currentDosage.contains("(Đã hoàn kho)")) {
+                detail.setDosage((currentDosage + " (Đã hoàn kho)").trim());
+            }
+            healthRecordDetailRepository.save(detail);
         }
 
-        healthRecordDetailRepository.deleteAll(details);
-        healthRecordRepository.delete(record);
+        // Deduct from pending invoice if exists
+        if (orderRepository != null && record.getResident() != null && totalRefund.compareTo(BigDecimal.ZERO) > 0) {
+            List<Order> pendingOrders = orderRepository.findByResidentIdAndPaymentStatus(
+                    record.getResident().getId(), "PENDING");
+            for (Order pendingOrder : pendingOrders) {
+                if (pendingOrder.getMedicationsPrice() != null && pendingOrder.getMedicationsPrice().compareTo(BigDecimal.ZERO) > 0) {
+                    BigDecimal currentMedPrice = pendingOrder.getMedicationsPrice();
+                    BigDecimal deduction = currentMedPrice.min(totalRefund);
+                    pendingOrder.setMedicationsPrice(currentMedPrice.subtract(deduction));
+                    if (pendingOrder.getTotalAmount() != null) {
+                        pendingOrder.setTotalAmount(pendingOrder.getTotalAmount().subtract(deduction).max(BigDecimal.ZERO));
+                    }
+                    orderRepository.save(pendingOrder);
+                    totalRefund = totalRefund.subtract(deduction);
+                    if (totalRefund.compareTo(BigDecimal.ZERO) <= 0) break;
+                }
+            }
+        }
+
+        // Keep the HealthRecord history, update notes with audit timestamp
+        String refundTag = "[ĐÃ HOÀN KHO THUỐC " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")) + "]";
+        String currentNotes = record.getNotes() != null ? record.getNotes() : "";
+        if (!currentNotes.contains("[ĐÃ HOÀN KHO")) {
+            record.setNotes((currentNotes.isBlank() ? "" : currentNotes + " | ") + refundTag);
+            healthRecordRepository.save(record);
+        }
     }
 
     @Override
@@ -246,6 +304,9 @@ public class HealthRecordServiceImpl implements HealthRecordService {
         }
 
         response.setMedications(medicationResponses);
+        if (record.getNotes() != null && record.getNotes().contains("[ĐÃ HOÀN KHO")) {
+            response.setReturnedStock(true);
+        }
         return response;
     }
 }

@@ -2,16 +2,21 @@ package com.group6.nhms.service.impl;
 
 import com.group6.nhms.dto.request.IncidentReportCreateRequest;
 import com.group6.nhms.dto.response.IncidentReportResponse;
+import com.group6.nhms.entity.Bed;
 import com.group6.nhms.entity.IncidentReport;
 import com.group6.nhms.entity.Resident;
+import com.group6.nhms.entity.Room;
 import com.group6.nhms.entity.Staff;
+import com.group6.nhms.enums.BedStatus;
 import com.group6.nhms.enums.IncidentStatus;
 import com.group6.nhms.enums.SeverityLevel;
 import com.group6.nhms.exception.BadRequestException;
 import com.group6.nhms.exception.ResourceNotFoundException;
 import com.group6.nhms.mapper.IncidentReportMapper;
+import com.group6.nhms.repository.BedRepository;
 import com.group6.nhms.repository.IncidentReportRepository;
 import com.group6.nhms.repository.ResidentRepository;
+import com.group6.nhms.repository.RoomRepository;
 import com.group6.nhms.repository.StaffRepository;
 import com.group6.nhms.service.IncidentReportService;
 import org.springframework.data.domain.Sort;
@@ -24,6 +29,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -32,17 +38,23 @@ public class IncidentReportServiceImpl implements IncidentReportService {
     private final IncidentReportRepository incidentReportRepository;
     private final ResidentRepository residentRepository;
     private final StaffRepository staffRepository;
+    private final BedRepository bedRepository;
+    private final RoomRepository roomRepository;
     private final IncidentReportMapper incidentReportMapper;
 
     public IncidentReportServiceImpl(
             IncidentReportRepository incidentReportRepository,
             ResidentRepository residentRepository,
             StaffRepository staffRepository,
+            BedRepository bedRepository,
+            RoomRepository roomRepository,
             IncidentReportMapper incidentReportMapper
     ) {
         this.incidentReportRepository = incidentReportRepository;
         this.residentRepository = residentRepository;
         this.staffRepository = staffRepository;
+        this.bedRepository = bedRepository;
+        this.roomRepository = roomRepository;
         this.incidentReportMapper = incidentReportMapper;
     }
 
@@ -52,18 +64,46 @@ public class IncidentReportServiceImpl implements IncidentReportService {
             IncidentReportCreateRequest request,
             Integer reporterStaffId
     ) {
-        Resident resident = residentRepository.findById(request.getResidentId())
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Không tìm thấy cư dân ID " + request.getResidentId()));
-
         Staff reporter = staffRepository.findById(reporterStaffId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Không tìm thấy nhân viên ID " + reporterStaffId));
 
+        if ("CENTER_MANAGER".equalsIgnoreCase(reporter.getJobTitle())) {
+            throw new BadRequestException("Giám đốc cơ sở giữ vai trò quản lý và điều hành xử lý sự cố, không trực tiếp báo cáo sự cố.");
+        }
+
+        Resident resident = null;
+        if (request.getResidentId() != null) {
+            resident = residentRepository.findById(request.getResidentId())
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Không tìm thấy cư dân ID " + request.getResidentId()));
+        }
+
         String severity = normalizeSeverity(request.getSeverityLevel());
 
+        if ("NURSE".equalsIgnoreCase(reporter.getJobTitle())) {
+            if (resident == null) {
+                throw new BadRequestException("Điều dưỡng báo cáo sự cố lâm sàng bắt buộc phải gắn với cư dân cụ thể.");
+            }
+            if (!"LOW".equalsIgnoreCase(severity) && !"MEDIUM".equalsIgnoreCase(severity)) {
+                throw new BadRequestException("Điều dưỡng chỉ báo cáo các sự cố mức độ LOW hoặc MEDIUM cho Bác sĩ và Giám đốc. Sự cố nặng (HIGH) và cấp cứu (CRITICAL) do Bác sĩ đánh giá và báo cáo.");
+            }
+        } else if ("DOCTOR".equalsIgnoreCase(reporter.getJobTitle())) {
+            if (resident == null) {
+                throw new BadRequestException("Bác sĩ báo cáo sự cố y tế bắt buộc phải gắn với cư dân cụ thể.");
+            }
+            if (!"HIGH".equalsIgnoreCase(severity) && !"CRITICAL".equalsIgnoreCase(severity)) {
+                throw new BadRequestException("Bác sĩ chuyên trách báo cáo các sự cố y tế mức độ HIGH hoặc CRITICAL để Giám đốc xử lý và chỉ đạo.");
+            }
+        } else if ("RECEPTIONIST".equalsIgnoreCase(reporter.getJobTitle())) {
+            // Nâng cấp 3: Lễ tân có thể báo cáo theo Cư dân, Phòng/Giường hoặc Khu vực cơ sở vật chất chung
+            if (resident == null && request.getBedId() == null && request.getRoomId() == null
+                    && (request.getLocation() == null || request.getLocation().isBlank())) {
+                throw new BadRequestException("Vui lòng chọn Cư dân, Phòng/Giường hoặc Khu vực cơ sở vật chất gặp sự cố.");
+            }
+        }
+
         IncidentReport incident = new IncidentReport();
-        incident.setResident(resident);
         incident.setReporterStaff(reporter);
         incident.setIncidentTime(Instant.now());
         String description = request.getDescription() != null ? request.getDescription().trim() : "";
@@ -71,6 +111,45 @@ public class IncidentReportServiceImpl implements IncidentReportService {
         incident.setDescription(title.isEmpty() ? description : "[" + title + "] " + description);
         incident.setSeverityLevel(severity);
         incident.setStatus(IncidentStatus.PENDING.name());
+
+        // Gắn Cư dân, Giường, Phòng & Vị trí
+        if (resident != null) {
+            incident.setResident(resident);
+            if (resident.getBed() != null) {
+                incident.setBed(resident.getBed());
+                if (resident.getBed().getRoom() != null) {
+                    incident.setRoom(resident.getBed().getRoom());
+                }
+            }
+        }
+
+        if (request.getBedId() != null) {
+            Bed bed = bedRepository.findById(request.getBedId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy giường ID " + request.getBedId()));
+            incident.setBed(bed);
+            if (bed.getRoom() != null && incident.getRoom() == null) {
+                incident.setRoom(bed.getRoom());
+            }
+        }
+
+        if (request.getRoomId() != null && incident.getRoom() == null) {
+            Room room = roomRepository.findById(request.getRoomId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phòng ID " + request.getRoomId()));
+            incident.setRoom(room);
+        }
+
+        if (request.getLocation() != null && !request.getLocation().isBlank()) {
+            incident.setLocation(request.getLocation().trim());
+        }
+
+        // Nâng cấp 2: Tự động chuyển giường sang trạng thái MAINTENANCE nếu là sự cố cơ sở vật chất
+        if (Boolean.TRUE.equals(request.getSetMaintenance()) && incident.getBed() != null) {
+            Bed targetBed = incident.getBed();
+            if (!BedStatus.MAINTENANCE.name().equalsIgnoreCase(targetBed.getStatus())) {
+                targetBed.setStatus(BedStatus.MAINTENANCE.name());
+                bedRepository.save(targetBed);
+            }
+        }
 
         IncidentReport saved = incidentReportRepository.save(incident);
         return incidentReportMapper.toResponse(saved);
@@ -132,6 +211,12 @@ public class IncidentReportServiceImpl implements IncidentReportService {
     @Override
     @Transactional
     public IncidentReportResponse resolveIncident(Integer incidentId, String actionTaken) {
+        return resolveIncident(incidentId, actionTaken, null);
+    }
+
+    @Override
+    @Transactional
+    public IncidentReportResponse resolveIncident(Integer incidentId, String actionTaken, Integer resolverStaffId) {
         if (actionTaken == null || actionTaken.isBlank()) {
             throw new BadRequestException("Hướng xử lý không được để trống");
         }
@@ -144,7 +229,54 @@ public class IncidentReportServiceImpl implements IncidentReportService {
             throw new BadRequestException("Chỉ có thể xử lý sự cố đang ở trạng thái PENDING");
         }
 
-        incident.setActionTaken(actionTaken.trim());
+        if (resolverStaffId != null) {
+            Staff resolver = staffRepository.findById(resolverStaffId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy nhân viên xử lý ID " + resolverStaffId));
+            String resolverRole = resolver.getJobTitle();
+            if ("NURSE".equalsIgnoreCase(resolverRole)) {
+                throw new BadRequestException("Điều dưỡng không có thẩm quyền xử lý sự cố.");
+            }
+
+            Staff reporter = incident.getReporterStaff();
+            String reporterRole = reporter != null ? reporter.getJobTitle() : "";
+
+            if ("RECEPTIONIST".equalsIgnoreCase(resolverRole)) {
+                if (!"RECEPTIONIST".equalsIgnoreCase(reporterRole) && incident.getReporterStaff() != null) {
+                    throw new BadRequestException("Lễ tân chỉ có thẩm quyền báo cáo giải quyết các sự cố cơ sở vật chất.");
+                }
+            } else if ("DOCTOR".equalsIgnoreCase(resolverRole)) {
+                if ("RECEPTIONIST".equalsIgnoreCase(reporterRole)) {
+                    throw new BadRequestException("Bác sĩ không xử lý các sự cố cơ sở vật chất của Lễ tân.");
+                }
+                if ("CRITICAL".equalsIgnoreCase(incident.getSeverityLevel())) {
+                    throw new BadRequestException("Sự cố y tế mức độ khẩn cấp / nguy kịch (CRITICAL) thuộc thẩm quyền xử lý và chỉ đạo của Giám đốc cơ sở.");
+                }
+            } else if ("CENTER_MANAGER".equalsIgnoreCase(resolverRole)) {
+                if ("NURSE".equalsIgnoreCase(reporterRole)) {
+                    throw new BadRequestException("Sự cố do Điều dưỡng báo cáo thuộc thẩm quyền chuyên môn của Bác sĩ trực tiếp nhận và xử lý y tế.");
+                }
+            }
+        }
+
+        String finalAction = actionTaken.trim();
+
+        // Nâng cấp 2: Tự động khôi phục trạng thái giường sau khi Giám đốc xử lý xong sự cố cơ sở vật chất
+        if (incident.getBed() != null) {
+            Bed targetBed = incident.getBed();
+            if (BedStatus.MAINTENANCE.name().equalsIgnoreCase(targetBed.getStatus())) {
+                Optional<Resident> activeResident = residentRepository.findByBedId(targetBed.getId())
+                        .filter(r -> "ACTIVE".equalsIgnoreCase(r.getStatus()));
+                if (activeResident.isPresent()) {
+                    targetBed.setStatus(BedStatus.OCCUPIED.name());
+                } else {
+                    targetBed.setStatus(BedStatus.AVAILABLE.name());
+                }
+                bedRepository.save(targetBed);
+                finalAction += " [Hệ thống: Đã khôi phục trạng thái giường " + targetBed.getBedNumber() + " -> " + targetBed.getStatus() + "]";
+            }
+        }
+
+        incident.setActionTaken(finalAction);
         incident.setStatus(IncidentStatus.RESOLVED.name());
 
         return incidentReportMapper.toResponse(incidentReportRepository.save(incident));
