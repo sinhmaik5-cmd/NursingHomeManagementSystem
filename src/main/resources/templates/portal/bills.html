@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout :: layout(~{::title}, ~{::content}, 'portal-bills')}">
+<head>
+    <title>Hóa Đơn Viện Phí Hàng Tháng - NHMS Care</title>
+</head>
+<body>
+<div th:fragment="content">
+    <!-- Header -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <div>
+            <h4 class="fw-bold mb-1 text-dark">
+                <i class="bi bi-receipt-cutoff text-primary me-2"></i>Hóa Đơn Viện Phí Hàng Tháng
+            </h4>
+            <p class="text-muted small mb-0">Theo dõi chi tiết các khoản viện phí hàng tháng (tiền phòng, gói chăm sóc, thuốc kê đơn) và tình trạng thanh toán của người thân</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a th:href="@{/health/history(residentId=${selectedResident != null ? selectedResident.id : null})}" class="btn btn-outline-primary btn-sm shadow-sm" th:if="${selectedResident != null}">
+                <i class="bi bi-clock-history me-1"></i>Lịch Sử Khám Bệnh
+            </a>
+            <a th:href="@{/portal/incidents(residentId=${selectedResident != null ? selectedResident.id : null})}" class="btn btn-outline-warning btn-sm shadow-sm" th:if="${selectedResident != null}">
+                <i class="bi bi-shield-exclamation me-1"></i>Sự Cố &amp; An Toàn
+            </a>
+            <a th:href="@{/portal/dashboard}" class="btn btn-outline-secondary btn-sm shadow-sm">
+                <i class="bi bi-arrow-left me-1"></i>Quay lại Cổng người thân
+            </a>
+        </div>
+    </div>
+
+
+    <!-- If no resident found under relative -->
+    <div th:if="${#lists.isEmpty(residents)}" class="nh-card p-5 text-center text-muted mb-4">
+        <i class="bi bi-people fs-1 text-muted d-block mb-2"></i>
+        <h5>Hiện chưa có hồ sơ cư dân nào liên kết với tài khoản người thân này.</h5>
+        <p class="small mb-0">Vui lòng liên hệ ban quản lý viện qua tổng đài 1900-NHMS để cập nhật thông tin bảo lãnh.</p>
+    </div>
+
+
+    <div th:unless="${#lists.isEmpty(residents)}">
+        <!-- Resident Filter Dropdown (Khi người thân bảo lãnh nhiều cư dân) -->
+        <div class="nh-card mb-4" th:if="${#lists.size(residents) > 1}">
+            <div class="nh-card-body p-3">
+                <form th:action="@{/portal/bills}" method="get" class="row g-2 align-items-center">
+                    <input type="hidden" name="status" th:if="${filterStatus != null}" th:value="${filterStatus}">
+                    <div class="col-12">
+                        <label for="residentSelect" class="form-label small fw-semibold text-muted mb-1">Chọn Cư Dân Tra Cứu Hóa Đơn:</label>
+                        <select class="form-select" id="residentSelect" name="residentId" onchange="this.form.submit()">
+                            <option th:each="r : ${residents}"
+                                    th:value="${r.id}"
+                                    th:selected="${selectedResident != null and selectedResident.id == r.id}"
+                                    th:text="${r.fullName} + ' (Phòng ' + ${r.roomNumber} + ' - Giường ' + ${r.bedNumber} + ')'">
+                                Nguyễn Văn An (Phòng P101 - G01)
+                            </option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+
+        <!-- Selected Resident Profile Header Card -->
+        <div th:if="${selectedResident != null}" class="nh-card p-4 mb-4 bg-white border">
+            <div class="row align-items-center">
+                <div class="col-12 col-md-8 d-flex align-items-center">
+                    <div class="sidebar-user-avatar bg-primary-subtle text-primary fs-2 me-4" style="width: 64px; height: 64px;">
+                        <i class="bi bi-person-fill"></i>
+                    </div>
+                    <div>
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <h4 class="fw-bold mb-0 text-dark" th:text="${selectedResident.fullName}">Nguyễn Văn An</h4>
+                            <span class="badge bg-light text-dark" th:text="${selectedResident.gender}">Nam</span>
+                            <span th:if="${selectedResident.status == 'ACTIVE'}" class="badge badge-status-available">Đang lưu trú</span>
+                            <span th:if="${selectedResident.status == 'HOSPITALIZED'}" class="badge bg-danger text-white">Chuyển viện</span>
+                        </div>
+                        <div class="text-muted small">
+                           <span class="me-3" th:if="${selectedResident.dateOfBirth != null}">
+                               <i class="bi bi-calendar-event me-1"></i>Sinh năm: <strong th:text="${#temporals.format(selectedResident.dateOfBirth, 'yyyy')}">1945</strong>
+                           </span>
+                            <span class="me-3">
+                               <i class="bi bi-hospital me-1"></i>Vị trí: <strong class="text-primary">Phòng <span th:text="${selectedResident.roomNumber}">P101</span> - Giường <span th:text="${selectedResident.bedNumber}">G01</span></strong>
+                           </span>
+                            <span th:if="${selectedResident.admissionDate != null}">
+                               <i class="bi bi-box-arrow-in-right me-1"></i>Nhập viện: <span th:text="${#temporals.format(selectedResident.admissionDate, 'dd/MM/yyyy')}">01/10/2026</span>
+                           </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-md-4 text-md-end mt-3 mt-md-0">
+                   <span class="badge bg-secondary-subtle text-secondary px-3 py-2">
+                       <i class="bi bi-person-heart me-1"></i>
+                       Người bảo lãnh: <strong th:text="${relative != null ? relative.fullName : 'Người thân'}">Nguyễn Tuấn Dũng</strong>
+                   </span>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Billing KPI Summary Stats -->
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-lg-3">
+                <div class="nh-card p-3 border-start border-4 border-primary">
+                    <span class="text-muted small d-block mb-1 fw-semibold">TỔNG SỐ HÓA ĐƠN</span>
+                    <h4 class="fw-bold mb-0 text-primary" th:text="${totalBillsCount != null ? totalBillsCount : #lists.size(orders)}">0</h4>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="nh-card p-3 border-start border-4 border-danger">
+                    <span class="text-muted small d-block mb-1 fw-semibold">CHƯA THANH TOÁN</span>
+                    <h4 class="fw-bold mb-0 text-danger" th:text="${unpaidCount != null ? unpaidCount : 0}">0</h4>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="nh-card p-3 border-start border-4 border-success">
+                    <span class="text-muted small d-block mb-1 fw-semibold">ĐÃ THANH TOÁN</span>
+                    <h4 class="fw-bold mb-0 text-success" th:text="${paidCount != null ? paidCount : 0}">0</h4>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="nh-card p-3 border-start border-4 border-warning">
+                    <span class="text-muted small d-block mb-1 fw-semibold">TỔNG CÒN PHẢI NỘP</span>
+                    <h4 class="fw-bold mb-0 text-danger"
+                        th:text="${totalUnpaidAmount != null ? #numbers.formatDecimal(totalUnpaidAmount, 0, 'COMMA', 0, 'POINT') + 'đ' : '0đ'}">
+                        0đ
+                    </h4>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Monthly Bills Table Card -->
+        <div class="nh-card">
+            <div class="nh-card-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                <h6 class="fw-bold mb-0 text-dark">
+                    <i class="bi bi-receipt text-primary me-2"></i>Danh Sách Hóa Đơn Hàng Tháng (<span th:text="${#lists.size(orders)}">0</span>)
+                </h6>
+
+
+                <!-- Filter by Status -->
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <div class="btn-group btn-group-sm" role="group">
+                        <a th:href="@{/portal/bills(residentId=${selectedResident != null ? selectedResident.id : null})}"
+                           class="btn btn-outline-secondary" th:classappend="${filterStatus == null or filterStatus == '' ? 'active' : ''}">Tất cả</a>
+                        <a th:href="@{/portal/bills(residentId=${selectedResident != null ? selectedResident.id : null}, status='PENDING')}"
+                           class="btn btn-outline-danger" th:classappend="${filterStatus == 'PENDING' ? 'active' : ''}">Chưa thanh toán</a>
+                        <a th:href="@{/portal/bills(residentId=${selectedResident != null ? selectedResident.id : null}, status='PAID')}"
+                           class="btn btn-outline-success" th:classappend="${filterStatus == 'PAID' ? 'active' : ''}">Đã thanh toán</a>
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="table-responsive">
+                <table class="nh-table align-middle" id="portalBillsTable">
+                    <thead>
+                    <tr>
+                        <th style="width: 100px;">Mã HĐ</th>
+                        <th style="width: 130px;">Kỳ Viện Phí</th>
+                        <th class="text-end" style="min-width: 120px;">Tiền Phòng</th>
+                        <th class="text-end" style="min-width: 120px;">Tiền Dịch Vụ</th>
+                        <th class="text-end" style="min-width: 120px;">Tiền Thuốc</th>
+                        <th class="text-end" style="min-width: 140px;">Tổng Cộng</th>
+                        <th style="width: 120px;">Hạn Nộp</th>
+                        <th style="width: 150px;">Trạng Thái</th>
+                        <th class="text-center" style="width: 110px;">Thao Tác</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:if="${#lists.isEmpty(orders)}">
+                        <td colspan="9" class="text-center py-5 text-muted">
+                            <i class="bi bi-receipt fs-1 text-muted d-block mb-2"></i>
+                            <h6 class="fw-bold text-dark">Hiện chưa có hóa đơn nào trong danh mục này.</h6>
+                            <p class="small mb-0">Hóa đơn viện phí hàng tháng sẽ được bộ phận kế toán phát hành định kỳ vào cuối tháng.</p>
+                        </td>
+                    </tr>
+                    <tr th:each="ord : ${orders}">
+                        <!-- 1. Mã HĐ -->
+                        <td class="fw-bold text-primary">
+                            <span th:text="'#HD-' + ${ord.id}">#HD-101</span>
+                        </td>
+
+
+                        <!-- 2. Kỳ Viện Phí -->
+                        <td class="small fw-semibold text-dark text-nowrap">
+                            <i class="bi bi-calendar-month me-1 text-muted"></i>
+                            <span th:text="${ord.issueDate != null ? #temporals.format(ord.issueDate, 'MM/yyyy') : (ord.createdDate != null ? #temporals.format(ord.createdDate, 'MM/yyyy') : '-')}">11/2026</span>
+                        </td>
+
+
+                        <!-- 3. Tiền phòng -->
+                        <td class="text-end text-muted small"
+                            th:text="${ord.roomPrice != null ? #numbers.formatDecimal(ord.roomPrice, 0, 'COMMA', 0, 'POINT') + 'đ' : (ord.roomBasePrice != null ? #numbers.formatDecimal(ord.roomBasePrice, 0, 'COMMA', 0, 'POINT') + 'đ' : '0đ')}">
+                            5,000,000đ
+                        </td>
+
+
+                        <!-- 4. Tiền dịch vụ -->
+                        <td class="text-end text-muted small"
+                            th:text="${ord.servicesPrice != null ? #numbers.formatDecimal(ord.servicesPrice, 0, 'COMMA', 0, 'POINT') + 'đ' : (ord.totalServicesAmount != null ? #numbers.formatDecimal(ord.totalServicesAmount, 0, 'COMMA', 0, 'POINT') + 'đ' : '0đ')}">
+                            1,500,000đ
+                        </td>
+
+
+                        <!-- 5. Tiền thuốc -->
+                        <td class="text-end fw-semibold text-danger small"
+                            th:text="${ord.medicationsPrice != null ? #numbers.formatDecimal(ord.medicationsPrice, 0, 'COMMA', 0, 'POINT') + 'đ' : '0đ'}">
+                            350,000đ
+                        </td>
+
+
+                        <!-- 6. Tổng cộng -->
+                        <td class="text-end fw-bold text-dark fs-6"
+                            th:text="${ord.totalAmount != null ? #numbers.formatDecimal(ord.totalAmount, 0, 'COMMA', 0, 'POINT') + ' VNĐ' : '0 VNĐ'}">
+                            6,850,000 VNĐ
+                        </td>
+
+
+                        <!-- 7. Hạn nộp -->
+                        <td class="small text-muted text-nowrap">
+                            <span th:text="${ord.dueDate != null ? #temporals.format(ord.dueDate, 'dd/MM/yyyy') : '-'}">15/11/2026</span>
+                        </td>
+
+
+                        <!-- 8. Trạng thái -->
+                        <td>
+                           <span th:if="${ord.paymentStatus == 'PAID'}" class="badge badge-status-available">
+                               <i class="bi bi-check-circle-fill me-1"></i>Đã thanh toán
+                           </span>
+                            <span th:if="${ord.paymentStatus == 'PENDING' or ord.paymentStatus == 'UNPAID'}" class="badge bg-danger-subtle text-danger">
+                               <i class="bi bi-clock-fill me-1"></i>Chưa thanh toán
+                           </span>
+                        </td>
+
+
+                        <!-- 9. Thao tác -->
+                        <td class="text-center">
+                            <a th:href="@{'/billing/orders/' + ${ord.id}}" class="btn btn-sm btn-outline-primary shadow-sm" title="Xem chi tiết hóa đơn">
+                                <i class="bi bi-eye me-1"></i>Chi tiết
+                            </a>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+
+            <!-- Pagination for Bills at bottom right (5 items per page) -->
+            <div class="d-flex justify-content-between align-items-center p-3 border-top flex-wrap gap-2" id="portalBillsPaginationWrapper">
+                <div class="small text-muted fw-semibold" id="portalBillsPaginationInfo">
+                    Đang hiển thị 1 - 5 trong số <span th:text="${#lists.size(orders)}">0</span> hóa đơn
+                </div>
+                <nav aria-label="Phân trang hóa đơn">
+                    <ul class="pagination pagination-sm mb-0 shadow-sm" id="portalBillsPagination"></ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Script khởi tạo phân trang -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            initTablePagination('#portalBillsTable', 'portalBillsPaginationWrapper', 'portalBillsPagination', 'portalBillsPaginationInfo', 5, 'hóa đơn');
+        });
+    </script>
+</div>
+</body>
+</html>

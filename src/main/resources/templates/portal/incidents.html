@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout :: layout(~{::title}, ~{::content}, 'portal-incidents')}">
+<head>
+    <title>Xem Sự Cố & An Toàn Cư Dân - NHMS Care</title>
+</head>
+<body>
+<div th:fragment="content">
+    <!-- Header -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <div>
+            <h4 class="fw-bold mb-1 text-dark">
+                <i class="bi bi-shield-exclamation text-warning me-2"></i>Xem Sự Cố & An Toàn Của Cư Dân
+            </h4>
+            <p class="text-muted small mb-0">Theo dõi thông tin chi tiết các sự cố y tế và cơ sở vật chất phát sinh đối với người thân cũng như biện pháp xử lý từ đội ngũ viện</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a th:href="@{/health/history(residentId=${selectedResident != null ? selectedResident.id : null})}" class="btn btn-outline-primary btn-sm shadow-sm" th:if="${selectedResident != null}">
+                <i class="bi bi-clock-history me-1"></i>Lịch Sử Khám Bệnh
+            </a>
+            <a th:href="@{/portal/dashboard}" class="btn btn-outline-secondary btn-sm shadow-sm">
+                <i class="bi bi-arrow-left me-1"></i>Quay lại Cổng người thân
+            </a>
+        </div>
+    </div>
+
+
+    <!-- If no resident found under relative -->
+    <div th:if="${#lists.isEmpty(residents)}" class="nh-card p-5 text-center text-muted mb-4">
+        <i class="bi bi-people fs-1 text-muted d-block mb-2"></i>
+        <h5>Hiện chưa có hồ sơ cư dân nào liên kết với tài khoản người thân này.</h5>
+        <p class="small mb-0">Vui lòng liên hệ ban quản lý viện qua tổng đài 1900-NHMS để cập nhật thông tin bảo lãnh.</p>
+    </div>
+
+
+    <div th:unless="${#lists.isEmpty(residents)}">
+        <!-- Resident Filter Dropdown (Khi người thân bảo lãnh nhiều cư dân) -->
+        <div class="nh-card mb-4" th:if="${#lists.size(residents) > 1}">
+            <div class="nh-card-body p-3">
+                <form th:action="@{/portal/incidents}" method="get" class="row g-2 align-items-center">
+                    <input type="hidden" name="status" th:if="${filterStatus != null}" th:value="${filterStatus}">
+                    <input type="hidden" name="sort" th:if="${currentSort != null}" th:value="${currentSort}">
+                    <div class="col-12">
+                        <label for="residentSelect" class="form-label small fw-semibold text-muted mb-1">Chọn Cư Dân Tra Cứu Sự Cố:</label>
+                        <select class="form-select" id="residentSelect" name="residentId" onchange="this.form.submit()">
+                            <option th:each="r : ${residents}"
+                                    th:value="${r.id}"
+                                    th:selected="${selectedResident != null and selectedResident.id == r.id}"
+                                    th:text="${r.fullName} + ' (Phòng ' + ${r.roomNumber} + ' - Giường ' + ${r.bedNumber} + ')'">
+                                Nguyễn Văn An (Phòng P101 - G01)
+                            </option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+
+        <!-- Selected Resident Profile Header Card -->
+        <div th:if="${selectedResident != null}" class="nh-card p-4 mb-4 bg-white border">
+            <div class="row align-items-center">
+                <div class="col-12 col-md-8 d-flex align-items-center">
+                    <div class="sidebar-user-avatar bg-danger-subtle text-danger fs-2 me-4" style="width: 64px; height: 64px;">
+                        <i class="bi bi-heart-pulse-fill"></i>
+                    </div>
+                    <div>
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <h4 class="fw-bold mb-0 text-dark" th:text="${selectedResident.fullName}">Nguyễn Văn An</h4>
+                            <span class="badge bg-light text-dark" th:text="${selectedResident.gender}">Nam</span>
+                            <span th:if="${selectedResident.status == 'ACTIVE'}" class="badge badge-status-available">Đang lưu trú</span>
+                            <span th:if="${selectedResident.status == 'HOSPITALIZED'}" class="badge bg-danger text-white">Chuyển viện</span>
+                        </div>
+                        <div class="text-muted small">
+                           <span class="me-3" th:if="${selectedResident.dateOfBirth != null}">
+                               <i class="bi bi-calendar-event me-1"></i>Sinh năm: <strong th:text="${#temporals.format(selectedResident.dateOfBirth, 'yyyy')}">1945</strong>
+                           </span>
+                            <span class="me-3">
+                               <i class="bi bi-hospital me-1"></i>Vị trí: <strong class="text-primary">Phòng <span th:text="${selectedResident.roomNumber}">P101</span> - Giường <span th:text="${selectedResident.bedNumber}">G01</span></strong>
+                           </span>
+                            <span th:if="${selectedResident.admissionDate != null}">
+                               <i class="bi bi-box-arrow-in-right me-1"></i>Nhập viện: <span th:text="${#temporals.format(selectedResident.admissionDate, 'dd/MM/yyyy')}">01/10/2026</span>
+                           </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-md-4 text-md-end mt-3 mt-md-0">
+                   <span class="badge bg-secondary-subtle text-secondary px-3 py-2">
+                       <i class="bi bi-person-heart me-1"></i>
+                       Người bảo lãnh: <strong th:text="${relative != null ? relative.fullName : 'Người thân'}">Nguyễn Tuấn Dũng</strong>
+                   </span>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Incident KPI Stats Bar -->
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-md-4">
+                <div class="nh-card p-3 border-start border-4 border-primary">
+                    <span class="text-muted small d-block mb-1 fw-semibold">TỔNG SỐ SỰ CỐ ĐÃ GHI NHẬN</span>
+                    <h4 class="fw-bold mb-0 text-primary" th:text="${#lists.size(incidents)}">0</h4>
+                </div>
+            </div>
+            <div class="col-6 col-md-4">
+                <div class="nh-card p-3 border-start border-4 border-warning">
+                    <span class="text-muted small d-block mb-1 fw-semibold">SỰ CỐ ĐANG THEO DÕI</span>
+                    <h4 class="fw-bold mb-0 text-warning"
+                        th:text="${pendingCount != null ? pendingCount : 0}">0</h4>
+                </div>
+            </div>
+            <div class="col-12 col-md-4">
+                <div class="nh-card p-3 border-start border-4 border-success">
+                    <span class="text-muted small d-block mb-1 fw-semibold">SỰ CỐ ĐÃ XỬ LÝ AN TOÀN</span>
+                    <h4 class="fw-bold mb-0 text-success"
+                        th:text="${resolvedCount != null ? resolvedCount : 0}">0</h4>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Incidents List Table Card -->
+        <div class="nh-card">
+            <div class="nh-card-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                <h6 class="fw-bold mb-0 text-dark">
+                    <i class="bi bi-card-checklist text-primary me-2"></i>Danh Sách Sự Cố &amp; An Toàn (<span th:text="${#lists.size(incidents)}">0</span>)
+                </h6>
+
+
+                <!-- Filter by Status & Sort Controls -->
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <!-- Status Filter -->
+                    <div class="btn-group btn-group-sm" role="group">
+                        <a th:href="@{/portal/incidents(residentId=selectedResident!=null?selectedResident.id:null,sort={currentSort})}"
+                           class="btn btn-outline-secondary" th:classappend="${filterStatus == null or filterStatus == '' ? 'active' : ''}">Tất cả</a>
+                        <a th:href="@{/portal/incidents(residentId=selectedResident!=null?selectedResident.id:null,status='PENDING',sort={currentSort})}"
+                           class="btn btn-outline-warning" th:classappend="${filterStatus == 'PENDING' ? 'active' : ''}">Chờ xử lý</a>
+                        <a th:href="@{/portal/incidents(residentId=selectedResident!=null?selectedResident.id:null,status='RESOLVED',sort={currentSort})}"
+                           class="btn btn-outline-success" th:classappend="${filterStatus == 'RESOLVED' ? 'active' : ''}">Đã giải quyết</a>
+                    </div>
+
+
+                    <!-- Sort Filter -->
+                    <div class="btn-group btn-group-sm" role="group">
+                        <a th:href="@{/portal/incidents(residentId=selectedResident!=null?selectedResident.id:null,status={filterStatus}, sort='newest')}"
+                           class="btn btn-outline-primary" th:classappend="${currentSort == 'newest' ? 'active' : ''}">
+                            <i class="bi bi-sort-down me-1"></i>Mới nhất
+                        </a>
+                        <a th:href="@{/portal/incidents(residentId=selectedResident!=null?selectedResident.id:null,status={filterStatus}, sort='oldest')}"
+                           class="btn btn-outline-primary" th:classappend="${currentSort == 'oldest' ? 'active' : ''}">
+                            <i class="bi bi-sort-up me-1"></i>Cũ nhất
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="table-responsive">
+                <table class="nh-table align-middle" id="portalIncidentsTable">
+                    <thead>
+                    <tr>
+                        <th style="width: 140px;">Thời gian</th>
+                        <th style="width: 110px;">Mức độ</th>
+                        <th>Tên sự cố &amp; Vị trí</th>
+                        <th>Mô tả chi tiết</th>
+                        <th style="min-width: 220px;">Trạng thái &amp; Biện pháp xử lý</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:if="${#lists.isEmpty(incidents)}">
+                        <td colspan="5" class="text-center py-5 text-muted">
+                            <i class="bi bi-shield-check fs-1 text-success d-block mb-2"></i>
+                            <h6 class="fw-bold text-dark">Tuyệt vời! Không có sự cố nào trong danh mục này.</h6>
+                            <p class="small mb-0">Cụ đang được chăm sóc và theo dõi sức khỏe an toàn tại viện.</p>
+                        </td>
+                    </tr>
+                    <tr th:each="inc : ${incidents}">
+                        <!-- 1. Thời gian -->
+                        <td class="small fw-semibold text-dark text-nowrap">
+                            <i class="bi bi-calendar3 me-1 text-muted"></i>
+                            <span th:text="${inc.createdDate != null ? #temporals.format(inc.createdDate, 'dd/MM/yyyy HH:mm') : '-'}">07/11/2026 17:34</span>
+                        </td>
+
+
+                        <!-- 2. Mức độ nghiêm trọng -->
+                        <td>
+                            <span th:if="${inc.severityLevel == 'LOW'}" class="badge badge-severity-low">LOW (Nhẹ)</span>
+                            <span th:if="${inc.severityLevel == 'MEDIUM'}" class="badge badge-severity-medium">MEDIUM (Vừa)</span>
+                            <span th:if="${inc.severityLevel == 'HIGH'}" class="badge badge-severity-high">HIGH (Nghiêm trọng)</span>
+                            <span th:if="${inc.severityLevel == 'CRITICAL'}" class="badge badge-severity-critical">CRITICAL (Khẩn cấp)</span>
+                        </td>
+
+
+                        <!-- 3. Tên sự cố & Vị trí -->
+                        <td>
+                            <span class="fw-bold text-dark d-block" th:text="${inc.title}">Hỏng vòi nước</span>
+                            <small class="text-muted" th:if="${inc.location != null}">
+                                <i class="bi bi-geo-alt me-1"></i><span th:text="${inc.location}">Phòng P101</span>
+                            </small>
+                        </td>
+
+
+                        <!-- 4. Mô tả chi tiết sự việc -->
+                        <td>
+                            <span class="small text-dark" th:text="${inc.description != null ? inc.description : '-'}">Rò rỉ nước phòng tắm</span>
+                        </td>
+
+
+                        <!-- 5. Trạng thái & Xử lý -->
+                        <td>
+                            <div th:if="${inc.status == 'RESOLVED'}" class="p-2 bg-success-subtle rounded border border-success-subtle small">
+                               <span class="badge bg-success text-white mb-1">
+                                   <i class="bi bi-check-circle-fill me-1"></i>ĐÃ GIẢI QUYẾT
+                               </span>
+                                <div class="text-dark fw-semibold mt-1" style="font-size: 0.8rem;">
+                                    <i class="bi bi-tools text-success me-1"></i>
+                                    <span th:text="${inc.actionTaken != null and !inc.actionTaken.isBlank() ? inc.actionTaken : 'Đã được đội ngũ nhân viên viện xử lý an toàn.'}">Đã chỉ đạo tổ bảo trì thay van mới</span>
+                                </div>
+                            </div>
+                            <div th:unless="${inc.status == 'RESOLVED'}" class="p-2 bg-warning-subtle rounded border border-warning-subtle small">
+                               <span class="badge bg-warning-subtle text-warning-emphasis mb-1">
+                                   <i class="bi bi-clock-history me-1"></i>CHỜ XỬ LÝ
+                               </span>
+                                <div class="text-muted mt-1" style="font-size: 0.8rem;">
+                                    <i class="bi bi-info-circle text-warning me-1"></i>Đang được nhân viên y tế &amp; kỹ thuật theo dõi sát sao.
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+
+            <!-- Pagination for Incidents at bottom right -->
+            <div class="d-flex justify-content-between align-items-center p-3 border-top flex-wrap gap-2" id="portalIncidentsPaginationWrapper">
+                <div class="small text-muted fw-semibold" id="portalIncidentsPaginationInfo">
+                    Đang hiển thị 1 - 5 trong số <span th:text="${#lists.size(incidents)}">0</span> sự cố
+                </div>
+                <nav aria-label="Phân trang sự cố">
+                    <ul class="pagination pagination-sm mb-0 shadow-sm" id="portalIncidentsPagination"></ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Script khởi tạo phân trang -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            initTablePagination('#portalIncidentsTable', 'portalIncidentsPaginationWrapper', 'portalIncidentsPagination', 'portalIncidentsPaginationInfo', 5, 'sự cố');
+        });
+    </script>
+</div>
+</body>
+</html>

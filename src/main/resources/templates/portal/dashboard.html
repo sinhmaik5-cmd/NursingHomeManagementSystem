@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout :: layout(~{::title}, ~{::content}, 'portal-dashboard')}">
+<head>
+    <title>Cổng Thông Tin Người Thân - NHMS Care</title>
+</head>
+<body>
+<div th:fragment="content">
+    <!-- Header -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <div>
+            <h4 class="fw-bold mb-1 text-dark">
+                <i class="bi bi-house-heart-fill text-danger me-2"></i>Cổng Thông Tin Người Thân & Gia Đình
+            </h4>
+            <p class="text-muted small mb-0">Theo dõi thông tin lưu trú và sổ theo dõi sức khỏe của người thân</p>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+           <span class="badge bg-secondary-subtle text-secondary px-3 py-2">
+               <i class="bi bi-person-heart me-1"></i>
+               Người bảo lãnh: <strong th:text="${relative != null ? relative.fullName : 'Người thân'}">Nguyễn Tuấn Dũng</strong>
+           </span>
+        </div>
+    </div>
+
+
+    <!-- If no resident found under relative -->
+    <div th:if="${#lists.isEmpty(residents)}" class="nh-card p-5 text-center text-muted mb-4">
+        <i class="bi bi-people fs-1 text-muted d-block mb-2"></i>
+        <h5>Hiện chưa có hồ sơ cư dân nào liên kết với tài khoản người thân này.</h5>
+        <p class="small mb-0">Vui lòng liên hệ ban quản lý viện qua tổng đài 1900 6868 để cập nhật thông tin bảo lãnh.</p>
+    </div>
+
+
+    <!-- Main Content for Residents -->
+    <div th:each="portal : ${residentPortals}" th:with="res=${portal.resident}" class="mb-5">
+        <!-- 1. Resident Profile Card -->
+        <div class="nh-card p-4 mb-4 bg-white border">
+            <div class="row align-items-center">
+                <div class="col-12 col-md-8 d-flex align-items-center">
+                    <div class="sidebar-user-avatar bg-danger-subtle text-danger fs-2 me-4" style="width: 72px; height: 72px;">
+                        <i class="bi bi-heart-pulse-fill"></i>
+                    </div>
+                    <div>
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <h3 class="fw-bold text-dark mb-0" th:text="${res.fullName}">Nguyễn Văn An</h3>
+                            <span class="badge bg-light text-dark" th:text="${res.gender}">Nam</span>
+                            <span th:if="${res.status == 'ACTIVE'}" class="badge badge-status-available">Đang lưu trú</span>
+                            <span th:if="${res.status == 'HOSPITALIZED'}" class="badge bg-danger text-white"><i class="bi bi-hospital me-1"></i>Chuyển viện cấp cứu</span>
+                            <span th:if="${res.status == 'DISCHARGED'}" class="badge bg-secondary-subtle text-secondary">Đã xuất viện</span>
+                        </div>
+                        <div class="text-muted small">
+                           <span class="me-3" th:if="${res.dateOfBirth != null}">
+                               <i class="bi bi-calendar-event me-1"></i>Sinh năm: <strong th:text="${#temporals.format(res.dateOfBirth, 'yyyy')}">1945</strong>
+                           </span>
+                            <span class="me-3">
+                               <i class="bi bi-hospital me-1"></i>Vị trí: <strong class="text-primary">Phòng <span th:text="${res.roomNumber}">P101</span> - Giường <span th:text="${res.bedNumber}">G01</span></strong>
+                           </span>
+                            <span th:if="${res.admissionDate != null}">
+                               <i class="bi bi-box-arrow-in-right me-1"></i>Nhập viện: <span th:text="${#temporals.format(res.admissionDate, 'dd/MM/yyyy')}">01/10/2026</span>
+                           </span>
+                        </div>
+                        <div class="small text-muted mt-2" th:if="${res.initialHealthStatus}">
+                            <i class="bi bi-info-circle me-1 text-primary"></i><strong>Ghi chú sức khỏe ban đầu:</strong> <span th:text="${res.initialHealthStatus}">Tăng huyết áp nhẹ, suy giảm thính lực</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- 2. Sổ theo dõi sức khỏe & Chỉ số sinh hiệu gần nhất -->
+        <div class="nh-card">
+            <div class="nh-card-header bg-light d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div class="d-flex align-items-center gap-2">
+                    <h6 class="fw-bold mb-0 text-dark">
+                        <i class="bi bi-activity text-danger me-2"></i>Sổ Theo Dõi Sức Khỏe Gần Nhất
+                    </h6>
+                    <span class="small text-muted" th:if="${portal.latestRecord != null}"
+                          th:text="'(Lần khám: ' + ${#temporals.format(portal.latestRecord.recordDate, 'dd/MM/yyyy HH:mm')} + ')'">
+                       (Lần khám: 23/10/2026 09:30)
+                   </span>
+                </div>
+                <a class="btn btn-sm btn-outline-primary shadow-sm"
+                   th:href="@{/health/history(residentId=${res.id})}"
+                   sec:authorize="hasRole('RELATIVE')">
+                    <i class="bi bi-clock-history me-1"></i>Xem toàn bộ lịch sử
+                </a>
+            </div>
+
+
+            <div class="nh-card-body p-4">
+                <div th:if="${portal.latestRecord == null}" class="text-center py-5 text-muted">
+                    <i class="bi bi-clipboard2-pulse fs-1 text-muted d-block mb-2"></i>
+                    <h6 class="fw-bold">Chưa có dữ liệu khám sức khỏe gần đây.</h6>
+                    <p class="small mb-0">Bác sĩ hoặc điều dưỡng sẽ sớm cập nhật chỉ số sinh hiệu cho cụ.</p>
+                </div>
+
+
+                <div th:if="${portal.latestRecord != null}">
+                    <!-- Vitals Grid -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-6 col-md-3">
+                            <div class="p-3 border rounded-3 bg-light text-center">
+                                <small class="text-muted d-block mb-1" style="font-size: 0.75rem;">Huyết áp</small>
+                                <h4 class="fw-bold text-dark mb-0" th:text="${portal.latestRecord.bloodPressure != null ? portal.latestRecord.bloodPressure : '-'}">120/80</h4>
+                                <small class="text-muted" style="font-size: 0.7rem;">mmHg</small>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="p-3 border rounded-3 bg-light text-center">
+                                <small class="text-muted d-block mb-1" style="font-size: 0.75rem;">Nhịp tim</small>
+                                <h4 class="fw-bold text-danger mb-0" th:text="${portal.latestRecord.heartRate != null ? portal.latestRecord.heartRate + ' bpm' : '-'}">75 bpm</h4>
+                                <small class="text-muted" style="font-size: 0.7rem;">bpm</small>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="p-3 border rounded-3 bg-light text-center">
+                                <small class="text-muted d-block mb-1" style="font-size: 0.75rem;">Nhiệt độ</small>
+                                <h4 class="fw-bold text-warning-emphasis mb-0" th:text="${portal.latestRecord.temperature != null ? portal.latestRecord.temperature + ' °C' : '-'}">36.8 °C</h4>
+                                <small class="text-muted" style="font-size: 0.7rem;">°C</small>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="p-3 border rounded-3 bg-light text-center">
+                                <small class="text-muted d-block mb-1" style="font-size: 0.75rem;">Đường huyết</small>
+                                <h4 class="fw-bold text-info-emphasis mb-0" th:text="${portal.latestRecord.bloodSugar != null ? portal.latestRecord.bloodSugar + ' mmol/L' : '-'}">5.6</h4>
+                                <small class="text-muted" style="font-size: 0.7rem;">mmol/L</small>
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <!-- Diagnosis -->
+                    <div class="mb-3">
+                        <span class="small fw-bold text-muted d-block mb-1">Chẩn đoán của Bác sĩ:</span>
+                        <div class="p-3 bg-light rounded-3 border text-dark fw-semibold small" th:text="${portal.latestRecord.diagnosis}">
+                            Tăng huyết áp nhẹ, sức khỏe tổng quát ổn định
+                        </div>
+                    </div>
+
+
+                    <!-- Medication pills prescribed -->
+                    <div th:if="${not #lists.isEmpty(portal.latestRecord.medications)}">
+                        <span class="small fw-bold text-muted d-block mb-2">Thuốc cụ đang dùng hàng ngày:</span>
+                        <div class="d-flex flex-wrap gap-2">
+                            <div th:each="m : ${portal.latestRecord.medications}" class="border rounded-3 p-2 bg-light small">
+                                <i class="bi bi-capsule text-success me-1"></i>
+                                <strong th:text="${m.medicationName}">Amlodipine 5mg</strong>:
+                                <span class="text-muted" th:text="${m.dosage}">1v sau ăn sáng</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Hotline Hỗ Trợ Thân Nhân (Gọn gàng) -->
+        <div class="nh-card mt-3 p-3 bg-white border shadow-sm">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="rounded-circle bg-danger-subtle text-danger d-flex align-items-center justify-content-center flex-shrink-0" style="width: 46px; height: 46px;">
+                        <i class="bi bi-telephone-fill fs-5"></i>
+                    </div>
+                    <div>
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <span class="small fw-bold text-muted text-uppercase" style="letter-spacing: 0.04em;">Hotline Hỗ Trợ &amp; Thăm Hỏi Cụ:</span>
+                            <span class="badge bg-danger text-white" style="font-size: 0.7rem;">Trực 24/7</span>
+                        </div>
+                        <div class="d-flex align-items-baseline gap-2 flex-wrap">
+                            <h3 class="fw-bold text-danger mb-0">1900 6868</h3>
+                            <small class="text-muted">(Phòng Y Tế &amp; Chăm Sóc Cư Dân)</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <a href="tel:19006868" class="btn btn-danger btn-sm px-3 py-2 shadow-sm fw-semibold">
+                        <i class="bi bi-telephone-outbound-fill me-1"></i>Gọi Hotline Ngay
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
