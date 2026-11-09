@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout :: layout(~{::title}, ~{::content}, 'staff-management')}">
+<head>
+    <title>Quản Lý Nhân Sự & Cấp Tài Khoản - NHMS Care</title>
+</head>
+<body>
+<div th:fragment="content">
+    <!-- Header -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <div>
+            <h4 class="fw-bold mb-1 text-dark">
+                <i class="bi bi-person-badge-fill text-primary me-2"></i>Quản Lý Nhân Sự & Cấp Tài Khoản
+            </h4>
+            <p class="text-muted small mb-0">Thẩm quyền Giám đốc cơ sở: Quản lý đội ngũ Bác sĩ, Điều dưỡng, Lễ tân và kiểm soát trạng thái hoạt động</p>
+        </div>
+        <div>
+            <button type="button" class="btn btn-primary px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#createStaffModal">
+                <i class="bi bi-person-plus-fill me-1"></i> Thêm Nhân Viên Mới
+            </button>
+        </div>
+    </div>
+
+
+    <!-- Overview Stats -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="stat-card">
+                <div>
+                    <span class="text-muted small fw-semibold d-block mb-1">TỔNG NHÂN SỰ</span>
+                    <h3 class="fw-bold mb-0 text-dark" th:text="${staffList != null ? #lists.size(staffList) : 0}">0</h3>
+                </div>
+                <div class="stat-icon bg-primary-subtle text-primary">
+                    <i class="bi bi-people-fill"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card">
+                <div>
+                    <span class="text-muted small fw-semibold d-block mb-1">BÁC SĨ (DOCTOR)</span>
+                    <h3 class="fw-bold mb-0 text-success"
+                        th:text="${doctorCount != null ? doctorCount : 0}">0</h3>
+                </div>
+                <div class="stat-icon bg-success-subtle text-success">
+                    <i class="bi bi-heart-pulse-fill"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card">
+                <div>
+                    <span class="text-muted small fw-semibold d-block mb-1">ĐIỀU DƯỠNG (NURSE)</span>
+                    <h3 class="fw-bold mb-0 text-info"
+                        th:text="${nurseCount != null ? nurseCount : 0}">0</h3>
+                </div>
+                <div class="stat-icon bg-info-subtle text-info">
+                    <i class="bi bi-activity"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card">
+                <div>
+                    <span class="text-muted small fw-semibold d-block mb-1">LỄ TÂN (RECEPTIONIST)</span>
+                    <h3 class="fw-bold mb-0 text-warning"
+                        th:text="${receptionistCount != null ? receptionistCount : 0}">0</h3>
+                </div>
+                <div class="stat-icon bg-warning-subtle text-warning">
+                    <i class="bi bi-person-vcard-fill"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Staff List Table Card -->
+    <div class="nh-card">
+        <div class="nh-card-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+            <h6 class="fw-bold mb-0 text-dark">
+                <i class="bi bi-person-lines-fill text-primary me-2"></i>Danh Sách Cán Bộ & Tài Khoản Nội Bộ
+            </h6>
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-light text-muted border" th:text="'Tổng số: ' + ${staffList != null ? #lists.size(staffList) : 0}">0</span>
+            </div>
+            <!-- Tìm kiếm nhân viên theo tên -->
+            <form th:action="@{/management/staff}" method="get" class="d-flex align-items-center gap-2 m-0" style="max-width: 360px; width: 100%;">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
+                    <input type="text" name="keyword" id="staffSearchInput" class="form-control border-start-0"
+                           placeholder="Tìm kiếm theo tên nhân viên..."
+                           th:value="${keyword}">
+                    <button type="submit" class="btn btn-primary px-3">Tìm</button>
+                    <a th:if="${keyword != null and !keyword.isBlank()}" th:href="@{/management/staff}" class="btn btn-outline-secondary" title="Hủy lọc">
+                        <i class="bi bi-x-lg"></i>
+                    </a>
+                </div>
+            </form>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="staffTable">
+                <thead class="table-light text-muted small text-uppercase">
+                <tr>
+                    <th class="ps-3 text-center" style="width: 60px;">STT</th>
+                    <th>Nhân viên</th>
+                    <th>Chức danh / Vai trò</th>
+                    <th>Chuyên môn / Bộ phận</th>
+                    <th>Tài khoản đăng nhập</th>
+                    <th>Trạng thái</th>
+                    <th class="text-end pe-3" style="width: 180px;">Thao tác</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:if="${staffList == null or #lists.isEmpty(staffList)}">
+                    <td colspan="7" class="text-center text-muted py-5">
+                        <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary"></i>
+                        <span th:if="${keyword != null and !keyword.isBlank()}">
+                           Không tìm thấy nhân viên nào phù hợp với từ khóa "<strong th:text="${keyword}"></strong>".
+                       </span>
+                        <span th:unless="${keyword != null and !keyword.isBlank()}">
+                           Chưa có dữ liệu nhân sự nào trong hệ thống.
+                       </span>
+                    </td>
+                </tr>
+                <tr th:each="st, stat : ${staffList}" class="staff-row" th:data-name="${st.fullName}">
+                    <td class="ps-3 text-center text-muted fw-bold" th:text="${stat.count}">1</td>
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="avatar-sm rounded-circle d-flex align-items-center justify-content-center text-white fw-bold"
+                                 th:classappend="${st.jobTitle == 'DOCTOR' ? 'bg-success' : (st.jobTitle == 'NURSE' ? 'bg-info' : (st.jobTitle == 'RECEPTIONIST' ? 'bg-warning' : 'bg-primary'))}"
+                                 style="width: 36px; height: 36px; font-size: 0.85rem;">
+                                <i class="bi" th:classappend="${st.jobTitle == 'DOCTOR' ? 'bi-heart-pulse' : (st.jobTitle == 'NURSE' ? 'bi-activity' : (st.jobTitle == 'RECEPTIONIST' ? 'bi-person-badge' : 'bi-shield-shaded'))}"></i>
+                            </div>
+                            <div>
+                                <span class="fw-bold text-dark d-block" th:text="${st.fullName}">Trần Quang Huy</span>
+                                <small class="text-muted d-block">
+                                    <i class="bi bi-telephone me-1"></i><span th:text="${st.phone}">0912345678</span>
+                                    <span th:if="${st.email != null and !st.email.isBlank()}" class="ms-2">
+                                       <i class="bi bi-envelope me-1"></i><span th:text="${st.email}">manager@nhmscare.vn</span>
+                                   </span>
+                                </small>
+                                <small class="text-muted" th:if="${st.citizenId != null and !st.citizenId.isBlank()}">
+                                    <i class="bi bi-card-heading me-1 text-primary"></i>CCCD: <span th:text="${st.citizenId}">079085001234</span>
+                                </small>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                       <span th:if="${st.jobTitle == 'CENTER_MANAGER'}" class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">
+                           <i class="bi bi-shield-lock-fill me-1"></i>Giám đốc cơ sở
+                       </span>
+                        <span th:if="${st.jobTitle == 'DOCTOR'}" class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
+                           <i class="bi bi-heart-pulse-fill me-1"></i>Bác sĩ
+                       </span>
+                        <span th:if="${st.jobTitle == 'NURSE'}" class="badge bg-info-subtle text-info border border-info-subtle px-2 py-1">
+                           <i class="bi bi-activity me-1"></i>Điều dưỡng
+                       </span>
+                        <span th:if="${st.jobTitle == 'RECEPTIONIST'}" class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1">
+                           <i class="bi bi-person-badge-fill me-1"></i>Lễ tân & Thu phí
+                       </span>
+                        <span th:if="${st.jobTitle != 'CENTER_MANAGER' and st.jobTitle != 'DOCTOR' and st.jobTitle != 'NURSE' and st.jobTitle != 'RECEPTIONIST'}"
+                              class="badge bg-secondary-subtle text-secondary px-2 py-1">Nhân viên</span>
+                    </td>
+                    <td>
+                        <span th:text="${st.specialization != null and !st.specialization.isBlank() ? st.specialization : 'Chưa cập nhật'}" class="text-dark small">Nội tổng quát</span>
+                    </td>
+                    <td>
+                       <span th:if="${st.username != null}" class="badge bg-light text-dark border font-monospace px-2 py-1">
+                           <i class="bi bi-at text-muted"></i><span th:text="${st.username}">username</span>
+                       </span>
+                        <span th:unless="${st.username != null}" class="text-muted small fst-italic">Chưa có tài khoản</span>
+                    </td>
+                    <td>
+                       <span th:if="${st.isActive == true}" class="badge badge-status-available">
+                           <i class="bi bi-check-circle-fill me-1"></i>Hoạt động
+                       </span>
+                        <span th:if="${st.isActive == false}" class="badge bg-danger-subtle text-danger border border-danger-subtle">
+                           <i class="bi bi-lock-fill me-1"></i>Đã khóa
+                       </span>
+                        <span th:if="${st.isActive == null}" class="badge bg-secondary-subtle text-muted">-</span>
+                    </td>
+                    <td class="text-end pe-3">
+                        <div th:if="${st.username != null}">
+                            <!-- Nút Khóa / Mở khóa với giao diện Modal chuyên nghiệp (Không dùng confirm popup) -->
+                            <button th:if="${st.username != #authentication.name or st.isActive != true}"
+                                    type="button"
+                                    class="btn btn-sm shadow-xs fw-semibold rounded-2 px-2.5 py-1"
+                                    th:classappend="${st.isActive == true ? 'btn-outline-danger' : 'btn-outline-success'}"
+                                    th:data-id="${st.id}"
+                                    th:data-name="${st.fullName}"
+                                    th:data-username="${st.username}"
+                                    th:data-active="${st.isActive}"
+                                    onclick="openToggleStatusModal(this)"
+                                    th:title="${st.isActive == true ? 'Bấm để khóa tài khoản' : 'Bấm để mở khóa tài khoản'}">
+                                <i class="bi" th:classappend="${st.isActive == true ? 'bi-lock-fill me-1' : 'bi-unlock-fill me-1'}"></i>
+                                <span th:text="${st.isActive == true ? 'Khóa' : 'Mở khóa'}">Khóa</span>
+                            </button>
+                            <span th:if="${st.username == #authentication.name and st.isActive == true}" class="badge bg-light text-muted border py-1.5 px-2">
+                               <i class="bi bi-person-check me-1 text-success"></i>Đang đăng nhập
+                           </span>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+
+        <!-- Pagination for Staff at bottom right -->
+        <div class="d-flex justify-content-between align-items-center p-3 border-top flex-wrap gap-2" id="staffPaginationWrapper">
+            <div class="small text-muted fw-semibold" id="staffPaginationInfo">
+                Đang hiển thị 1 - 5 trong số <span th:text="${staffList != null ? #lists.size(staffList) : 0}">0</span> nhân viên
+            </div>
+            <nav aria-label="Phân trang nhân sự">
+                <ul class="pagination pagination-sm mb-0 shadow-sm" id="staffPagination"></ul>
+            </nav>
+        </div>
+    </div>
+
+
+    <!-- Modal: Xác nhận Thay đổi trạng thái tài khoản (Khóa / Mở khóa) -->
+    <div class="modal fade" id="toggleStatusModal" tabindex="-1" aria-labelledby="toggleStatusModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 440px;">
+            <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+                <div class="modal-body p-4 text-center">
+                    <!-- Icon Box -->
+                    <div id="toggleModalIconContainer" class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 68px; height: 68px;">
+                        <i id="toggleModalIcon" class="fs-1"></i>
+                    </div>
+
+
+                    <h5 class="fw-bold mb-2 text-dark" id="toggleModalTitle">Xác nhận thay đổi trạng thái</h5>
+
+
+                    <p class="text-muted small mb-3" id="toggleModalMessage">
+                        Bạn có chắc chắn muốn thay đổi trạng thái tài khoản của nhân viên này?
+                    </p>
+
+
+                    <div class="p-3 bg-light rounded-3 border text-start mb-4">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="small text-muted">Nhân viên:</span>
+                            <strong class="small text-dark" id="toggleModalStaffName">Nguyễn Văn A</strong>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span class="small text-muted">Tài khoản:</span>
+                            <span class="small fw-semibold text-primary" id="toggleModalUsername">@username</span>
+                        </div>
+                    </div>
+
+
+                    <form id="toggleStatusForm" method="post" action="">
+                        <div class="d-flex gap-2 justify-content-center">
+                            <button type="button" class="btn btn-light px-4 py-2 rounded-pill fw-semibold text-muted border" data-bs-dismiss="modal">
+                                Hủy bỏ
+                            </button>
+                            <button type="submit" class="btn px-4 py-2 rounded-pill fw-semibold text-white shadow-sm" id="toggleModalSubmitBtn">
+                                Xác nhận
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        function openToggleStatusModal(btn) {
+            const staffId = btn.getAttribute('data-id');
+            const staffName = btn.getAttribute('data-name');
+            const username = btn.getAttribute('data-username');
+            const isActive = btn.getAttribute('data-active') === 'true';
+
+
+            const form = document.getElementById('toggleStatusForm');
+            form.action = '/management/staff/' + staffId + '/toggle-status';
+
+
+            document.getElementById('toggleModalStaffName').textContent = staffName;
+            document.getElementById('toggleModalUsername').textContent = '@' + username;
+
+
+            const iconContainer = document.getElementById('toggleModalIconContainer');
+            const icon = document.getElementById('toggleModalIcon');
+            const title = document.getElementById('toggleModalTitle');
+            const msg = document.getElementById('toggleModalMessage');
+            const submitBtn = document.getElementById('toggleModalSubmitBtn');
+
+
+            if (isActive) {
+                iconContainer.className = 'rounded-circle d-inline-flex align-items-center justify-content-center mb-3 bg-danger-subtle text-danger';
+                icon.className = 'bi bi-lock-fill fs-1 text-danger';
+                title.textContent = 'Khóa Tài Khoản Nhân Viên';
+                msg.textContent = 'Sau khi khóa, nhân viên này sẽ bị vô hiệu hóa quyền truy cập và không thể đăng nhập vào hệ thống.';
+                submitBtn.className = 'btn btn-danger px-4 py-2 rounded-pill fw-semibold text-white shadow-sm';
+                submitBtn.innerHTML = '<i class="bi bi-lock-fill me-1"></i> Khóa tài khoản';
+            } else {
+                iconContainer.className = 'rounded-circle d-inline-flex align-items-center justify-content-center mb-3 bg-success-subtle text-success';
+                icon.className = 'bi bi-unlock-fill fs-1 text-success';
+                title.textContent = 'Mở Khóa Tài Khoản';
+                msg.textContent = 'Nhân viên sẽ được khôi phục quyền truy cập và có thể đăng nhập bình thường vào hệ thống.';
+                submitBtn.className = 'btn btn-success px-4 py-2 rounded-pill fw-semibold text-white shadow-sm';
+                submitBtn.innerHTML = '<i class="bi bi-unlock-fill me-1"></i> Mở khóa ngay';
+            }
+
+
+            const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('toggleStatusModal'));
+            modal.show();
+        }
+    </script>
+
+
+    <!-- Modal: Thêm Nhân Viên Mới -->
+    <div class="modal fade" id="createStaffModal" tabindex="-1" aria-labelledby="createStaffModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header bg-primary text-white p-3 px-4 rounded-top-4">
+                    <h5 class="modal-title fw-bold" id="createStaffModalLabel">
+                        <i class="bi bi-person-plus-fill me-2"></i>Thêm Mới Nhân Viên & Cấp Tài Khoản
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form th:action="@{/management/staff/create}" th:object="${createRequest}" method="post" id="createStaffForm">
+                    <div class="modal-body p-4">
+                        <!-- Thông tin nhân sự -->
+                        <h6 class="fw-bold text-primary mb-3 text-uppercase small letter-spacing-1">
+                            <i class="bi bi-person-lines-fill me-1"></i>1. Hồ Sơ Nhân Viên
+                        </h6>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-7">
+                                <label for="mFullName" class="form-label small fw-semibold text-muted">Họ và tên nhân viên <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="mFullName" th:field="*{fullName}" placeholder="Ví dụ: BS. Trần Minh Châu" required>
+                                <div class="text-danger small mt-1" th:if="${#fields.hasErrors('fullName')}" th:errors="*{fullName}"></div>
+                            </div>
+                            <div class="col-md-5">
+                                <label for="mPhone" class="form-label small fw-semibold text-muted">Số điện thoại <span class="text-danger">*</span></label>
+                                <input type="tel" class="form-control" id="mPhone" th:field="*{phone}" placeholder="09xxxxxxxx" required>
+                                <div class="text-danger small mt-1" th:if="${#fields.hasErrors('phone')}" th:errors="*{phone}"></div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="mEmail" class="form-label small fw-semibold text-muted">Địa chỉ Email</label>
+                                <input type="email" class="form-control" id="mEmail" th:field="*{email}" placeholder="nhanvien@nhmscare.vn">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="mCitizenId" class="form-label small fw-semibold text-muted">Số Căn cước công dân (CCCD)</label>
+                                <input type="text" class="form-control" id="mCitizenId" th:field="*{citizenId}" placeholder="Nhập 12 số CCCD">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="mJobTitle" class="form-label small fw-semibold text-muted">Chức danh / Vai trò <span class="text-danger">*</span></label>
+                                <select class="form-select" id="mJobTitle" th:field="*{jobTitle}" required>
+                                    <option value="DOCTOR">Bác sĩ chuyên khoa (DOCTOR)</option>
+                                    <option value="NURSE">Điều dưỡng viên (NURSE)</option>
+                                    <option value="RECEPTIONIST">Lễ tân & Thu phí (RECEPTIONIST)</option>
+                                    <option value="CENTER_MANAGER">Giám đốc cơ sở (CENTER_MANAGER)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="mSpecialization" class="form-label small fw-semibold text-muted">Chuyên môn / Phòng ban</label>
+                                <input type="text" class="form-control" id="mSpecialization" th:field="*{specialization}" placeholder="Ví dụ: Lão khoa, Phục hồi chức năng, Tiếp đón">
+                            </div>
+                        </div>
+
+
+                        <!-- Thông tin tài khoản -->
+                        <h6 class="fw-bold text-primary mb-3 text-uppercase small letter-spacing-1 border-top pt-3">
+                            <i class="bi bi-shield-lock-fill me-1"></i>2. Cấp Tài Khoản Đăng Nhập
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-12">
+                                <label for="mUsername" class="form-label small fw-semibold text-muted">Tên đăng nhập (Username) <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light text-muted"><i class="bi bi-at"></i></span>
+                                    <input type="text" class="form-control" id="mUsername" th:field="*{username}" placeholder="Ví dụ: doctor.chau, nurse.hoa" required>
+                                </div>
+                                <div class="text-danger small mt-1" th:if="${#fields.hasErrors('username')}" th:errors="*{username}"></div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="mPassword" class="form-label small fw-semibold text-muted">Mật khẩu khởi tạo <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light text-muted"><i class="bi bi-lock"></i></span>
+                                    <input type="password" class="form-control" id="mPassword" th:field="*{password}" placeholder="Tối thiểu 6 ký tự" required>
+                                </div>
+                                <div class="text-danger small mt-1" th:if="${#fields.hasErrors('password')}" th:errors="*{password}"></div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="mConfirmPassword" class="form-label small fw-semibold text-muted">Xác nhận mật khẩu <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light text-muted"><i class="bi bi-check2-circle"></i></span>
+                                    <input type="password" class="form-control" id="mConfirmPassword" th:field="*{confirmPassword}" placeholder="Nhập lại mật khẩu" required>
+                                </div>
+                                <div class="text-danger small mt-1" th:if="${#fields.hasErrors('confirmPassword')}" th:errors="*{confirmPassword}"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light p-3 rounded-bottom-4">
+                        <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn btn-primary px-4 fw-semibold shadow-sm">
+                            <i class="bi bi-check-lg me-1"></i> Lưu & Cấp Tài Khoản
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+
+    <script th:if="${showCreateModal == true}">
+        document.addEventListener('DOMContentLoaded', function () {
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('createStaffModal')).show();
+        });
+    </script>
+
+
+    <!-- Script pagination & real-time search -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const staffPaginator = initTablePagination('#staffTable', 'staffPaginationWrapper', 'staffPagination', 'staffPaginationInfo', 5, 'nhân viên');
+
+
+            const staffSearchInput = document.getElementById('staffSearchInput');
+            if (staffSearchInput) {
+                staffSearchInput.addEventListener('input', function () {
+                    const query = this.value.trim().toLowerCase();
+                    const rows = document.querySelectorAll('.staff-row');
+                    rows.forEach(function (row) {
+                        const matches = row.innerText.toLowerCase().includes(query);
+                        if (matches) {
+                            row.classList.remove('empty-row');
+                        } else {
+                            row.classList.add('empty-row');
+                        }
+                    });
+                    if (staffPaginator) staffPaginator.refresh();
+                });
+            }
+        });
+    </script>
+    <!-- Script validation -->
+    <script>
+        const createStaffForm = document.getElementById('createStaffForm');
+        if (createStaffForm) {
+            createStaffForm.addEventListener('submit', function (e) {
+                const pwd = document.getElementById('mPassword').value;
+                const confirmPwd = document.getElementById('mConfirmPassword').value;
+                if (pwd !== confirmPwd) {
+                    e.preventDefault();
+                    alert('Mật khẩu xác nhận không khớp! Vui lòng nhập lại.');
+                    document.getElementById('mConfirmPassword').focus();
+                }
+            });
+        }
+    </script>
+</div>
+</body>
+</html>
+
+
+

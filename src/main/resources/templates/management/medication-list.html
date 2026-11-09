@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout :: layout(~{::title}, ~{::content}, 'medications')}">
+<head>
+    <title>Quản Lý Kho Thuốc - NHMS Care</title>
+</head>
+<body>
+<div th:fragment="content">
+    <!-- Header -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <div>
+            <h4 class="fw-bold mb-1 text-dark">
+                <i class="bi bi-capsule-pill text-primary me-2"></i>Quản Lý Kho Dược Phẩm & Thuốc
+            </h4>
+            <p class="text-muted small mb-0">Theo dõi định mức tồn kho, cảnh báo cận date và quản lý xuất nhập thuốc y tế</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-primary btn-sm shadow-sm" data-bs-toggle="modal" data-bs-target="#addMedicationModal"
+                    sec:authorize="hasRole('CENTER_MANAGER')">
+                <i class="bi bi-plus-circle me-1"></i> Nhập Thuốc Mới
+            </button>
+        </div>
+    </div>
+
+
+    <!-- KPI Summary Row -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-lg-3">
+            <div class="nh-card p-3 border h-100 bg-white">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="text-muted small fw-semibold">Tổng Loại Thuốc</span>
+                        <h4 class="fw-bold mb-0 text-dark mt-1" th:text="${totalTypes}">0</h4>
+                    </div>
+                    <div class="p-3 bg-primary-subtle text-primary rounded-3 fs-4">
+                        <i class="bi bi-boxes"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <div class="col-6 col-lg-3">
+            <div class="nh-card p-3 border h-100 bg-white">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="text-muted small fw-semibold">Sắp Hết Hàng (&lt; 10)</span>
+                        <h4 class="fw-bold mb-0 text-warning mt-1" th:text="${lowStockCount}">0</h4>
+                    </div>
+                    <div class="p-3 bg-warning-subtle text-warning rounded-3 fs-4">
+                        <i class="bi bi-exclamation-triangle"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <div class="col-6 col-lg-3">
+            <div class="nh-card p-3 border h-100 bg-white">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="text-muted small fw-semibold">Đã Hết Hàng</span>
+                        <h4 class="fw-bold mb-0 text-danger mt-1" th:text="${outOfStockCount}">0</h4>
+                    </div>
+                    <div class="p-3 bg-danger-subtle text-danger rounded-3 fs-4">
+                        <i class="bi bi-x-octagon"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <div class="col-6 col-lg-3">
+            <div class="nh-card p-3 border h-100 bg-white">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="text-muted small fw-semibold">Hết Hạn Sử Dụng</span>
+                        <h4 class="fw-bold mb-0 text-danger mt-1" th:text="${expiredCount}">0</h4>
+                    </div>
+                    <div class="p-3 bg-danger-subtle text-danger rounded-3 fs-4">
+                        <i class="bi bi-calendar-x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Search & Filter Controls -->
+    <div class="nh-card mb-4">
+        <div class="nh-card-body p-3">
+            <form th:action="@{/medications}" method="get" class="row g-2 align-items-center">
+                <div class="col-12 col-md-5">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white text-muted border-end-0"><i class="bi bi-search"></i></span>
+                        <input type="text" class="form-control border-start-0" name="search" th:value="${search}" placeholder="Tìm theo tên thuốc...">
+                    </div>
+                </div>
+                <div class="col-12 col-md-5">
+                    <div class="btn-group w-100" role="group">
+                        <a th:href="@{/medications(filter='ALL', search=${search})}"
+                           class="btn btn-sm" th:classappend="${filter == 'ALL' ? 'btn-primary' : 'btn-outline-secondary'}">Tất cả</a>
+                        <a th:href="@{/medications(filter='LOW_STOCK', search=${search})}"
+                           class="btn btn-sm" th:classappend="${filter == 'LOW_STOCK' ? 'btn-warning text-dark fw-bold' : 'btn-outline-secondary'}">Sắp hết</a>
+                        <a th:href="@{/medications(filter='OUT_OF_STOCK', search=${search})}"
+                           class="btn btn-sm" th:classappend="${filter == 'OUT_OF_STOCK' ? 'btn-danger' : 'btn-outline-secondary'}">Hết hàng</a>
+                        <a th:href="@{/medications(filter='EXPIRING_SOON', search=${search})}"
+                           class="btn btn-sm" th:classappend="${filter == 'EXPIRING_SOON' ? 'btn-info text-dark' : 'btn-outline-secondary'}">Cận date</a>
+                        <a th:href="@{/medications(filter='EXPIRED', search=${search})}"
+                           class="btn btn-sm" th:classappend="${filter == 'EXPIRED' ? 'btn-danger' : 'btn-outline-secondary'}">Hết hạn</a>
+                    </div>
+                </div>
+                <div class="col-12 col-md-2 text-end">
+                    <button type="submit" class="btn btn-secondary btn-sm w-100">
+                        <i class="bi bi-funnel me-1"></i> Lọc
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <!-- Medication List Table -->
+    <div class="nh-card shadow-sm border">
+        <div class="nh-card-header bg-white py-3 d-flex justify-content-between align-items-center">
+            <h6 class="fw-bold mb-0 text-dark">
+                <i class="bi bi-list-ul me-2 text-primary"></i>Danh Mục Dược Phẩm Trong Kho (<span th:text="${#lists.size(medications)}">0</span>)
+            </h6>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="medicationTable">
+                <thead class="table-light small">
+                <tr>
+                    <th style="width: 5%;">#</th>
+                    <th style="width: 28%;">Tên Thuốc & Quy Cách</th>
+                    <th style="width: 20%;">Nhà Cung Cấp</th>
+                    <th style="width: 14%;">Đơn Giá (VNĐ)</th>
+                    <th style="width: 13%;">Tồn Kho</th>
+                    <th style="width: 12%;">Hạn Dùng</th>
+                    <th style="width: 8%;" class="text-center" sec:authorize="hasRole('CENTER_MANAGER')">Thao Tác</th>
+                </tr>
+                </thead>
+                <tbody class="small">
+                <tr th:if="${#lists.isEmpty(medications)}">
+                    <td colspan="7" class="text-center py-5 text-muted">
+                        <i class="bi bi-inbox fs-1 d-block mb-2 text-muted"></i>
+                        Không tìm thấy loại thuốc nào phù hợp với bộ lọc.
+                    </td>
+                </tr>
+                <tr th:each="med, stat : ${medications}">
+                    <td class="text-muted" th:text="${stat.count}">1</td>
+                    <td>
+                        <strong class="text-dark fs-6 d-block" th:text="${med.medName}">Amlodipine 5mg</strong>
+                        <span class="badge bg-danger-subtle text-danger" th:if="${med.expired}">Đã hết hạn sử dụng</span>
+                        <span class="badge bg-warning-subtle text-warning-emphasis" th:if="${med.nearExpiry}">Cận hạn &lt; 30 ngày</span>
+                    </td>
+                    <td>
+                        <span class="text-secondary" th:text="${med.supplier != null and !med.supplier.isBlank() ? med.supplier : 'Công ty Dược VN'}">Dược Hậu Giang</span>
+                    </td>
+                    <td class="fw-bold text-dark" th:text="${med.unitPrice != null ? #numbers.formatDecimal(med.unitPrice, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">
+                        3.500 đ
+                    </td>
+                    <td>
+                        <span th:if="${med.outOfStock}" class="badge bg-danger">Hết hàng (0)</span>
+                        <span th:if="${med.lowStock}" class="badge bg-warning text-dark fw-bold" th:text="'Sắp hết: ' + ${med.quantityInStock}">Sắp hết: 5</span>
+                        <span th:if="${!med.outOfStock and !med.lowStock}" class="badge bg-success-subtle text-success fw-bold" th:text="${med.quantityInStock} + ' đơn vị'">120 đơn vị</span>
+                    </td>
+                    <td>
+                       <span th:if="${med.expiryDate != null}"
+                             th:class="${med.expired ? 'text-danger fw-bold' : (med.nearExpiry ? 'text-warning-emphasis fw-bold' : 'text-dark')}"
+                             th:text="${#temporals.format(med.expiryDate, 'dd/MM/yyyy')}">
+                           31/12/2026
+                       </span>
+                        <span th:if="${med.expiryDate == null}" class="text-muted">Không thời hạn</span>
+                    </td>
+                    <td class="text-center" sec:authorize="hasRole('CENTER_MANAGER')">
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-light border-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-three-dots-vertical"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                                <li>
+                                    <button class="dropdown-item py-2" type="button"
+                                            th:data-id="${med.id}"
+                                            th:data-name="${med.medName}"
+                                            th:data-stock="${med.quantityInStock}"
+                                            th:data-price="${med.unitPrice}"
+                                            th:data-supplier="${med.supplier != null ? med.supplier : ''}"
+                                            th:data-expiry="${med.expiryDate != null ? #temporals.format(med.expiryDate, 'yyyy-MM-dd') : ''}"
+                                            onclick="openEditModalFromButton(this)">
+                                        <i class="bi bi-pencil-square text-primary me-2"></i>Cập nhật kho
+                                    </button>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <form th:action="@{'/medications/' + ${med.id} + '/delete'}" method="post" class="m-0"
+                                          onsubmit="return confirm('Bạn có chắc chắn muốn xóa thuốc này khỏi danh mục kho?')">
+                                        <button type="submit" class="dropdown-item py-2 text-danger">
+                                            <i class="bi bi-trash me-2"></i>Xóa khỏi danh mục
+                                        </button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+
+        <!-- Pagination for Medication Inventory at bottom right -->
+        <div class="d-flex justify-content-between align-items-center p-3 border-top flex-wrap gap-2" id="medicationPaginationWrapper">
+            <div class="small text-muted fw-semibold" id="medicationPaginationInfo">
+                Đang hiển thị 1 - 5 trong số <span th:text="${#lists.size(medications)}">0</span> loại thuốc
+            </div>
+            <nav aria-label="Phân trang kho thuốc">
+                <ul class="pagination pagination-sm mb-0 shadow-sm" id="medicationPagination"></ul>
+            </nav>
+        </div>
+    </div>
+
+
+    <!-- Modal Nhập Thuốc Mới -->
+    <div class="modal fade" id="addMedicationModal" tabindex="-1" aria-labelledby="addMedicationModalLabel" aria-hidden="true" sec:authorize="hasRole('CENTER_MANAGER')">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content rounded-4 border-0 shadow">
+                <form th:action="@{/medications/create}" method="post">
+                    <div class="modal-header bg-primary text-white rounded-top-4 p-3">
+                        <h5 class="modal-title fw-bold" id="addMedicationModalLabel">
+                            <i class="bi bi-plus-circle me-2"></i>Nhập Thuốc Mới Vào Kho
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <div class="mb-3">
+                            <label for="newMedName" class="form-label small fw-semibold">Tên thuốc & Hàm lượng <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="newMedName" name="medName" required placeholder="VD: Panadol Extra 500mg">
+                        </div>
+                        <div class="row g-3 mb-3">
+                            <div class="col-6">
+                                <label for="newQuantity" class="form-label small fw-semibold">Số lượng nhập ban đầu <span class="text-danger">*</span></label>
+                                <input type="number" min="0" class="form-control" id="newQuantity" name="quantityInStock" value="50" required>
+                            </div>
+                            <div class="col-6">
+                                <label for="newUnitPrice" class="form-label small fw-semibold">Đơn giá bán (VNĐ) <span class="text-danger">*</span></label>
+                                <input type="number" step="500" min="0" class="form-control" id="newUnitPrice" name="unitPrice" value="5000" required>
+                            </div>
+                        </div>
+                        <div class="row g-3 mb-3">
+                            <div class="col-6">
+                                <label for="newSupplier" class="form-label small fw-semibold">Nhà cung cấp</label>
+                                <input type="text" class="form-control" id="newSupplier" name="supplier" placeholder="VD: Dược Hậu Giang">
+                            </div>
+                            <div class="col-6">
+                                <label for="newExpiryDate" class="form-label small fw-semibold">Hạn sử dụng</label>
+                                <input type="date" class="form-control" id="newExpiryDate" name="expiryDate">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light rounded-bottom-4 p-3">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn btn-primary px-4 fw-semibold">
+                            <i class="bi bi-save me-1"></i> Lưu Vào Kho
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Modal Cập Nhật Tồn Kho / Giá Thuốc -->
+    <div class="modal fade" id="editStockModal" tabindex="-1" aria-labelledby="editStockModalLabel" aria-hidden="true" sec:authorize="hasRole('CENTER_MANAGER')">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content rounded-4 border-0 shadow">
+                <form id="editStockForm" method="post">
+                    <div class="modal-header bg-primary text-white rounded-top-4 p-3">
+                        <h5 class="modal-title fw-bold" id="editStockModalLabel">
+                            <i class="bi bi-pencil-square me-2"></i>Cập Nhật Tồn Kho & Thông Tin Thuốc
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold text-muted">Tên thuốc:</label>
+                            <input type="text" class="form-control fw-bold" id="editMedName" readonly style="background-color: #f8f9fa;">
+                        </div>
+                        <div class="row g-3 mb-3">
+                            <div class="col-6">
+                                <label for="editQuantity" class="form-label small fw-semibold">Số lượng tồn kho <span class="text-danger">*</span></label>
+                                <input type="number" min="0" class="form-control" id="editQuantity" name="quantityInStock" required>
+                            </div>
+                            <div class="col-6">
+                                <label for="editUnitPrice" class="form-label small fw-semibold">Đơn giá (VNĐ) <span class="text-danger">*</span></label>
+                                <input type="number" step="500" min="0" class="form-control" id="editUnitPrice" name="unitPrice" required>
+                            </div>
+                        </div>
+                        <div class="row g-3 mb-3">
+                            <div class="col-6">
+                                <label for="editSupplier" class="form-label small fw-semibold">Nhà cung cấp</label>
+                                <input type="text" class="form-control" id="editSupplier" name="supplier">
+                            </div>
+                            <div class="col-6">
+                                <label for="editExpiryDate" class="form-label small fw-semibold">Hạn sử dụng</label>
+                                <input type="date" class="form-control" id="editExpiryDate" name="expiryDate">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light rounded-bottom-4 p-3">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn btn-primary px-4 fw-semibold">
+                            <i class="bi bi-check2-circle me-1"></i> Cập Nhật
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        function openEditModalFromButton(btn) {
+            const id = btn.getAttribute('data-id');
+            const medName = btn.getAttribute('data-name');
+            const qty = btn.getAttribute('data-stock');
+            const price = btn.getAttribute('data-price');
+            const supplier = btn.getAttribute('data-supplier');
+            const expiryDate = btn.getAttribute('data-expiry');
+
+
+            document.getElementById('editStockForm').action = '/medications/' + id + '/update-stock';
+            document.getElementById('editMedName').value = medName || '';
+            document.getElementById('editQuantity').value = qty || '0';
+            document.getElementById('editUnitPrice').value = price || '0';
+            document.getElementById('editSupplier').value = supplier || '';
+            document.getElementById('editExpiryDate').value = expiryDate || '';
+
+
+            const modal = new bootstrap.Modal(document.getElementById('editStockModal'));
+            modal.show();
+        }
+
+
+        document.addEventListener('DOMContentLoaded', function () {
+            initTablePagination('#medicationTable', 'medicationPaginationWrapper', 'medicationPagination', 'medicationPaginationInfo', 5, 'loại thuốc');
+        });
+    </script>
+</div>
+</body>
+</html>
+
