@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đăng nhập - Hệ Thống Quản Lý Viện Dưỡng Lão NHMS Care</title>
+    <!-- Bootstrap 5 CSS -->
+    <link rel="stylesheet" th:href="@{/css/bootstrap.min.css}">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+    <style>
+        body.login-page {
+            background: linear-gradient(135deg, #e0f2fe 0%, #f0fdf4 50%, #f8fafc 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+        .login-wrapper {
+            max-width: 1060px;
+            width: 100%;
+            background: #ffffff;
+            border-radius: 24px;
+            border: 1px solid rgba(226, 232, 240, 0.9);
+            box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.15), 0 10px 20px -5px rgba(15, 23, 42, 0.05);
+            overflow: hidden;
+        }
+        .login-banner-col {
+            background: linear-gradient(145deg, rgba(2, 132, 199, 0.92) 0%, rgba(13, 148, 136, 0.92) 100%),
+            url('/images/login-hero.jpg') center/cover no-repeat;
+            color: #ffffff;
+            padding: 3rem 2.5rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+        }
+        .login-banner-col::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at top right, rgba(255,255,255,0.15), transparent 70%);
+            pointer-events: none;
+        }
+        .banner-logo-circle {
+            width: 54px;
+            height: 54px;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.35);
+            border-radius: 16px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.75rem;
+        }
+        .banner-feature-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.85rem;
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(8px);
+            padding: 0.75rem 1rem;
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.25s ease;
+        }
+        .banner-feature-item:hover {
+            background: rgba(255, 255, 255, 0.18);
+            transform: translateX(4px);
+        }
+        .banner-feature-icon {
+            font-size: 1.15rem;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .login-form-col {
+            padding: 3rem 2.75rem;
+            background: #ffffff;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .demo-pill {
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.78rem;
+        }
+        .demo-pill:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .form-control:focus {
+            box-shadow: 0 0 0 0.25rem rgba(2, 132, 199, 0.15);
+            border-color: #0284c7;
+        }
+        .btn-login-submit {
+            background: linear-gradient(135deg, #0284c7 0%, #0d9488 100%);
+            border: none;
+            transition: all 0.3s ease;
+        }
+        .btn-login-submit:hover {
+            background: linear-gradient(135deg, #0369a1 0%, #0f766e 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 10px 15px -3px rgba(2, 132, 199, 0.3);
+        }
+        .illustration-card {
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 12px 24px rgba(0,0,0,0.15);
+            border: 2px solid rgba(255,255,255,0.4);
+            margin-top: 1.25rem;
+        }
+        .illustration-card img {
+            width: 100%;
+            height: 160px;
+            object-fit: cover;
+            display: block;
+        }
+        @media (max-width: 991.98px) {
+            .login-banner-col {
+                padding: 2.25rem 1.75rem;
+            }
+            .login-form-col {
+                padding: 2.25rem 1.75rem;
+            }
+            .illustration-card {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body class="login-page">
+
+
+<div class="login-wrapper">
+    <div class="row g-0">
+        <!-- Cột Trái: Banner Minh Họa & Giới Thiệu Viện -->
+        <div class="col-lg-6 login-banner-col d-flex flex-column justify-content-between">
+            <div>
+                <!-- Brand Header -->
+                <div class="d-flex align-items-center gap-3 mb-4">
+                    <div class="banner-logo-circle shadow-sm">
+                        <i class="bi bi-heart-pulse-fill text-white"></i>
+                    </div>
+                    <div>
+                        <h4 class="fw-bold mb-0 text-white tracking-wide">NHMS Care</h4>
+                        <small class="text-white-50" style="font-size: 0.8rem;">Viện Dưỡng Lão Toàn Diện</small>
+                    </div>
+                </div>
+
+
+                <!-- Main Slogan -->
+                <div class="mb-4">
+                    <h3 class="fw-bold text-white mb-2" style="line-height: 1.35;">
+                        Tận Tâm Chăm Sóc - Vững Bước Tuổi Già
+                    </h3>
+                    <p class="text-white-50 small mb-0" style="line-height: 1.6;">
+                        Hệ thống kết nối toàn diện giữa Y bác sĩ, Điều dưỡng viên và Thân nhân gia đình. Đồng hành theo dõi sức khỏe và cuộc sống an vui của các cụ mỗi ngày.
+                    </p>
+                </div>
+
+
+                <!-- Feature Highlights -->
+                <div class="d-flex flex-column gap-2 mb-2">
+                    <div class="banner-feature-item">
+                        <div class="banner-feature-icon text-warning">
+                            <i class="bi bi-clipboard2-pulse"></i>
+                        </div>
+                        <div>
+                            <div class="fw-semibold text-white small">Hồ sơ y tế &amp; Sinh hiệu 24/7</div>
+                            <small class="text-white-50" style="font-size: 0.75rem;">Theo dõi huyết áp, tim mạch, thuốc kê đơn liên tục</small>
+                        </div>
+                    </div>
+
+
+                    <div class="banner-feature-item">
+                        <div class="banner-feature-icon text-info">
+                            <i class="bi bi-house-heart"></i>
+                        </div>
+                        <div>
+                            <div class="fw-semibold text-white small">Cổng thông tin gia đình minh bạch</div>
+                            <small class="text-white-50" style="font-size: 0.75rem;">Thân nhân cập nhật tình hình sức khỏe và sự cố tức thời</small>
+                        </div>
+                    </div>
+
+
+                    <div class="banner-feature-item">
+                        <div class="banner-feature-icon text-success">
+                            <i class="bi bi-receipt"></i>
+                        </div>
+                        <div>
+                            <div class="fw-semibold text-white small">Quản lý viện phí định kỳ chính xác</div>
+                            <small class="text-white-50" style="font-size: 0.75rem;">Minh bạch bảng kê chi phí phòng, dịch vụ và thuốc men</small>
+                        </div>
+                    </div>
+                </div>
+
+
+                <!-- Illustration Image Card -->
+                <div class="illustration-card">
+                    <img th:src="@{/images/login-hero.jpg}" alt="Minh họa chăm sóc viện dưỡng lão NHMS Care"
+                         onerror="this.parentElement.style.display='none'">
+                    <div class="p-2 bg-dark bg-opacity-50 text-white text-center" style="font-size: 0.75rem; backdrop-filter: blur(4px);">
+                        <i class="bi bi-check-circle-fill text-success me-1"></i>Môi trường nội trú an toàn, nhân ái &amp; hiện đại
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- Footer Quote / Hotline -->
+            <div class="pt-3 border-top border-white border-opacity-25 mt-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <small class="text-white-50" style="font-size: 0.76rem;">
+                    <i class="bi bi-shield-check text-warning me-1"></i>Đạt chuẩn y tế &amp; an toàn lão khoa
+                </small>
+                <small class="text-white fw-semibold" style="font-size: 0.78rem;">
+                    <i class="bi bi-telephone-fill me-1 text-warning"></i>Hotline: 1900 6868
+                </small>
+            </div>
+        </div>
+
+
+        <!-- Cột Phải: Khung Đăng Nhập Hệ Thống -->
+        <div class="col-lg-6 login-form-col">
+            <!-- Top Controls: Nút Về Trang Chủ -->
+            <div class="d-flex justify-content-start align-items-center mb-4">
+                <a th:href="@{/}" class="btn btn-outline-secondary btn-sm rounded-pill px-3 shadow-sm d-inline-flex align-items-center" title="Quay về trang chủ NHMS Care">
+                    <i class="bi bi-house-door-fill me-1 text-primary"></i>Về Trang Chủ
+                </a>
+            </div>
+
+
+            <div class="mb-4">
+                <h4 class="fw-bold text-dark mb-1">Đăng Nhập Hệ Thống</h4>
+                <p class="text-muted small mb-0">Vui lòng đăng nhập để tiếp tục làm việc hoặc theo dõi người thân</p>
+            </div>
+
+
+            <!-- Error Alert -->
+            <div th:if="${param.error}" class="alert alert-danger alert-dismissible fade show d-flex align-items-center mb-3 shadow-sm" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2 fs-5 text-danger"></i>
+                <div class="small fw-semibold">Tên đăng nhập hoặc mật khẩu không chính xác!</div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+
+
+            <!-- Success Flash Alert -->
+            <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show d-flex align-items-center mb-3 shadow-sm" role="alert">
+                <i class="bi bi-check-circle-fill me-2 fs-5 text-success"></i>
+                <div class="small fw-semibold" th:text="${successMessage}">Đăng ký tài khoản thành công!</div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+
+
+            <!-- Logout Alert -->
+            <div th:if="${param.logout}" class="alert alert-success alert-dismissible fade show d-flex align-items-center mb-3 shadow-sm" role="alert">
+                <i class="bi bi-check-circle-fill me-2 fs-5 text-success"></i>
+                <div class="small fw-semibold">Bạn đã đăng xuất thành công khỏi hệ thống.</div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+
+
+            <!-- Login Form -->
+            <form th:action="@{/login}" method="post" id="loginForm">
+                <div class="mb-3">
+                    <label for="usernameInput" class="form-label small fw-semibold text-dark">Tên đăng nhập (Username):</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light border-end-0 text-muted"><i class="bi bi-person"></i></span>
+                        <input type="text" class="form-control border-start-0 ps-0" id="usernameInput" name="username" placeholder="Nhập username của bạn" required autofocus>
+                    </div>
+                </div>
+
+
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <label for="passwordInput" class="form-label small fw-semibold text-dark mb-0">Mật khẩu:</label>
+                    </div>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light border-end-0 text-muted"><i class="bi bi-lock"></i></span>
+                        <input type="password" class="form-control border-start-0 ps-0" id="passwordInput" name="password" placeholder="Nhập mật khẩu" required>
+                        <button class="btn btn-outline-light text-muted border border-start-0" type="button" id="togglePasswordBtn">
+                            <i class="bi bi-eye" id="toggleIcon"></i>
+                        </button>
+                    </div>
+                </div>
+
+
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="rememberMe" name="remember-me">
+                        <label class="form-check-label small text-muted" for="rememberMe">
+                            Ghi nhớ đăng nhập
+                        </label>
+                    </div>
+                    <span class="text-muted small">Cần hỗ trợ? Gọi <strong class="text-primary">1900 6868</strong></span>
+                </div>
+
+
+                <button type="submit" class="btn btn-primary btn-login-submit w-100 py-2 fw-semibold shadow-sm mb-3 text-white">
+                    <i class="bi bi-box-arrow-in-right me-1"></i> Đăng Nhập Hệ Thống
+                </button>
+
+
+                <!-- Register Link for Relative -->
+                <div class="text-center mb-2">
+                    <span class="text-muted small">Người thân chưa có tài khoản?</span>
+                    <a th:href="@{/register}" class="small fw-bold text-decoration-none text-primary ms-1">
+                        <i class="bi bi-person-plus-fill me-1"></i>Đăng ký ngay
+                    </a>
+                </div>
+            </form>
+
+
+            <!-- Quick Fill Helper for Testing Roles -->
+            <div class="pt-3 border-top mt-3">
+                <div class="small fw-semibold text-muted mb-2 text-center">
+                    <i class="bi bi-lightning-charge-fill text-warning me-1"></i>Chọn nhanh tài khoản thử nghiệm:
+                </div>
+                <div class="d-flex flex-wrap gap-1 justify-content-center">
+                   <span class="badge bg-primary-subtle text-primary border border-primary-subtle demo-pill py-1 px-2" onclick="quickFill('manager', '123456')">
+                       <i class="bi bi-person-gear"></i> Giám đốc
+                   </span>
+                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle demo-pill py-1 px-2" onclick="quickFill('receptionist', '123456')">
+                       <i class="bi bi-person-badge"></i> Lễ tân
+                   </span>
+                    <span class="badge bg-success-subtle text-success border border-success-subtle demo-pill py-1 px-2" onclick="quickFill('doctor', '123456')">
+                       <i class="bi bi-heart-pulse"></i> Bác sĩ
+                   </span>
+                    <span class="badge bg-info-subtle text-info border border-info-subtle demo-pill py-1 px-2" onclick="quickFill('nurse', '123456')">
+                       <i class="bi bi-activity"></i> Điều dưỡng
+                   </span>
+                    <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle demo-pill py-1 px-2" onclick="quickFill('relative', '123456')">
+                       <i class="bi bi-people"></i> Người thân
+                   </span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Bootstrap 5 Bundle JS -->
+<script th:src="@{/js/bootstrap.bundle.min.js}"></script>
+<script>
+    function quickFill(user, pass) {
+        document.getElementById('usernameInput').value = user;
+        document.getElementById('passwordInput').value = pass;
+    }
+
+
+    const toggleBtn = document.getElementById('togglePasswordBtn');
+    const pwdInput = document.getElementById('passwordInput');
+    const toggleIcon = document.getElementById('toggleIcon');
+    if (toggleBtn && pwdInput) {
+        toggleBtn.addEventListener('click', function () {
+            if (pwdInput.type === 'password') {
+                pwdInput.type = 'text';
+                toggleIcon.classList.replace('bi-eye', 'bi-eye-slash');
+            } else {
+                pwdInput.type = 'password';
+                toggleIcon.classList.replace('bi-eye-slash', 'bi-eye');
+            }
+        });
+    }
+</script>
+</body>
+</html>
+
