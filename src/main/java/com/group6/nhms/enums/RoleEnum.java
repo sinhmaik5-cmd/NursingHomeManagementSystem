@@ -7,3 +7,4 @@ public enum RoleEnum {
     NURSE,          // Điều dưỡng (Chăm sóc hàng ngày, đo sinh hiệu, sự cố, dọn vệ sinh giường)
     RELATIVE        // Người thân / Người bảo lãnh (Cổng thông tin người thân chính chủ)
 }
+

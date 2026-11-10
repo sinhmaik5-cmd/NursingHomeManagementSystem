@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout :: layout(~{::title}, ~{::content}, 'profile')}">
+<head>
+    <title>Quản Lý Hồ Sơ Tài Khoản - NHMS Care</title>
+</head>
+<body>
+<div th:fragment="content">
+    <!-- Header -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <div>
+            <h4 class="fw-bold mb-1 text-dark">
+                <i class="bi bi-person-bounding-box text-primary me-2"></i>Quản Lý Hồ Sơ &amp; Tài Khoản
+            </h4>
+            <p class="text-muted small mb-0">Xem và cập nhật thông tin cá nhân, số điện thoại liên lạc và đổi mật khẩu bảo mật tài khoản</p>
+        </div>
+        <div>
+            <a th:href="@{/}" class="btn btn-outline-secondary btn-sm shadow-sm">
+                <i class="bi bi-arrow-left me-1"></i>Về Trang Chủ
+            </a>
+        </div>
+    </div>
+
+
+    <!-- Alert Messages -->
+    <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i>
+        <span th:text="${successMessage}">Cập nhật thành công!</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        <span th:text="${errorMessage}">Có lỗi xảy ra!</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+
+
+    <div class="row g-4">
+        <!-- Left Column: User Profile Overview Card -->
+        <div class="col-12 col-lg-4">
+            <div class="nh-card p-4 text-center mb-4">
+                <div class="sidebar-user-avatar bg-primary text-white mx-auto mb-3" style="width: 84px; height: 84px; font-size: 2.5rem;">
+                    <i class="bi bi-person-fill"></i>
+                </div>
+                <h5 class="fw-bold mb-1 text-dark"
+                    th:text="${isRelative ? (relative != null ? relative.fullName : account.username) : (staff != null ? staff.fullName : account.username)}">
+                    Nguyễn Văn A
+                </h5>
+                <p class="text-muted small mb-2">@<span th:text="${account.username}">username</span></p>
+
+
+                <!-- Role Badge -->
+                <div class="mb-3">
+                   <span sec:authorize="hasRole('CENTER_MANAGER')" class="badge bg-danger px-3 py-2">
+                       <i class="bi bi-shield-lock-fill me-1"></i>Giám Đốc Cơ Sở
+                   </span>
+                    <span sec:authorize="hasRole('DOCTOR')" class="badge bg-primary px-3 py-2">
+                       <i class="bi bi-heart-pulse-fill me-1"></i>Bác Sĩ Chuyên Khoa
+                   </span>
+                    <span sec:authorize="hasRole('NURSE')" class="badge bg-info text-white px-3 py-2">
+                       <i class="bi bi-clipboard2-pulse-fill me-1"></i>Điều Dưỡng Viên
+                   </span>
+                    <span sec:authorize="hasRole('RECEPTIONIST')" class="badge bg-success px-3 py-2">
+                       <i class="bi bi-person-badge-fill me-1"></i>Lễ Tân &amp; Thu Phí
+                   </span>
+                    <span sec:authorize="hasRole('RELATIVE')" class="badge bg-warning text-dark px-3 py-2">
+                       <i class="bi bi-person-heart me-1"></i>Người Thân &amp; Bảo Lãnh
+                   </span>
+                </div>
+
+
+                <div class="border-top pt-3 text-start small">
+                    <div class="d-flex justify-content-between py-1 border-bottom">
+                        <span class="text-muted">Trạng thái:</span>
+                        <span class="badge badge-status-available"><i class="bi bi-check-circle-fill me-1"></i>Đang hoạt động</span>
+                    </div>
+                    <div class="d-flex justify-content-between py-1 border-bottom" th:if="${staff != null}">
+                        <span class="text-muted">Chức vụ:</span>
+                        <span class="fw-semibold text-dark" th:text="${staff.jobTitle}">Bác sĩ</span>
+                    </div>
+                    <div class="d-flex justify-content-between py-1 border-bottom" th:if="${staff != null and staff.email != null}">
+                        <span class="text-muted">Email:</span>
+                        <span class="fw-semibold text-dark" th:text="${staff.email}">email@nhmscare.vn</span>
+                    </div>
+                    <div class="d-flex justify-content-between py-1 border-bottom" th:if="${staff != null and staff.citizenId != null}">
+                        <span class="text-muted">Số CCCD:</span>
+                        <span class="fw-semibold text-dark" th:text="${staff.citizenId}">079085001234</span>
+                    </div>
+                    <div class="d-flex justify-content-between py-1 border-bottom" th:if="${staff != null and staff.specialization != null}">
+                        <span class="text-muted">Chuyên môn:</span>
+                        <span class="fw-semibold text-dark" th:text="${staff.specialization}">Nội tổng quát</span>
+                    </div>
+                    <div class="d-flex justify-content-between py-1 border-bottom" th:if="${staff != null and staff.phone != null}">
+                        <span class="text-muted">Điện thoại:</span>
+                        <span class="fw-semibold text-dark" th:text="${staff.phone}">0912345678</span>
+                    </div>
+                    <div class="d-flex justify-content-between py-1 border-bottom" th:if="${relative != null and relative.relationship != null}">
+                        <span class="text-muted">Quan hệ với cụ:</span>
+                        <span class="fw-semibold text-dark" th:text="${relative.relationship}">Con trai</span>
+                    </div>
+                    <div class="d-flex justify-content-between py-1" th:if="${relative != null and relative.phoneNumber != null}">
+                        <span class="text-muted">Điện thoại:</span>
+                        <span class="fw-semibold text-dark" th:text="${relative.phoneNumber}">0911223344</span>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- If Relative: List of Sponsored Residents -->
+            <div class="nh-card p-3 mb-4" th:if="${isRelative}">
+                <div class="nh-card-header bg-light p-2 mb-2 rounded border">
+                    <h6 class="fw-bold mb-0 text-dark small">
+                        <i class="bi bi-people-fill text-primary me-1"></i>Cư Dân Đang Bảo Lãnh (<span th:text="${#lists.size(sponsoredResidents)}">0</span>)
+                    </h6>
+                </div>
+                <div th:if="${#lists.isEmpty(sponsoredResidents)}" class="text-muted small p-3 text-center">
+                    Chưa có cư dân liên kết bảo lãnh.
+                </div>
+                <div th:unless="${#lists.isEmpty(sponsoredResidents)}" class="d-flex flex-column gap-2">
+                    <div th:each="r : ${sponsoredResidents}" class="p-2 border rounded bg-light-subtle small d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong class="text-dark d-block" th:text="${r.fullName}">Nguyễn Văn An</strong>
+                            <span class="text-muted" style="font-size: 0.75rem;">Phòng <span th:text="${r.roomNumber}">P101</span> - Giường <span th:text="${r.bedNumber}">G01</span></span>
+                        </div>
+                        <span th:if="${r.status == 'ACTIVE'}" class="badge badge-status-available" style="font-size: 0.7rem;">Lưu trú</span>
+                        <span th:if="${r.status == 'HOSPITALIZED'}" class="badge bg-danger text-white" style="font-size: 0.7rem;">Chuyển viện</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Right Column: Profile Form & Password Change -->
+        <div class="col-12 col-lg-8">
+            <!-- 1. Profile Info Form -->
+            <div class="nh-card mb-4">
+                <div class="nh-card-header bg-light d-flex align-items-center gap-2">
+                    <i class="bi bi-person-vcard text-primary fs-5"></i>
+                    <h6 class="fw-bold mb-0 text-dark">Cập Nhật Thông Tin Cá Nhân</h6>
+                </div>
+                <div class="nh-card-body p-4">
+                    <form th:action="@{/profile/update-info}" method="post">
+                        <div class="row g-3">
+                            <!-- Username (Readonly) -->
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold text-muted">Tên đăng nhập (Username):</label>
+                                <input type="text" class="form-control bg-light" th:value="${account.username}" readonly>
+                            </div>
+
+
+                            <!-- Role Display (Readonly) -->
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold text-muted">Vai trò tài khoản:</label>
+                                <input type="text" class="form-control bg-light" th:value="${account.role}" readonly>
+                            </div>
+
+
+                            <!-- Full Name -->
+                            <div class="col-md-6">
+                                <label for="fullName" class="form-label small fw-semibold text-dark">Họ và tên <span class="text-danger">*</span>:</label>
+                                <input type="text" class="form-control" id="fullName" name="fullName" required
+                                       th:value="${isRelative ? (relative != null ? relative.fullName : '') : (staff != null ? staff.fullName : '')}"
+                                       placeholder="Nhập họ và tên đầy đủ">
+                            </div>
+
+
+                            <!-- Phone Number -->
+                            <div class="col-md-6">
+                                <label for="phone" class="form-label small fw-semibold text-dark">Số điện thoại liên lạc <span class="text-danger">*</span>:</label>
+                                <input type="tel" class="form-control" id="phone" name="phone" required
+                                       th:value="${isRelative ? (relative != null ? relative.phoneNumber : '') : (staff != null ? staff.phone : '')}"
+                                       placeholder="Nhập số điện thoại">
+                            </div>
+
+
+                            <!-- Extra fields for Staff: Email & CCCD -->
+                            <div class="col-md-6" th:if="${!isRelative}">
+                                <label for="staffEmail" class="form-label small fw-semibold text-dark">Địa chỉ Email:</label>
+                                <input type="email" class="form-control" id="staffEmail" name="email"
+                                       th:value="${staff != null ? staff.email : ''}"
+                                       placeholder="nhanvien@nhmscare.vn">
+                            </div>
+
+
+                            <div class="col-md-6" th:if="${!isRelative}">
+                                <label for="staffCitizenId" class="form-label small fw-semibold text-dark">Căn cước công dân (CCCD):</label>
+                                <input type="text" class="form-control" id="staffCitizenId" name="citizenId"
+                                       th:value="${staff != null ? staff.citizenId : ''}"
+                                       placeholder="Nhập 12 số CCCD">
+                            </div>
+
+
+                            <div class="col-md-12" th:if="${!isRelative}">
+                                <label for="specialization" class="form-label small fw-semibold text-dark">Chuyên môn / Khoa phụ trách:</label>
+                                <input type="text" class="form-control" id="specialization" name="specialization"
+                                       th:value="${staff != null ? staff.specialization : ''}"
+                                       placeholder="Ví dụ: Quản lý toàn diện &amp; Điều hành, Nội khoa lão khoa, v.v.">
+                            </div>
+
+
+                            <!-- Extra fields for Relative -->
+                            <div class="col-md-6" th:if="${isRelative}">
+                                <label for="email" class="form-label small fw-semibold text-dark">Địa chỉ Email:</label>
+                                <input type="email" class="form-control" id="email" name="email"
+                                       th:value="${relative != null ? relative.email : ''}"
+                                       placeholder="example@gmail.com">
+                            </div>
+
+
+                            <div class="col-md-6" th:if="${isRelative}">
+                                <label for="relationship" class="form-label small fw-semibold text-dark">Mối quan hệ với cư dân:</label>
+                                <input type="text" class="form-control" id="relationship" name="relationship"
+                                       th:value="${relative != null ? relative.relationship : ''}"
+                                       placeholder="Ví dụ: Con trai, Con gái, Cháu...">
+                            </div>
+
+
+                            <div class="col-12" th:if="${isRelative}">
+                                <label for="address" class="form-label small fw-semibold text-dark">Địa chỉ nơi cư trú:</label>
+                                <input type="text" class="form-control" id="address" name="address"
+                                       th:value="${relative != null ? relative.address : ''}"
+                                       placeholder="Địa chỉ liên hệ và nhận giấy tờ">
+                            </div>
+
+
+                            <div class="col-12 text-end pt-2">
+                                <button type="submit" class="btn btn-primary px-4 shadow-sm">
+                                    <i class="bi bi-check2-circle me-1"></i>Lưu Thay Đổi Thông Tin
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+
+            <!-- 2. Change Password Form -->
+            <div class="nh-card">
+                <div class="nh-card-header bg-light d-flex align-items-center gap-2">
+                    <i class="bi bi-shield-lock text-danger fs-5"></i>
+                    <h6 class="fw-bold mb-0 text-dark">Đổi Mật Khẩu Đăng Nhập</h6>
+                </div>
+                <div class="nh-card-body p-4">
+                    <form th:action="@{/profile/change-password}" method="post">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label for="currentPassword" class="form-label small fw-semibold text-dark">Mật khẩu hiện tại <span class="text-danger">*</span>:</label>
+                                <input type="password" class="form-control" id="currentPassword" name="currentPassword" required placeholder="Nhập mật khẩu đang dùng">
+                            </div>
+
+
+                            <div class="col-md-6">
+                                <label for="newPassword" class="form-label small fw-semibold text-dark">Mật khẩu mới <span class="text-danger">*</span>:</label>
+                                <input type="password" class="form-control" id="newPassword" name="newPassword" minlength="6" required placeholder="Tối thiểu 6 ký tự">
+                            </div>
+
+
+                            <div class="col-md-6">
+                                <label for="confirmPassword" class="form-label small fw-semibold text-dark">Xác nhận mật khẩu mới <span class="text-danger">*</span>:</label>
+                                <input type="password" class="form-control" id="confirmPassword" name="confirmPassword" minlength="6" required placeholder="Nhập lại mật khẩu mới">
+                            </div>
+
+
+                            <div class="col-12 text-end pt-2">
+                                <button type="submit" class="btn btn-danger px-4 shadow-sm">
+                                    <i class="bi bi-key-fill me-1"></i>Cập Nhật Mật Khẩu
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
+

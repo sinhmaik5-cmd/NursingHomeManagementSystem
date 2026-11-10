@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+</head>
+<body>
+<div th:fragment="medicalHistoryContent">
+    <!-- 1. Header thông tin cư dân & Tình trạng nhập viện -->
+    <div class="card border-0 bg-light-subtle rounded-3 p-3 mb-4 border shadow-sm">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+            <div class="d-flex align-items-center gap-3">
+                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center shadow-sm" style="width: 58px; height: 58px; min-width: 58px; font-size: 1.8rem;">
+                    <i class="bi bi-person-heart"></i>
+                </div>
+                <div>
+                    <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                        <h4 class="fw-bold mb-0 text-dark" th:text="${resident.fullName}">Nguyễn Văn An</h4>
+                        <span class="badge bg-secondary-subtle text-secondary" th:text="${resident.gender}">Nam</span>
+                        <span class="badge bg-primary-subtle text-primary fw-semibold" th:if="${resident.bedNumber != null}">
+                           <i class="bi bi-hospital me-1"></i>Phòng <span th:text="${resident.roomNumber}">P101</span> - Giường <span th:text="${resident.bedNumber}">G101-1</span>
+                       </span>
+                        <span th:if="${resident.status == 'ACTIVE'}" class="badge bg-success-subtle text-success">Đang lưu trú</span>
+                        <span th:if="${resident.status == 'HOSPITALIZED'}" class="badge bg-danger text-white"><i class="bi bi-hospital me-1"></i>Chuyển viện cấp cứu</span>
+                        <span th:if="${resident.status == 'DISCHARGED'}" class="badge bg-secondary-subtle text-secondary">Đã xuất viện</span>
+                        <span th:if="${resident.status == 'DECEASED'}" class="badge bg-dark-subtle text-dark">Đã qua đời</span>
+                    </div>
+                    <div class="small text-muted d-flex flex-wrap gap-3">
+                       <span th:if="${resident.dateOfBirth != null}">
+                           <i class="bi bi-calendar-event me-1"></i>Ngày sinh: <strong class="text-dark" th:text="${#temporals.format(resident.dateOfBirth, 'dd/MM/yyyy')}">15/06/1945</strong>
+                       </span>
+                        <span th:if="${resident.bloodType != null}">
+                           <i class="bi bi-droplet-half text-danger me-1"></i>Nhóm máu: <strong class="text-dark" th:text="${resident.bloodType}">O+</strong>
+                       </span>
+                        <span th:if="${resident.admissionDate != null}">
+                           <i class="bi bi-box-arrow-in-right text-success me-1"></i>Ngày tiếp nhận: <strong class="text-dark" th:text="${#temporals.format(resident.admissionDate, 'dd/MM/yyyy')}">23/08/2026</strong>
+                       </span>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- Người thân bảo lãnh -->
+            <div class="p-2 px-3 border rounded bg-white text-md-end">
+                <span class="text-muted small d-block" style="font-size: 0.75rem;"><i class="bi bi-person-badge me-1"></i>Người thân bảo lãnh:</span>
+                <span class="fw-bold text-dark" th:text="${resident.relativeName != null ? resident.relativeName : 'Chưa có thông tin'}">Nguyễn Tuấn Dũng</span>
+                <div class="small text-muted" th:if="${resident.relativePhone != null}">
+                    <i class="bi bi-telephone text-primary me-1"></i><span th:text="${resident.relativePhone}">0911223344</span>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Tiền sử bệnh lý khi tiếp nhận -->
+        <div class="mt-3 p-3 rounded bg-danger-subtle border border-danger-subtle text-danger-emphasis">
+            <div class="small fw-bold mb-1">
+                <i class="bi bi-exclamation-triangle-fill me-1"></i>TIỀN SỬ BỆNH LÝ & ĐẶC ĐIỂM SỨC KHỎE BAN ĐẦU:
+            </div>
+            <div class="small" th:text="${resident.initialHealthStatus != null && !resident.initialHealthStatus.isBlank() ? resident.initialHealthStatus : 'Chưa ghi nhận tiền sử bệnh lý đặc biệt khi tiếp nhận.'}">
+                Tăng huyết áp nhẹ, suy giảm thính lực, minh mẫn.
+            </div>
+        </div>
+    </div>
+
+
+    <!-- 2. Thống kê sinh hiệu đo gần nhất (nếu có phiếu khám) -->
+    <div th:if="${not #lists.isEmpty(records)}" class="mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="fw-bold text-dark mb-0">
+                <i class="bi bi-activity text-danger me-1"></i>Chỉ Số Sinh Tồn Gần Nhất
+            </h6>
+            <span class="small text-muted">
+               Đo ngày: <strong th:text="${#temporals.format(records.get(0).recordDate, 'dd/MM/yyyy HH:mm')}"></strong> - Bởi: <strong th:text="${records.get(0).staffName}"></strong>
+           </span>
+        </div>
+        <div class="row g-2">
+            <div class="col-6 col-md-3">
+                <div class="p-2 border rounded text-center bg-white shadow-sm">
+                    <small class="text-muted d-block" style="font-size: 0.75rem;">Huyết áp</small>
+                    <span class="fw-bold text-primary fs-6" th:text="${records.get(0).bloodPressure != null ? records.get(0).bloodPressure : '-'}">120/80 mmHg</span>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="p-2 border rounded text-center bg-white shadow-sm">
+                    <small class="text-muted d-block" style="font-size: 0.75rem;">Nhịp tim</small>
+                    <span class="fw-bold text-danger fs-6" th:text="${records.get(0).heartRate != null ? records.get(0).heartRate + ' bpm' : '-'}">75 bpm</span>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="p-2 border rounded text-center bg-white shadow-sm">
+                    <small class="text-muted d-block" style="font-size: 0.75rem;">Thân nhiệt</small>
+                    <span class="fw-bold text-warning-emphasis fs-6" th:text="${records.get(0).temperature != null ? records.get(0).temperature + ' °C' : '-'}">36.8 °C</span>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="p-2 border rounded text-center bg-white shadow-sm">
+                    <small class="text-muted d-block" style="font-size: 0.75rem;">Đường huyết</small>
+                    <span class="fw-bold text-info-emphasis fs-6" th:text="${records.get(0).bloodSugar != null ? records.get(0).bloodSugar + ' mmol/L' : '-'}">5.6 mmol/L</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- 3. Lịch sử các lần khám bệnh & Theo dõi chi tiết -->
+    <div>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="fw-bold text-dark mb-0">
+                <i class="bi bi-clock-history text-primary me-2"></i>Lịch Sử Thăm Khám & Đơn Thuốc (<span th:text="${#lists.size(records)}">0</span>)
+            </h6>
+            <a th:href="@{'/health/records/create?residentId=' + ${resident.id}}" class="btn btn-sm btn-outline-success" sec:authorize="hasAnyRole('DOCTOR', 'NURSE')">
+                <i class="bi bi-plus-lg me-1"></i>Thêm phiếu khám
+            </a>
+        </div>
+
+
+        <!-- Trạng thái trống (Chưa có phiếu khám nào) -->
+        <div th:if="${#lists.isEmpty(records)}" class="p-5 border rounded bg-white text-center text-muted">
+            <i class="bi bi-clipboard2-x fs-1 d-block mb-2 text-muted opacity-50"></i>
+            <h6 class="fw-bold text-dark">Chưa có phiếu khám sức khỏe nào cho cư dân này.</h6>
+            <p class="small text-muted mb-0">Hồ sơ khám, chỉ số sinh tồn và đơn thuốc sẽ xuất hiện tại đây khi Bác sĩ hoặc Điều dưỡng thực hiện khám.</p>
+        </div>
+
+
+        <!-- Danh sách phiếu khám -->
+        <div th:unless="${#lists.isEmpty(records)}" class="d-flex flex-column gap-3">
+            <div class="border rounded bg-white shadow-sm overflow-hidden" th:each="rec, iter : ${records}">
+                <!-- Card Header -->
+                <div class="p-3 bg-light d-flex justify-content-between align-items-center border-bottom">
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                       <span class="badge bg-primary px-3 py-2">
+                           <i class="bi bi-calendar3 me-1"></i>Lần <span th:text="${#lists.size(records) - iter.index}">1</span>: <span th:text="${#temporals.format(rec.recordDate, 'dd/MM/yyyy HH:mm')}">23/10/2026 09:30</span>
+                       </span>
+                        <span class="small text-muted ms-1">
+                           Người khám: <strong class="text-dark" th:text="${rec.staffName != null ? rec.staffName : 'Cán bộ y tế'}">BS. Nguyễn Văn Minh</strong>
+                       </span>
+                    </div>
+                </div>
+
+
+                <!-- Card Body -->
+                <div class="p-3">
+                    <!-- Sinh hiệu lần khám -->
+                    <div class="row g-2 mb-3">
+                        <div class="col-6 col-md-3">
+                            <div class="p-2 border rounded bg-light-subtle text-center">
+                                <small class="text-muted d-block" style="font-size: 0.7rem;">Huyết áp</small>
+                                <span class="fw-semibold text-dark small" th:text="${rec.bloodPressure != null ? rec.bloodPressure : '-'}">120/80</span>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="p-2 border rounded bg-light-subtle text-center">
+                                <small class="text-muted d-block" style="font-size: 0.7rem;">Nhịp tim</small>
+                                <span class="fw-semibold text-danger small" th:text="${rec.heartRate != null ? rec.heartRate + ' bpm' : '-'}">75 bpm</span>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="p-2 border rounded bg-light-subtle text-center">
+                                <small class="text-muted d-block" style="font-size: 0.7rem;">Thân nhiệt</small>
+                                <span class="fw-semibold text-warning-emphasis small" th:text="${rec.temperature != null ? rec.temperature + ' °C' : '-'}">36.8 °C</span>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="p-2 border rounded bg-light-subtle text-center">
+                                <small class="text-muted d-block" style="font-size: 0.7rem;">Đường huyết</small>
+                                <span class="fw-semibold text-info-emphasis small" th:text="${rec.bloodSugar != null ? rec.bloodSugar + ' mmol/L' : '-'}">5.6 mmol/L</span>
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <!-- Chẩn đoán & Ghi chú -->
+                    <div class="mb-3">
+                        <span class="small fw-bold text-dark"><i class="bi bi-clipboard2-check text-primary me-1"></i>Chẩn đoán y khoa: </span>
+                        <span class="small fw-semibold text-primary" th:text="${rec.diagnosis != null && !rec.diagnosis.isBlank() ? rec.diagnosis : 'Theo dõi sinh hiệu & chăm sóc điều dưỡng thường quy'}">Tăng huyết áp độ 1, ổn định</span>
+                    </div>
+
+
+                    <!-- Danh sách thuốc kê đơn -->
+                    <div th:if="${not #lists.isEmpty(rec.medications)}">
+                       <span class="small fw-bold text-dark d-block mb-1">
+                           <i class="bi bi-capsule text-success me-1"></i>Đơn thuốc chỉ định:
+                       </span>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered align-middle mb-0">
+                                <thead class="table-light small">
+                                <tr>
+                                    <th>Tên thuốc</th>
+                                    <th class="text-center" style="width: 80px;">Số lượng</th>
+                                    <th>Liều lượng & Hướng dẫn sử dụng</th>
+                                    <th class="text-end" style="width: 110px;">Đơn giá</th>
+                                    <th class="text-end" style="width: 120px;">Thành tiền</th>
+                                </tr>
+                                </thead>
+                                <tbody class="small">
+                                <tr th:each="med : ${rec.medications}">
+                                    <td class="fw-semibold text-dark" th:text="${med.medicationName}">Amlodipine 5mg</td>
+                                    <td class="text-center" th:text="${med.quantity}">30</td>
+                                    <td class="text-muted" th:text="${med.dosage}">1 viên/ngày sau ăn sáng</td>
+                                    <td class="text-end text-muted" th:text="${med.unitPrice != null ? #numbers.formatDecimal(med.unitPrice, 0, 'COMMA', 0, 'POINT') + 'đ' : '-'}">3.500đ</td>
+                                    <td class="text-end fw-bold text-dark" th:text="${med.totalPrice != null ? #numbers.formatDecimal(med.totalPrice, 0, 'COMMA', 0, 'POINT') + 'đ' : '-'}">105.000đ</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div th:if="${#lists.isEmpty(rec.medications)}" class="small text-muted fst-italic">
+                        <i class="bi bi-check-circle me-1"></i>Không có chỉ định thuốc trong lần khám này.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
+
