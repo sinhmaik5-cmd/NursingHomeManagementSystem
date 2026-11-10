@@ -304,7 +304,7 @@
                                     <span>Điều dưỡng trực hôm nay:</span>
                                     <span class="fw-semibold text-dark"
                                           th:each="sc, iter : ${schedulesByRoomId.get(room.id)}"
-                                          th:text="${sc.staffName} + ' (' + sc.shift+')'+({iter.last} ? '' : ', ')">
+                                          th:text="${sc.staffName + ' (' + sc.shift + ')' + (iter.last ? '' : ', ')}">
                                        ĐD. Lê Thị Hoa
                                    </span>
                                 </div>
@@ -659,7 +659,7 @@
                             <label for="modalBedRoomId" class="form-label small fw-semibold text-muted">Chọn phòng cư dân tiếp nhận <span class="text-danger">*</span></label>
                             <select class="form-select" id="modalBedRoomId" name="roomId" required>
                                 <option th:each="r : ${residentRooms}" th:value="${r.id}"
-                                        th:text="'Phòng ' + ${r.roomNumber} + ' (' + r.roomType+'-Đangcó'+({bedsByRoomId.get(r.id) != null ? bedsByRoomId.get(r.id).size() : 0}) + '/' + ${r.capacity} + ' giường)'">
+                                        th:text="${'Phòng ' + r.roomNumber + ' (' + r.roomType + ' - Đang có ' + (bedsByRoomId.get(r.id) != null ? bedsByRoomId.get(r.id).size() : 0) + '/' + r.capacity + ' giường)'}">
                                     Phòng P101 (STANDARD - Đang có 2/2 giường)
                                 </option>
                             </select>

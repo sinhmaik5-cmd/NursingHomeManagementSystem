@@ -3,7 +3,7 @@ package com.group6.nhms.service;
 import com.group6.nhms.dto.request.BedCreateRequest;
 import com.group6.nhms.dto.request.BedStatusUpdateRequest;
 import com.group6.nhms.dto.request.BedUpdateRequest;
-import com. group6.nhms . dto. response. BedResponse;
+import com.group6.nhms.dto.response.BedResponse;
 
 import java.util.List;
 
@@ -15,7 +15,7 @@ public interface BedService {
 
     BedResponse getBedById(Integer id);
 
-    BedResponse updateBedStatus(Integer id, BedstatusUpdateRequest request);
+    BedResponse updateBedStatus(Integer id, BedStatusUpdateRequest request);
 
     BedResponse updateBed(Integer id, BedUpdateRequest request);
 
@@ -33,5 +33,5 @@ public interface BedService {
 
     long countMaintenanceBeds();
 
-    double getoccupancyRate();
+    double getOccupancyRate();
 }

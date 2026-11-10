@@ -77,7 +77,9 @@ class ViewRenderIntegrationTest {
     @Test
     void testLoginViewRender() throws Exception {
         createMockMvc().perform(get("/login"))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(MockMvcResultMatchers.content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("Chọn nhanh tài khoản thử nghiệm"))))
+                .andExpect(MockMvcResultMatchers.content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("quickFill"))));
     }
 
     @Test

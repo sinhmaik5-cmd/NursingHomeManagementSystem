@@ -83,6 +83,8 @@ public class StaffServiceImpl implements StaffService {
 
 
         return accountRepository.findByUsername(authentication.getName())
+                .filter(a -> !RoleEnum.RELATIVE.name().equalsIgnoreCase(a.getRole())
+                        && !"ROLE_RELATIVE".equalsIgnoreCase(a.getRole()))
                 .filter(a -> a.getReferenceId() != null)
                 .flatMap(a -> staffRepository.findById(a.getReferenceId()))
                 .orElse(null);
@@ -158,7 +160,10 @@ public class StaffServiceImpl implements StaffService {
     @Override
     @Transactional
     public void toggleStaffAccountStatus(Integer staffId, Authentication currentAuth) {
-        List<Account> accounts = accountRepository.findByReferenceId(staffId);
+        List<Account> accounts = accountRepository.findByReferenceId(staffId).stream()
+                .filter(acc -> !RoleEnum.RELATIVE.name().equalsIgnoreCase(acc.getRole())
+                        && !"ROLE_RELATIVE".equalsIgnoreCase(acc.getRole()))
+                .toList();
         if (accounts.isEmpty()) {
             throw new ResourceNotFoundException("Không tìm thấy tài khoản gắn liền với nhân viên ID " + staffId);
         }
@@ -170,22 +175,6 @@ public class StaffServiceImpl implements StaffService {
                 throw new BadRequestException("Bạn không thể tự khóa tài khoản đang đăng nhập của chính mình!");
             }
             account.setIsActive(!Boolean.TRUE.equals(account.getIsActive()));
-            accountRepository.save(account);
-        }
-    }
-
-
-    @Override
-    @Transactional
-    public void resetStaffPassword(Integer staffId, String newPassword) {
-        List<Account> accounts = accountRepository.findByReferenceId(staffId);
-        if (accounts.isEmpty()) {
-            throw new ResourceNotFoundException("Không tìm thấy tài khoản gắn liền với nhân viên ID " + staffId);
-        }
-
-
-        for (Account account : accounts) {
-            account.setPasswordHash(passwordEncoder.encode(newPassword));
             accountRepository.save(account);
         }
     }

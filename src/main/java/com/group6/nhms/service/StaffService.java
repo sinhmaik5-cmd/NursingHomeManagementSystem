@@ -27,8 +27,5 @@ public interface StaffService {
 
 
     void toggleStaffAccountStatus(Integer staffId, Authentication currentAuth);
-
-
-    void resetStaffPassword(Integer staffId, String newPassword);
 }
 

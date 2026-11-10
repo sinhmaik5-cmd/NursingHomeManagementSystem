@@ -130,22 +130,22 @@
                 <div class="d-flex align-items-center gap-2 flex-wrap">
                     <!-- Status Filter -->
                     <div class="btn-group btn-group-sm" role="group">
-                        <a th:href="@{/portal/incidents(residentId=selectedResident!=null?selectedResident.id:null,sort={currentSort})}"
+                        <a th:href="@{/portal/incidents(residentId=${selectedResident != null ? selectedResident.id : null}, sort=${currentSort})}"
                            class="btn btn-outline-secondary" th:classappend="${filterStatus == null or filterStatus == '' ? 'active' : ''}">Tất cả</a>
-                        <a th:href="@{/portal/incidents(residentId=selectedResident!=null?selectedResident.id:null,status='PENDING',sort={currentSort})}"
+                        <a th:href="@{/portal/incidents(residentId=${selectedResident != null ? selectedResident.id : null}, status='PENDING', sort=${currentSort})}"
                            class="btn btn-outline-warning" th:classappend="${filterStatus == 'PENDING' ? 'active' : ''}">Chờ xử lý</a>
-                        <a th:href="@{/portal/incidents(residentId=selectedResident!=null?selectedResident.id:null,status='RESOLVED',sort={currentSort})}"
+                        <a th:href="@{/portal/incidents(residentId=${selectedResident != null ? selectedResident.id : null}, status='RESOLVED', sort=${currentSort})}"
                            class="btn btn-outline-success" th:classappend="${filterStatus == 'RESOLVED' ? 'active' : ''}">Đã giải quyết</a>
                     </div>
 
 
                     <!-- Sort Filter -->
                     <div class="btn-group btn-group-sm" role="group">
-                        <a th:href="@{/portal/incidents(residentId=selectedResident!=null?selectedResident.id:null,status={filterStatus}, sort='newest')}"
+                        <a th:href="@{/portal/incidents(residentId=${selectedResident != null ? selectedResident.id : null}, status=${filterStatus}, sort='newest')}"
                            class="btn btn-outline-primary" th:classappend="${currentSort == 'newest' ? 'active' : ''}">
                             <i class="bi bi-sort-down me-1"></i>Mới nhất
                         </a>
-                        <a th:href="@{/portal/incidents(residentId=selectedResident!=null?selectedResident.id:null,status={filterStatus}, sort='oldest')}"
+                        <a th:href="@{/portal/incidents(residentId=${selectedResident != null ? selectedResident.id : null}, status=${filterStatus}, sort='oldest')}"
                            class="btn btn-outline-primary" th:classappend="${currentSort == 'oldest' ? 'active' : ''}">
                             <i class="bi bi-sort-up me-1"></i>Cũ nhất
                         </a>

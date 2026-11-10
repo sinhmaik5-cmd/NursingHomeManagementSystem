@@ -1,5 +1,6 @@
 package com.group6.nhms;
 
+import com.group6.nhms.config.DataInitializer;
 import com.group6.nhms.dto.request.RelativeRegisterRequest;
 import com.group6.nhms.dto.request.StaffAccountCreateRequest;
 import com.group6.nhms.dto.response.StaffResponse;
@@ -38,6 +39,9 @@ class NursingHomeManagementSystemApplicationTests {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private DataInitializer dataInitializer;
 
     @Test
     void contextLoads() {
@@ -226,5 +230,26 @@ class NursingHomeManagementSystemApplicationTests {
         request.setConfirmPassword("123456");
 
         assertThrows(BadRequestException.class, () -> staffService.createStaffWithAccount(request));
+    }
+
+    @Test
+    @Transactional
+    void testDataInitializerPreservesExistingPasswordAndActiveStatus() {
+        Account managerAccount = accountRepository.findByUsername("manager").orElse(null);
+        assertNotNull(managerAccount, "Default manager account should exist");
+
+        managerAccount.setPasswordHash(passwordEncoder.encode("newSecretPass123"));
+        managerAccount.setIsActive(false);
+        accountRepository.save(managerAccount);
+
+        dataInitializer.run();
+
+        Account reloaded = accountRepository.findByUsername("manager").orElseThrow();
+        assertTrue(passwordEncoder.matches("newSecretPass123", reloaded.getPasswordHash()),
+                "DataInitializer must not overwrite user's updated password");
+        assertFalse(passwordEncoder.matches("123456", reloaded.getPasswordHash()),
+                "DataInitializer must not reset password back to 123456");
+        assertFalse(Boolean.TRUE.equals(reloaded.getIsActive()),
+                "DataInitializer must not reactivate a locked account");
     }
 }

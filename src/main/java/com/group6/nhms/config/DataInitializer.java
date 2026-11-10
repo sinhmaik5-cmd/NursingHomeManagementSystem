@@ -178,26 +178,41 @@ public class DataInitializer implements CommandLineRunner {
        });
 
 
-       // Khởi tạo hoặc cập nhật tài khoản mẫu với mật khẩu mặc định 123456
-       createOrUpdateAccount("manager", "123456", RoleEnum.CENTER_MANAGER.name(), managerStaff.getId());
-       createOrUpdateAccount("receptionist", "123456", RoleEnum.RECEPTIONIST.name(), receptionistStaff.getId());
-       createOrUpdateAccount("doctor", "123456", RoleEnum.DOCTOR.name(), doctorStaff.getId());
-       createOrUpdateAccount("nurse", "123456", RoleEnum.NURSE.name(), nurseStaff.getId());
-       createOrUpdateAccount("relative", "123456", RoleEnum.RELATIVE.name(), relative.getId());
+       // Chỉ khởi tạo tài khoản mẫu nếu chưa tồn tại trong DB (không ghi đè mật khẩu hay trạng thái khóa đã thay đổi)
+       createAccountIfNotExists("manager", "123456", RoleEnum.CENTER_MANAGER.name(), managerStaff.getId());
+       createAccountIfNotExists("receptionist", "123456", RoleEnum.RECEPTIONIST.name(), receptionistStaff.getId());
+       createAccountIfNotExists("doctor", "123456", RoleEnum.DOCTOR.name(), doctorStaff.getId());
+       createAccountIfNotExists("nurse", "123456", RoleEnum.NURSE.name(), nurseStaff.getId());
+       createAccountIfNotExists("relative", "123456", RoleEnum.RELATIVE.name(), relative.getId());
    }
 
 
-   private void createOrUpdateAccount(String username, String rawPassword, String role, Integer refId) {
-       Account account = accountRepository.findByUsername(username).orElseGet(() -> {
-           Account a = new Account();
-           a.setUsername(username);
-           return a;
-       });
-       account.setPasswordHash(passwordEncoder.encode(rawPassword));
-       account.setRole(role);
-       account.setReferenceId(refId);
-       account.setIsActive(true);
-       accountRepository.save(account);
+   private void createAccountIfNotExists(String username, String rawPassword, String role, Integer refId) {
+       accountRepository.findByUsername(username).ifPresentOrElse(
+               existing -> {
+                   boolean updated = false;
+                   if (existing.getRole() == null || !existing.getRole().equals(role)) {
+                       existing.setRole(role);
+                       updated = true;
+                   }
+                   if (existing.getReferenceId() == null && refId != null) {
+                       existing.setReferenceId(refId);
+                       updated = true;
+                   }
+                   if (updated) {
+                       accountRepository.save(existing);
+                   }
+               },
+               () -> {
+                   Account account = new Account();
+                   account.setUsername(username);
+                   account.setPasswordHash(passwordEncoder.encode(rawPassword));
+                   account.setRole(role);
+                   account.setReferenceId(refId);
+                   account.setIsActive(true);
+                   accountRepository.save(account);
+               }
+       );
    }
 
 

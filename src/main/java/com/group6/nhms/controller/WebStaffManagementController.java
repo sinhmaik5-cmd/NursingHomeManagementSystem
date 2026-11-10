@@ -40,13 +40,7 @@ public class WebStaffManagementController {
                     .toList();
             model.addAttribute("keyword", keyword.trim());
         }
-        model.addAttribute("staffList", staffList);
-        long doctorCount = staffList.stream().filter(s -> "DOCTOR".equalsIgnoreCase(s.getJobTitle())).count();
-        long nurseCount = staffList.stream().filter(s -> "NURSE".equalsIgnoreCase(s.getJobTitle())).count();
-        long receptionistCount = staffList.stream().filter(s -> "RECEPTIONIST".equalsIgnoreCase(s.getJobTitle())).count();
-        model.addAttribute("doctorCount", doctorCount);
-        model.addAttribute("nurseCount", nurseCount);
-        model.addAttribute("receptionistCount", receptionistCount);
+        populateStaffListModel(model, staffList);
         if (!model.containsAttribute("createRequest")) {
             model.addAttribute("createRequest", new StaffAccountCreateRequest());
         }
@@ -62,7 +56,7 @@ public class WebStaffManagementController {
             Model model
     ) {
         if (bindingResult.hasErrors()) {
-            model.addAttribute("staffList", staffService.getAllStaff());
+            populateStaffListModel(model, staffService.getAllStaff());
             model.addAttribute("activeMenu", "staff-management");
             model.addAttribute("showCreateModal", true);
             return "management/staff-list";
@@ -93,5 +87,16 @@ public class WebStaffManagementController {
         return "redirect:/management/staff";
     }
 
-
+    /**
+     * Nạp danh sách nhân viên và thống kê số lượng theo từng vai trò vào Model.
+     */
+    private void populateStaffListModel(Model model, List<StaffResponse> staffList) {
+        model.addAttribute("staffList", staffList);
+        long doctorCount = staffList.stream().filter(s -> "DOCTOR".equalsIgnoreCase(s.getJobTitle())).count();
+        long nurseCount = staffList.stream().filter(s -> "NURSE".equalsIgnoreCase(s.getJobTitle())).count();
+        long receptionistCount = staffList.stream().filter(s -> "RECEPTIONIST".equalsIgnoreCase(s.getJobTitle())).count();
+        model.addAttribute("doctorCount", doctorCount);
+        model.addAttribute("nurseCount", nurseCount);
+        model.addAttribute("receptionistCount", receptionistCount);
+    }
 }
