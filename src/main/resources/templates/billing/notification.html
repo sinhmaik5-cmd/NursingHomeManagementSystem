@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout :: layout(~{::title}, ~{::content}, 'relative-notifications')}">
+<head>
+    <title>Gửi Thông Báo Viện Phí & Sự Cố Cư Dân - NHMS Care</title>
+</head>
+<body>
+<div th:fragment="content">
+    <!-- Header -->
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">
+        <div>
+            <h4 class="fw-bold mb-1 text-dark">
+                <i class="bi bi-envelope-paper-heart-fill text-primary me-2"></i>Gửi Thông Báo Viện Phí &amp; Sự Cố Cho Thân Nhân
+            </h4>
+            <p class="text-muted small mb-0">
+                Thẩm quyền Lễ tân: Tự động tổng hợp các hóa đơn viện phí chưa thanh toán và sự cố y tế / cơ sở vật chất chưa xử lý của cư dân để gửi email đến người thân.
+            </p>
+        </div>
+        <div class="d-flex flex-wrap gap-2" sec:authorize="hasRole('RECEPTIONIST')">
+            <!-- Nút mở Modal gửi 1 lần cho TẤT CẢ thân nhân -->
+            <button type="button" class="btn btn-primary shadow-sm fw-semibold"
+                    th:disabled="${eligibleCount == 0}"
+                    data-bs-toggle="modal" data-bs-target="#confirmSendAllModal">
+                <i class="bi bi-send-check-fill me-1"></i> Gửi Email Cho Tất Cả Thân Nhân
+                <span class="badge bg-white text-primary ms-1 px-2" th:text="${eligibleCount}">0</span>
+            </button>
+            <a th:href="@{/billing/monthly}" class="btn btn-outline-secondary shadow-sm">
+                <i class="bi bi-receipt me-1"></i> Bảng Kê Hóa Đơn
+            </a>
+        </div>
+    </div>
+
+
+    <!-- KPI Summary Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-lg-3">
+            <div class="nh-card p-3 border-start border-4 border-primary">
+                <span class="text-muted small d-block mb-1 fw-semibold">THÂN NHÂN CẦN BÁO</span>
+                <div class="d-flex align-items-baseline gap-2">
+                    <h3 class="fw-bold mb-0 text-primary" th:text="${eligibleCount}">0</h3>
+                    <small class="text-muted">người</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="nh-card p-3 border-start border-4 border-danger">
+                <span class="text-muted small d-block mb-1 fw-semibold">TỔNG NỢ VIỆN PHÍ CHƯA THU</span>
+                <h4 class="fw-bold mb-0 text-danger"
+                    th:text="${totalUnpaidAll != null ? #numbers.formatDecimal(totalUnpaidAll, 0, 'COMMA', 0, 'POINT') + ' VNĐ' : '0 VNĐ'}">
+                    0 VNĐ
+                </h4>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="nh-card p-3 border-start border-4 border-warning">
+                <span class="text-muted small d-block mb-1 fw-semibold">SỰ CỐ CƯ DÂN CHỜ XỬ LÝ</span>
+                <div class="d-flex align-items-baseline gap-2">
+                    <h3 class="fw-bold mb-0 text-warning" th:text="${totalPendingIncidents}">0</h3>
+                    <small class="text-muted">sự cố</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="nh-card p-3 border-start border-4 border-success">
+                <span class="text-muted small d-block mb-1 fw-semibold">EMAIL ĐÃ GỬI TRONG PHIÊN</span>
+                <div class="d-flex align-items-baseline gap-2">
+                    <h3 class="fw-bold mb-0 text-success" th:text="${#lists.size(recentLogs)}">0</h3>
+                    <small class="text-muted">lượt gửi</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Cảnh báo nếu có thân nhân thiếu email -->
+    <div class="alert alert-warning py-2 small mb-4 d-flex align-items-center gap-2" th:if="${missingEmailCount > 0}">
+        <i class="bi bi-exclamation-triangle-fill fs-5 text-warning"></i>
+        <div>
+            Có <strong><span th:text="${missingEmailCount}">0</span> thân nhân</strong> có cư dân gặp sự cố hoặc nợ viện phí nhưng <strong>chưa cập nhật địa chỉ email</strong>. Vui lòng cập nhật email của thân nhân trong danh sách cư dân để hệ thống có thể chuyển phát thông báo!
+        </div>
+    </div>
+
+
+    <!-- Tabs: Danh sách thân nhân VS Lịch sử gửi email -->
+    <ul class="nav nav-pills p-2 bg-light rounded-3 mb-3 border shadow-sm" id="notificationTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active fw-bold py-2 px-3" id="tab-relatives-btn" data-bs-toggle="pill" data-bs-target="#tab-relatives" type="button" role="tab">
+                <i class="bi bi-people-fill me-1"></i> Danh Sách Thân Nhân &amp; Tình Trạng Cư Dân
+                <span class="badge bg-primary text-white ms-1" th:text="${#lists.size(summaries)}">0</span>
+            </button>
+        </li>
+        <li class="nav-item ms-2" role="presentation">
+            <button class="nav-link fw-bold py-2 px-3" id="tab-history-btn" data-bs-toggle="pill" data-bs-target="#tab-history" type="button" role="tab">
+                <i class="bi bi-clock-history me-1"></i> Lịch Sử Gửi Email Gần Nhất
+                <span class="badge bg-success text-white ms-1" th:text="${#lists.size(recentLogs)}">0</span>
+            </button>
+        </li>
+    </ul>
+
+
+    <div class="tab-content" id="notificationTabContent">
+        <!-- TAB 1: DANH SÁCH THÂN NHÂN -->
+        <div class="tab-pane fade show active" id="tab-relatives" role="tabpanel">
+            <div class="nh-card">
+                <div class="nh-card-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+                    <div>
+                        <h6 class="fw-bold mb-0 text-dark">
+                            <i class="bi bi-card-checklist text-primary me-2"></i>Bảng Tổng Hợp Thân Nhân Cần Gửi Thông Báo
+                        </h6>
+                        <small class="text-muted">Nhấn "Xem trước" để xem mẫu thư hoặc "Gửi Email" để gửi riêng cho từng thân nhân</small>
+                    </div>
+                </div>
+
+
+                <div class="table-responsive">
+                    <table class="nh-table align-middle" id="relativesTable">
+                        <thead>
+                        <tr>
+                            <th>Thân nhân</th>
+                            <th>Cư dân bảo lãnh</th>
+                            <th>Viện phí chưa thanh toán</th>
+                            <th>Sự cố chưa xử lý</th>
+                            <th>Trạng thái gửi</th>
+                            <th class="text-end">Thao tác</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:if="${#lists.isEmpty(summaries)}">
+                            <td colspan="6" class="text-center py-5 text-muted">
+                                <i class="bi bi-check-circle-fill text-success fs-2 d-block mb-1"></i>
+                                Tuyệt vời! Hiện tại không có thân nhân nào có khoản chưa thanh toán hoặc sự cố tồn đọng.
+                            </td>
+                        </tr>
+                        <tr th:each="s : ${summaries}" th:classappend="${s.hasPendingItems ? '' : 'opacity-75'}">
+                            <!-- 1. Thân nhân -->
+                            <td>
+                                <span class="fw-bold text-dark d-block" th:text="${s.relativeName}">Nguyễn Tuấn Dũng</span>
+                                <small class="text-muted d-block">
+                                    <span class="badge bg-light text-secondary border me-1" th:text="${s.relationship}">Con trai</span>
+                                    <i class="bi bi-telephone ms-1 me-1"></i><span th:text="${s.relativePhone}">0911223344</span>
+                                </small>
+                                <div class="mt-1">
+                                   <span th:if="${s.hasEmail}" class="text-primary small">
+                                       <i class="bi bi-envelope-at me-1"></i><span th:text="${s.relativeEmail}">dung.nguyen@gmail.com</span>
+                                   </span>
+                                    <span th:unless="${s.hasEmail}" class="badge bg-danger-subtle text-danger">
+                                       <i class="bi bi-exclamation-circle me-1"></i>Chưa cập nhật Email
+                                   </span>
+                                </div>
+                            </td>
+
+
+                            <!-- 2. Cư dân bảo lãnh -->
+                            <td>
+                                <div th:each="res : ${s.residents}" class="mb-1">
+                                    <span class="fw-semibold text-dark small" th:text="${res.residentName}">Nguyễn Văn An</span>
+                                    <small class="text-muted d-block" style="font-size: 0.75rem;">
+                                        Phòng <span th:text="${res.roomNumber != null ? res.roomNumber : '-'}">P101</span>
+                                        <span th:if="${res.bedNumber}"> - G.<span th:text="${res.bedNumber}">G101-1</span></span>
+                                    </small>
+                                </div>
+                                <span th:if="${#lists.isEmpty(s.residents)}" class="text-muted small">Không có cư dân liên kết</span>
+                            </td>
+
+
+                            <!-- 3. Viện phí chưa thanh toán -->
+                            <td>
+                                <div th:if="${s.totalUnpaidOrdersCount > 0}">
+                                   <span class="badge bg-danger-subtle text-danger mb-1">
+                                       <i class="bi bi-clock-fill me-1"></i><span th:text="${s.totalUnpaidOrdersCount}">1</span> hóa đơn chưa thu
+                                   </span>
+                                    <div class="fw-bold text-danger fs-6"
+                                         th:text="${s.totalUnpaidAmount != null ? #numbers.formatDecimal(s.totalUnpaidAmount, 0, 'COMMA', 0, 'POINT') + ' VNĐ' : '0 VNĐ'}">
+                                        6,850,000 VNĐ
+                                    </div>
+                                    <small class="text-muted d-block" style="font-size: 0.75rem;">
+                                       <span th:each="res : ${s.residents}">
+                                           <span th:each="ord : ${res.unpaidOrders}" class="me-1">
+                                               #HĐ-<span th:text="${ord.id}">1</span>
+                                           </span>
+                                       </span>
+                                    </small>
+                                </div>
+                                <div th:unless="${s.totalUnpaidOrdersCount > 0}">
+                                   <span class="badge badge-status-available">
+                                       <i class="bi bi-check-circle-fill me-1"></i>Không nợ viện phí
+                                   </span>
+                                </div>
+                            </td>
+
+
+                            <!-- 4. Sự cố chưa xử lý -->
+                            <td>
+                                <div th:if="${s.totalPendingIncidentsCount > 0}">
+                                   <span class="badge bg-warning-subtle text-warning-emphasis mb-1">
+                                       <i class="bi bi-exclamation-triangle-fill me-1"></i><span th:text="${s.totalPendingIncidentsCount}">1</span> sự cố chờ xử lý
+                                   </span>
+                                    <div th:each="res : ${s.residents}">
+                                        <div th:each="inc : ${res.pendingIncidents}" class="small mb-1">
+                                            <span th:if="${inc.severityLevel == 'LOW'}" class="badge badge-severity-low" style="font-size: 0.65rem;">LOW</span>
+                                            <span th:if="${inc.severityLevel == 'MEDIUM'}" class="badge badge-severity-medium" style="font-size: 0.65rem;">MED</span>
+                                            <span th:if="${inc.severityLevel == 'HIGH'}" class="badge badge-severity-high" style="font-size: 0.65rem;">HIGH</span>
+                                            <span th:if="${inc.severityLevel == 'CRITICAL'}" class="badge badge-severity-critical" style="font-size: 0.65rem;">CRIT</span>
+                                            <span class="fw-semibold text-dark text-truncate d-inline-block align-bottom" style="max-width: 140px;" th:title="${inc.title}" th:text="${inc.title}">Tên sự cố</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div th:unless="${s.totalPendingIncidentsCount > 0}">
+                                   <span class="badge badge-status-available">
+                                       <i class="bi bi-shield-check me-1"></i>Không có sự cố
+                                   </span>
+                                </div>
+                            </td>
+
+
+                            <!-- 5. Trạng thái gửi -->
+                            <td>
+                                <div th:if="${s.lastSentTime != null}">
+                                   <span class="badge bg-success-subtle text-success mb-1">
+                                       <i class="bi bi-check2-all me-1"></i>Đã gửi
+                                   </span>
+                                    <small class="text-muted d-block" style="font-size: 0.72rem;"
+                                           th:text="${#temporals.format(s.lastSentTime, 'dd/MM/yyyy HH:mm')}">
+                                        07/11/2026 15:30
+                                    </small>
+                                </div>
+                                <div th:unless="${s.lastSentTime != null}">
+                                    <span class="badge bg-light text-muted border">Chưa gửi</span>
+                                </div>
+                            </td>
+
+
+                            <!-- 6. Thao tác -->
+                            <td class="text-end">
+                                <div class="btn-group btn-group-sm">
+                                    <!-- Xem trước email modal button -->
+                                    <button type="button" class="btn btn-outline-primary"
+                                            th:data-relname="${s.relativeName}"
+                                            th:data-relemail="${s.relativeEmail}"
+                                            th:data-subject="${s.previewEmailSubject}"
+                                            th:data-html="${s.previewEmailHtml}"
+                                            onclick="openEmailPreview(this)"
+                                            title="Xem trước nội dung email gửi đến thân nhân">
+                                        <i class="bi bi-eye"></i> Xem trước
+                                    </button>
+
+
+                                    <!-- Nút mở Modal gửi riêng cho từng thân nhân -->
+                                    <button type="button" class="btn btn-primary"
+                                            sec:authorize="hasRole('RECEPTIONIST')"
+                                            th:disabled="${!s.hasPendingItems or !s.hasEmail}"
+                                            th:data-id="${s.relativeId}"
+                                            th:data-name="${s.relativeName}"
+                                            th:data-email="${s.relativeEmail}"
+                                            th:data-unpaid="${s.totalUnpaidOrdersCount > 0 ? (#numbers.formatDecimal(s.totalUnpaidAmount, 0, 'COMMA', 0, 'POINT') + ' VNĐ (' + s.totalUnpaidOrdersCount + ' HĐ)') : 'Không nợ viện phí'}"
+                                            th:data-incidents="${s.totalPendingIncidentsCount > 0 ? (s.totalPendingIncidentsCount + ' sự cố chờ xử lý') : 'Không có sự cố'}"
+                                            th:title="${!s.hasEmail ? 'Thân nhân chưa có email' : (!s.hasPendingItems ? 'Không có khoản nợ hay sự cố nào cần báo' : 'Gửi email cho thân nhân này')}"
+                                            onclick="openConfirmSingleModal(this)">
+                                        <i class="bi bi-send-fill"></i> Gửi Email
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+
+                <!-- Pagination for Relatives List at bottom right -->
+                <div class="d-flex justify-content-between align-items-center p-3 border-top flex-wrap gap-2" id="relativesPaginationWrapper">
+                    <div class="small text-muted fw-semibold" id="relativesPaginationInfo">
+                        Đang hiển thị 1 - 5 trong số <span th:text="${#lists.size(summaries)}">0</span> thân nhân
+                    </div>
+                    <nav aria-label="Phân trang thân nhân">
+                        <ul class="pagination pagination-sm mb-0 shadow-sm" id="relativesPagination"></ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- TAB 2: LỊCH SỬ GỬI EMAIL -->
+        <div class="tab-pane fade" id="tab-history" role="tabpanel">
+            <div class="nh-card">
+                <div class="nh-card-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="fw-bold mb-0 text-dark">
+                            <i class="bi bi-clock-history text-success me-2"></i>Nhật Ký Gửi Email Thông Báo Gần Nhất
+                        </h6>
+                        <small class="text-muted">Lưu vết toàn bộ lượt gửi thông báo nhắc viện phí và sự cố cho thân nhân</small>
+                    </div>
+                </div>
+
+
+                <div class="table-responsive">
+                    <table class="nh-table align-middle" id="logsTable">
+                        <thead>
+                        <tr>
+                            <th>Thời gian gửi</th>
+                            <th>Người nhận (Thân nhân)</th>
+                            <th>Cư dân liên quan</th>
+                            <th>Tóm tắt nội dung</th>
+                            <th>Nhân viên gửi</th>
+                            <th>Trạng thái</th>
+                            <th class="text-end">Chi tiết</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:if="${#lists.isEmpty(recentLogs)}">
+                            <td colspan="7" class="text-center py-5 text-muted">
+                                <i class="bi bi-inbox fs-2 d-block mb-1"></i>
+                                Chưa có nhật ký gửi email nào trong phiên làm việc này.
+                            </td>
+                        </tr>
+                        <tr th:each="log : ${recentLogs}">
+                            <td class="small" th:text="${#temporals.format(log.sentAt, 'dd/MM/yyyy HH:mm:ss')}">07/11/2026 23:00:15</td>
+                            <td>
+                                <span class="fw-bold text-dark small d-block" th:text="${log.relativeName}">Nguyễn Tuấn Dũng</span>
+                                <span class="text-primary small"><i class="bi bi-envelope me-1"></i><span th:text="${log.recipientEmail}">dung.nguyen@gmail.com</span></span>
+                            </td>
+                            <td>
+                                <span class="small fw-semibold text-dark" th:text="${log.residentNames}">Nguyễn Văn An (P.101)</span>
+                            </td>
+                            <td>
+                                <small class="d-block text-danger fw-semibold">
+                                    <i class="bi bi-receipt me-1"></i><span th:text="${log.unpaidOrdersCount}">1</span> HĐ nợ
+                                    (<span th:text="${log.unpaidTotalAmount != null ? #numbers.formatDecimal(log.unpaidTotalAmount, 0, 'COMMA', 0, 'POINT') + 'đ' : '0đ'}">6,850,000đ</span>)
+                                </small>
+                                <small class="d-block text-warning-emphasis">
+                                    <i class="bi bi-exclamation-triangle me-1"></i><span th:text="${log.pendingIncidentsCount}">1</span> sự cố chờ xử lý
+                                </small>
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-dark border" th:text="${log.senderStaffName}">Lê Thu Trang</span>
+                            </td>
+                            <td>
+                               <span class="badge bg-success-subtle text-success">
+                                   <i class="bi bi-check-circle-fill me-1"></i>THÀNH CÔNG
+                               </span>
+                            </td>
+                            <td class="text-end">
+                                <button type="button" class="btn btn-sm btn-outline-secondary"
+                                        th:data-relname="${log.relativeName}"
+                                        th:data-relemail="${log.recipientEmail}"
+                                        th:data-subject="${log.subject}"
+                                        th:data-html="${log.contentHtml}"
+                                        onclick="openEmailPreview(this)">
+                                    <i class="bi bi-file-earmark-text"></i> Xem thư
+                                </button>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+
+                <!-- Pagination for Logs at bottom right -->
+                <div class="d-flex justify-content-between align-items-center p-3 border-top flex-wrap gap-2" id="logsPaginationWrapper">
+                    <div class="small text-muted fw-semibold" id="logsPaginationInfo">
+                        Đang hiển thị 1 - 5 trong số <span th:text="${#lists.size(recentLogs)}">0</span> lượt gửi
+                    </div>
+                    <nav aria-label="Phân trang nhật ký">
+                        <ul class="pagination pagination-sm mb-0 shadow-sm" id="logsPagination"></ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Modal Xem Trước Email (Email Preview Modal) -->
+    <div class="modal fade" id="emailPreviewModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-light">
+                    <div>
+                        <h5 class="modal-title fw-bold text-primary mb-1">
+                            <i class="bi bi-envelope-paper-fill me-2"></i>Xem Trước Nội Dung Email Thông Báo
+                        </h5>
+                        <div class="small text-muted" id="previewMeta">Người nhận: -</div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4 bg-light-subtle">
+                    <div class="card p-3 mb-3 bg-white border">
+                        <div class="small fw-bold text-muted mb-1">TIÊU ĐỀ THƯ (SUBJECT):</div>
+                        <div class="fw-bold text-dark fs-6" id="previewSubject">Tiêu đề email...</div>
+                    </div>
+
+
+                    <div class="card p-3 bg-white border shadow-sm">
+                        <div class="small fw-bold text-muted mb-2">NỘI DUNG THƯ GỬI ĐẾN HÒM THƯ NGƯỜI THÂN:</div>
+                        <div id="previewHtmlContainer"></div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light border-0">
+                    <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">Đóng</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Modal Xác Nhận Gửi Email Cho TẤT CẢ Thân Nhân -->
+    <div class="modal fade" id="confirmSendAllModal" tabindex="-1" aria-hidden="true" sec:authorize="hasRole('RECEPTIONIST')">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <form th:action="@{/billing/notifications/send-all}" method="post">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title fw-bold">
+                            <i class="bi bi-send-check-fill me-2"></i>Xác Nhận Gửi Email Đồng Loạt
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <div class="text-center mb-3">
+                            <div class="d-inline-flex align-items-center justify-content-center bg-primary-subtle text-primary rounded-circle mb-2" style="width: 64px; height: 64px;">
+                                <i class="bi bi-envelope-paper-heart-fill fs-2"></i>
+                            </div>
+                            <h6 class="fw-bold text-dark mb-1">Gửi email cho tất cả thân nhân có khoản cần báo?</h6>
+                            <p class="text-muted small mb-0">Hệ thống sẽ gửi email tổng hợp viện phí chưa thanh toán và sự cố chưa xử lý đến từng thân nhân hợp lệ.</p>
+                        </div>
+
+
+                        <div class="card bg-light border-0 p-3 mb-0">
+                            <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                                <span class="small text-muted">Số thân nhân sẽ nhận email:</span>
+                                <span class="fw-bold text-primary fs-6"><span th:text="${eligibleCount}">0</span> người</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                                <span class="small text-muted">Tổng viện phí nhắc thu:</span>
+                                <span class="fw-bold text-danger" th:text="${totalUnpaidAll != null ? #numbers.formatDecimal(totalUnpaidAll, 0, 'COMMA', 0, 'POINT') + ' VNĐ' : '0 VNĐ'}">0 VNĐ</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="small text-muted">Tổng sự cố thông báo:</span>
+                                <span class="fw-bold text-warning" th:text="${totalPendingIncidents}">0 sự cố</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light border-0">
+                        <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">
+                            <i class="bi bi-x-circle me-1"></i>Hủy bỏ
+                        </button>
+                        <button type="submit" class="btn btn-primary fw-semibold px-4 shadow-sm">
+                            <i class="bi bi-send-check-fill me-1"></i>Xác Nhận Gửi Ngay
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Modal Xác Nhận Gửi Email Cho 1 Thân Nhân Cụ Thể -->
+    <div class="modal fade" id="confirmSendSingleModal" tabindex="-1" aria-hidden="true" sec:authorize="hasRole('RECEPTIONIST')">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <form id="confirmSingleForm" method="post">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title fw-bold">
+                            <i class="bi bi-envelope-check me-2"></i>Xác Nhận Gửi Email Thông Báo
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <div class="text-center mb-3">
+                            <div class="d-inline-flex align-items-center justify-content-center bg-primary-subtle text-primary rounded-circle mb-2" style="width: 56px; height: 56px;">
+                                <i class="bi bi-person-fill-check fs-2"></i>
+                            </div>
+                            <h6 class="fw-bold text-dark mb-1">Xác nhận gửi email cho thân nhân này?</h6>
+                            <p class="text-muted small mb-0">Thư điện tử thông báo viện phí &amp; sự cố sẽ được gửi trực tiếp đến hộp thư cá nhân của thân nhân.</p>
+                        </div>
+
+
+                        <div class="card bg-light border-0 p-3 mb-0">
+                            <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                                <span class="small text-muted">Họ tên thân nhân:</span>
+                                <strong class="text-dark" id="modalSingleName">-</strong>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                                <span class="small text-muted">Địa chỉ email:</span>
+                                <span class="text-primary fw-semibold" id="modalSingleEmail">-</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                                <span class="small text-muted">Viện phí cần nhắc:</span>
+                                <span class="text-danger fw-semibold" id="modalSingleUnpaid">-</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="small text-muted">Sự cố thông báo:</span>
+                                <span class="text-warning-emphasis fw-semibold" id="modalSingleIncidents">-</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light border-0">
+                        <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">
+                            <i class="bi bi-x-circle me-1"></i>Hủy bỏ
+                        </button>
+                        <button type="submit" class="btn btn-primary fw-semibold px-4 shadow-sm">
+                            <i class="bi bi-send-fill me-1"></i>Xác Nhận Gửi Email
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Script điều khiển Modal -->
+    <script>
+        function openEmailPreview(button) {
+            const relName = button.getAttribute('data-relname') || 'Thân nhân';
+            const relEmail = button.getAttribute('data-relemail') || 'Chưa có email';
+            const subject = button.getAttribute('data-subject') || '';
+            const html = button.getAttribute('data-html') || '<p class="text-muted">Không có nội dung</p>';
+
+
+            document.getElementById('previewMeta').innerHTML = 'Gửi đến: <strong>' + relName + '</strong> &lt;<span class="text-primary">' + relEmail + '</span>&gt;';
+            document.getElementById('previewSubject').innerText = subject;
+            document.getElementById('previewHtmlContainer').innerHTML = html;
+
+
+            const modal = new bootstrap.Modal(document.getElementById('emailPreviewModal'));
+            modal.show();
+        }
+
+
+        function openConfirmSingleModal(button) {
+            const id = button.getAttribute('data-id');
+            const name = button.getAttribute('data-name') || '';
+            const email = button.getAttribute('data-email') || '';
+            const unpaid = button.getAttribute('data-unpaid') || '';
+            const incidents = button.getAttribute('data-incidents') || '';
+
+
+            document.getElementById('modalSingleName').innerText = name;
+            document.getElementById('modalSingleEmail').innerText = email;
+            document.getElementById('modalSingleUnpaid').innerText = unpaid;
+            document.getElementById('modalSingleIncidents').innerText = incidents;
+
+
+            document.getElementById('confirmSingleForm').action = '/billing/notifications/send/' + id;
+
+
+            const modal = new bootstrap.Modal(document.getElementById('confirmSendSingleModal'));
+            modal.show();
+        }
+
+
+        document.addEventListener('DOMContentLoaded', function () {
+            initTablePagination('#relativesTable', 'relativesPaginationWrapper', 'relativesPagination', 'relativesPaginationInfo', 5, 'thân nhân');
+            initTablePagination('#logsTable', 'logsPaginationWrapper', 'logsPagination', 'logsPaginationInfo', 5, 'lượt gửi');
+        });
+    </script>
+</div>
+</body>
+</html>
+

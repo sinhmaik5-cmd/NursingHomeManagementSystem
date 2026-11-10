@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout :: layout(~{::title}, ~{::content}, 'health-history')}">
+<head>
+    <title>Lịch Sử Bệnh Án - NHMS Care</title>
+</head>
+<body>
+<div th:fragment="content">
+    <!-- Header -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <div>
+            <h4 class="fw-bold mb-1 text-dark">
+                <i class="bi bi-clock-history text-primary me-2"></i>Lịch Sử Bệnh Án
+            </h4>
+            <p class="text-muted small mb-0">Theo dõi tiến trình sức khỏe, biến động sinh hiệu và lịch sử dùng thuốc của cư dân</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a th:href="@{/portal/dashboard}" class="btn btn-outline-secondary btn-sm"
+               sec:authorize="hasRole('RELATIVE')">
+                <i class="bi bi-arrow-left me-1"></i>Quay lại Cổng người thân
+            </a>
+        </div>
+    </div>
+
+
+    <!-- Resident Filter Card -->
+    <div class="nh-card mb-4">
+        <div class="nh-card-body p-3">
+            <form th:action="@{/health/history#timeline-records}" method="get" class="row g-2 align-items-center">
+                <div class="col-12">
+                    <label for="residentSelect" class="form-label small fw-semibold text-muted mb-1">Chọn Cư Dân Tra Cứu:</label>
+                    <select class="form-select" id="residentSelect" name="residentId" onchange="this.form.submit()">
+                        <option value="" disabled th:selected="${selectedResident == null}">-- Chọn cư dân --</option>
+                        <option th:each="r : ${residents}"
+                                th:value="${r.id}"
+                                th:selected="${selectedResident != null and selectedResident.id == r.id}"
+                                th:text="${r.fullName} + ' (Phòng ' + ${r.roomNumber} + ' - ' + ${r.bedNumber} + ')'">
+                            Nguyễn Văn An (Phòng P101 - G01)
+                        </option>
+                    </select>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <!-- Selected Resident Profile Header -->
+    <div th:if="${selectedResident != null}" class="nh-card p-4 mb-4 bg-white border">
+        <div class="row align-items-center">
+            <div class="col-12 col-md-8 d-flex align-items-center">
+                <div class="sidebar-user-avatar bg-primary text-white fs-3 me-3" style="width: 58px; height: 58px;">
+                    <i class="bi bi-person-heart"></i>
+                </div>
+                <div class="w-100">
+                    <div class="d-flex align-items-center gap-2">
+                        <h4 class="fw-bold mb-0 text-dark" th:text="${selectedResident.fullName}">Nguyễn Văn An</h4>
+                        <span class="badge bg-light text-dark" th:text="${selectedResident.gender}">Nam</span>
+                        <span class="badge bg-primary-subtle text-primary fw-bold" th:if="${selectedResident.bedNumber}">
+                           Phòng <span th:text="${selectedResident.roomNumber}">P101</span> - <span th:text="${selectedResident.bedNumber}">G01</span>
+                       </span>
+                    </div>
+                    <div class="text-muted small mt-1">
+                       <span class="me-3" th:if="${selectedResident.dateOfBirth != null}">
+                           <i class="bi bi-calendar-event me-1"></i>Ngày sinh: <span th:text="${#temporals.format(selectedResident.dateOfBirth, 'dd/MM/yyyy')}">15/06/1945</span>
+                       </span>
+                        <span class="me-3" th:if="${selectedResident.relativeName}">
+                           <i class="bi bi-person-badge me-1"></i>Người thân: <span th:text="${selectedResident.relativeName}">Nguyễn Tuấn Dũng</span>
+                       </span>
+                        <span th:if="${selectedResident.relativePhone}">
+                           <i class="bi bi-telephone me-1"></i>SĐT: <span th:text="${selectedResident.relativePhone}">0911223344</span>
+                       </span>
+                    </div>
+                    <div class="small text-danger mt-2 d-flex align-items-center justify-content-between flex-wrap gap-2">
+                        <div>
+                            <i class="bi bi-exclamation-triangle-fill me-1"></i><strong>Tiền sử bệnh lý:</strong>
+                            <span th:text="${selectedResident.initialHealthStatus != null and !selectedResident.initialHealthStatus.isBlank() ? selectedResident.initialHealthStatus : 'Chưa ghi nhận'}">Tăng huyết áp nhẹ, suy giảm thính lực</span>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 fw-semibold" data-bs-toggle="modal" data-bs-target="#editMedicalHistoryModal" sec:authorize="hasAnyRole('DOCTOR', 'NURSE', 'CENTER_MANAGER')">
+                            <i class="bi bi-pencil-square me-1"></i>Chỉnh sửa tiền sử bệnh lý
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="col-12 col-md-4 text-md-end mt-3 mt-md-0 d-flex justify-content-md-end gap-2 align-items-center">
+                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#residentSummaryModal">
+                    <i class="bi bi-file-earmark-medical me-1"></i> Tóm tắt bệnh án
+                </button>
+                <a th:href="@{'/health/records/create?residentId=' + ${selectedResident.id}}" class="btn btn-outline-success" sec:authorize="hasRole('DOCTOR')">
+                    <i class="bi bi-plus-lg me-1"></i> Khám cho cụ này
+                </a>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Health Records Timeline -->
+    <div th:if="${selectedResident != null}" id="timeline-records">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
+            <h5 class="fw-bold text-dark mb-0">
+                <i class="bi bi-journals text-primary me-2"></i>Lịch Sử Các Lần Khám (<span id="recordCountText" th:text="${#lists.size(records)}">0</span>)
+            </h5>
+            <!-- Calendar Date Picker Filter -->
+            <div class="d-flex align-items-center gap-2" th:unless="${#lists.isEmpty(records)}">
+                <label for="recordDateFilter" class="small fw-semibold text-muted mb-0 text-nowrap">
+                    <i class="bi bi-calendar-event text-primary me-1"></i>Xem theo ngày:
+                </label>
+                <input type="date" id="recordDateFilter" class="form-control form-control-sm" style="width: 170px;" onchange="filterRecordsByDate(this.value)">
+            </div>
+        </div>
+
+
+        <div th:if="${#lists.isEmpty(records)}" class="nh-card p-5 text-center text-muted">
+            <i class="bi bi-folder-x fs-1 d-block mb-2 text-muted"></i>
+            <h6>Chưa có phiếu khám sức khỏe nào cho cư dân này.</h6>
+            <p class="small mb-3">Bác sĩ hoặc điều dưỡng có thể bắt đầu khám và lưu sinh hiệu ngay bây giờ.</p>
+            <a th:href="@{/health/records/create(residentId=${selectedResident.id})}" class="btn btn-sm btn-primary" sec:authorize="hasAnyRole('DOCTOR', 'NURSE')">
+                <i class="bi bi-clipboard2-pulse me-1"></i> Tạo phiếu khám đầu tiên
+            </a>
+        </div>
+
+
+        <!-- Examination Record Summary Rows Container -->
+        <div id="recordsContainer" class="d-flex flex-column gap-3" th:unless="${#lists.isEmpty(records)}">
+            <div class="nh-card shadow-sm border rounded-3 record-card"
+                 th:each="rec, recStat : ${records}"
+                 th:data-record-date="${rec.recordDate != null ? #temporals.format(rec.recordDate, 'yyyy-MM-dd') : ''}"
+                 th:data-index="${recStat.index}">
+                <div class="nh-card-body p-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                       <span class="badge bg-primary px-3 py-2">
+                           <i class="bi bi-calendar3 me-1"></i>
+                           <span th:text="${#temporals.format(rec.recordDate, 'dd/MM/yyyy HH:mm')}">23/10/2026 09:30</span>
+                       </span>
+
+
+                        <!-- Separate Doctor vs Nurse -->
+                        <span th:if="${rec.doctor}" class="small">
+                           <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1 me-1">
+                               <i class="bi bi-heart-pulse-fill me-1"></i>Bác sĩ:
+                           </span>
+                           <strong class="text-dark" th:text="${rec.staffName != null ? rec.staffName : 'Bác sĩ phụ trách'}">BS. Nguyễn Văn Minh</strong>
+                       </span>
+                        <span th:if="${rec.nurse}" class="small">
+                           <span class="badge bg-info-subtle text-info border border-info-subtle px-2 py-1 me-1">
+                               <i class="bi bi-person-fill-check me-1"></i>Điều dưỡng:
+                           </span>
+                           <strong class="text-dark" th:text="${rec.staffName != null ? rec.staffName : 'Điều dưỡng'}">ĐD. Lê Thị Hoa</strong>
+                       </span>
+                        <span th:if="${!rec.doctor and !rec.nurse}" class="small text-muted">
+                           Người thực hiện: <strong class="text-dark" th:text="${rec.staffName != null ? rec.staffName : 'Cán bộ y tế'}">NV. Y Tế</strong>
+                       </span>
+
+
+                        <!-- Vital Signs Summary Pill -->
+                        <span class="badge bg-light text-dark border px-2 py-1 small">
+                           <i class="bi bi-activity text-danger me-1"></i>HA: <strong th:text="${rec.bloodPressure != null ? rec.bloodPressure : '-'}">120/80</strong>
+                           | Tim: <strong class="text-danger" th:text="${rec.heartRate != null ? rec.heartRate + ' bpm' : '-'}">75 bpm</strong>
+                       </span>
+
+
+                        <!-- Diagnosis Snippet -->
+                        <span class="badge bg-light text-secondary border px-2 py-1 text-truncate d-none d-lg-inline-block" style="max-width: 260px;"
+                              th:if="${rec.diagnosis != null and !rec.diagnosis.isBlank()}"
+                              th:text="${rec.diagnosis}">
+                       </span>
+
+
+                        <!-- Has Prescription Badge -->
+                        <span th:if="${not #lists.isEmpty(rec.medications)}" class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
+                           <i class="bi bi-capsule me-1"></i>Có đơn thuốc (<span th:text="${#lists.size(rec.medications)}">0</span>)
+                       </span>
+                    </div>
+
+
+                    <div class="d-flex align-items-center gap-2">
+                        <!-- View Button triggering Bootstrap Modal -->
+                        <button type="button" class="btn btn-sm btn-primary fw-semibold px-3 shadow-sm toggle-record-btn"
+                                data-bs-toggle="modal"
+                                th:data-bs-target="'#recordModal_' + ${rec.id}">
+                            <i class="bi bi-eye me-1"></i> View
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Pagination Controls at Bottom Right (5 records per page) -->
+        <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2" id="paginationWrapper" th:unless="${#lists.isEmpty(records)}">
+            <div class="small text-muted fw-semibold" id="recordPaginationInfo">
+                Đang hiển thị 1 - 5 trong số <span th:text="${#lists.size(records)}">0</span> lần khám
+            </div>
+            <nav aria-label="Phân trang lịch sử khám bệnh">
+                <ul class="pagination pagination-sm mb-0 shadow-sm" id="recordsPagination">
+                    <!-- Dynamic Page Numbers Rendered by JavaScript -->
+                </ul>
+            </nav>
+        </div>
+
+
+        <!-- Modals for Each Record (Styled like Image 2) -->
+        <div th:unless="${#lists.isEmpty(records)}" id="recordModalsContainer">
+            <div th:each="rec : ${records}" class="modal fade" th:id="'recordModal_' + ${rec.id}" tabindex="-1"
+                 th:aria-labelledby="'recordModalLabel_' + ${rec.id}" aria-hidden="true">
+                <div class="modal-dialog modal-lg modal-dialog-centered">
+                    <div class="modal-content rounded-4 border-0 shadow-lg overflow-hidden">
+                        <!-- Modal Header matching Image 2 with crisp blue background and close button -->
+                        <div class="modal-header bg-primary text-white p-3">
+                            <h5 class="modal-title fw-bold text-white mb-0" th:id="'recordModalLabel_' + ${rec.id}">
+                                <i class="bi bi-clipboard2-pulse me-2"></i>Chi Tiết Phiếu Khám & Đơn Thuốc
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+
+
+                        <div class="modal-body p-4">
+                            <!-- Resident & Date Information Box -->
+                            <div class="d-flex align-items-center justify-content-between p-3 bg-light rounded-3 mb-3 border flex-wrap gap-2">
+                                <div>
+                                    <span class="text-muted small d-block">Cư dân:</span>
+                                    <h6 class="fw-bold text-dark mb-0" th:text="${selectedResident.fullName} + ' (Phòng ' + ${selectedResident.roomNumber} + ' - Giường ' + ${selectedResident.bedNumber} + ')'">Nguyễn Văn An</h6>
+                                </div>
+                                <div class="text-end">
+                                    <span class="text-muted small d-block">Thời gian khám:</span>
+                                    <span class="badge bg-primary px-3 py-1 fs-6">
+                                       <i class="bi bi-calendar3 me-1"></i>
+                                       <span th:text="${#temporals.format(rec.recordDate, 'dd/MM/yyyy HH:mm')}">08/11/2026 10:57</span>
+                                   </span>
+                                </div>
+                            </div>
+
+
+                            <!-- Attending Staff Info -->
+                            <div class="mb-3 p-2 bg-light rounded border small d-flex align-items-center gap-2 flex-wrap">
+                                <span class="fw-semibold text-muted">Bác sĩ / Điều dưỡng phụ trách:</span>
+                                <span th:if="${rec.doctor}" class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">
+                                   <i class="bi bi-heart-pulse-fill me-1"></i>Bác sĩ: <strong th:text="${rec.staffName}">BS. Nguyễn Văn Minh</strong>
+                               </span>
+                                <span th:if="${rec.nurse}" class="badge bg-info-subtle text-info border border-info-subtle px-2 py-1">
+                                   <i class="bi bi-person-fill-check me-1"></i>Điều dưỡng: <strong th:text="${rec.staffName}">ĐD. Lê Thị Hoa</strong>
+                               </span>
+                                <span th:if="${!rec.doctor and !rec.nurse}" class="badge bg-secondary-subtle text-secondary px-2 py-1" th:text="${rec.staffName}">NV. Y Tế</span>
+                            </div>
+
+
+                            <!-- 4 Vital Signs Boxes -->
+                            <h6 class="fw-bold text-dark mb-2">
+                                <i class="bi bi-activity text-danger me-1"></i>Chỉ Số Sinh Hiệu
+                            </h6>
+                            <div class="row g-3 mb-3">
+                                <div class="col-6 col-md-3">
+                                    <div class="p-3 border rounded-3 bg-light text-center">
+                                        <small class="text-muted d-block mb-1">Huyết áp</small>
+                                        <span class="fw-bold text-dark fs-5" th:text="${rec.bloodPressure != null ? rec.bloodPressure : '-'}">120/80</span>
+                                        <small class="text-muted d-block" style="font-size: 0.7rem;">mmHg</small>
+                                    </div>
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <div class="p-3 border rounded-3 bg-light text-center">
+                                        <small class="text-muted d-block mb-1">Nhịp tim</small>
+                                        <span class="fw-bold text-danger fs-5" th:text="${rec.heartRate != null ? rec.heartRate : '-'}">75</span>
+                                        <small class="text-muted d-block" style="font-size: 0.7rem;">bpm</small>
+                                    </div>
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <div class="p-3 border rounded-3 bg-light text-center">
+                                        <small class="text-muted d-block mb-1">Nhiệt độ</small>
+                                        <span class="fw-bold text-warning-emphasis fs-5" th:text="${rec.temperature != null ? rec.temperature : '-'}">36.8</span>
+                                        <small class="text-muted d-block" style="font-size: 0.7rem;">°C</small>
+                                    </div>
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <div class="p-3 border rounded-3 bg-light text-center">
+                                        <small class="text-muted d-block mb-1">Đường huyết</small>
+                                        <span class="fw-bold text-info-emphasis fs-5" th:text="${rec.bloodSugar != null ? rec.bloodSugar : '-'}">5.6</span>
+                                        <small class="text-muted d-block" style="font-size: 0.7rem;">mmol/L</small>
+                                    </div>
+                                </div>
+                            </div>
+
+
+                            <!-- Diagnosis & Instructions Box -->
+                            <div class="mb-3">
+                                <h6 class="fw-bold text-dark mb-2">
+                                    <i class="bi bi-clipboard2-check text-primary me-1"></i>Chẩn Đoán Lâm Sàng & Dặn Dò
+                                </h6>
+                                <div class="p-3 border rounded-3 bg-light">
+                                    <div class="text-dark fw-semibold" th:text="${rec.diagnosis != null and !rec.diagnosis.isBlank() ? rec.diagnosis : 'Không có ghi chú thêm.'}">Tăng huyết áp nhẹ, kiểm soát tốt.</div>
+                                </div>
+                            </div>
+
+
+                            <!-- Prescribed Medications Table -->
+                            <div>
+                                <h6 class="fw-bold text-dark mb-2">
+                                    <i class="bi bi-capsule text-success me-1"></i>Danh Sách Thuốc Kê Đơn
+                                </h6>
+
+
+                                <div th:if="${not #lists.isEmpty(rec.medications)}" class="table-responsive border rounded-3">
+                                    <table class="table table-sm table-hover align-middle mb-0">
+                                        <thead class="table-light small">
+                                        <tr>
+                                            <th>Tên thuốc & Hàm lượng</th>
+                                            <th class="text-center">Số lượng</th>
+                                            <th>Liều dùng & Hướng dẫn</th>
+                                            <th class="text-end">Đơn giá</th>
+                                            <th class="text-end">Thành tiền</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody class="small">
+                                        <tr th:each="med : ${rec.medications}">
+                                            <td class="fw-semibold text-primary" th:text="${med.medicationName}">Amlodipine 5mg</td>
+                                            <td class="text-center fw-bold" th:text="${med.quantity}">30</td>
+                                            <td th:text="${med.dosage}">1 viên/ngày sau ăn sáng</td>
+                                            <td class="text-end" th:text="${med.unitPrice != null ? #numbers.formatDecimal(med.unitPrice, 0, 'COMMA', 0, 'POINT') + 'đ' : '-'}">3.500đ</td>
+                                            <td class="text-end fw-bold text-dark"
+                                                th:text="${med.totalPrice != null ? #numbers.formatDecimal(med.totalPrice, 0, 'COMMA', 0, 'POINT') + 'đ' : '-'}">
+                                                105.000đ
+                                            </td>
+                                        </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+
+                                <div th:if="${#lists.isEmpty(rec.medications)}" class="p-3 bg-light rounded-3 border text-muted small fst-italic">
+                                    <i class="bi bi-info-circle me-1"></i>Không có đơn thuốc kê theo lần khám này (chỉ đo sinh hiệu & chăm sóc định kỳ).
+                                </div>
+                            </div>
+                        </div>
+
+
+                        <!-- Modal Footer styled nicely -->
+                        <div class="modal-footer bg-light p-3 border-top d-flex justify-content-between align-items-center">
+                            <button type="button" class="btn btn-secondary px-4 fw-semibold" data-bs-dismiss="modal">Đóng</button>
+                            <button type="button" class="btn btn-outline-primary px-3 fw-semibold" onclick="window.print()">
+                                <i class="bi bi-printer me-1"></i> In Phiếu
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Modal Chỉnh sửa Tiền sử Bệnh lý -->
+    <div th:if="${selectedResident != null}" class="modal fade" id="editMedicalHistoryModal" tabindex="-1" aria-labelledby="editMedicalHistoryModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content rounded-4 border-0 shadow">
+                <form th:action="@{'/health/residents/' + ${selectedResident.id} + '/medical-history'}" method="post">
+                    <div class="modal-header bg-danger text-white rounded-top-4 p-3">
+                        <h5 class="modal-title fw-bold" id="editMedicalHistoryModalLabel">
+                            <i class="bi bi-pencil-square me-2"></i>Chỉnh Sửa Tiền Sử Bệnh Lý
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold text-muted">Cư dân:</label>
+                            <div class="fw-bold text-dark fs-6" th:text="${selectedResident.fullName} + ' (Phòng ' + ${selectedResident.roomNumber} + ' - ' + ${selectedResident.bedNumber} + ')'">Nguyễn Văn An</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="medicalHistoryInput" class="form-label small fw-semibold">Nội dung tiền sử bệnh lý & bệnh nền <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="medicalHistoryInput" name="medicalHistory" rows="4" required
+                                      th:text="${selectedResident.initialHealthStatus}"
+                                      placeholder="VD: Tăng huyết áp nhẹ, suy giảm thính lực, đái tháo đường type 2..."></textarea>
+                            <div class="form-text small">Chỉ ghi nhận bệnh lý lúc mới vào viện hoặc khi phát hiện thêm bệnh lý nền mới. Không ghi chép lịch sử các lần khám bệnh vào mục này.</div>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light rounded-bottom-4 p-3">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy bỏ</button>
+                        <button type="submit" class="btn btn-danger px-4 fw-semibold">
+                            <i class="bi bi-save me-1"></i> Lưu Tiền Sử
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Modal Tóm tắt Hồ sơ Bệnh án (Tiền sử & 3 ngày khám gần nhất) -->
+    <div th:if="${selectedResident != null}" class="modal fade" id="residentSummaryModal" tabindex="-1" aria-labelledby="residentSummaryModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header bg-primary text-white p-3 rounded-top-4">
+                    <h5 class="modal-title fw-bold" id="residentSummaryModalLabel">
+                        <i class="bi bi-file-earmark-medical me-2"></i>Tóm Tắt Bệnh Án
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="d-flex align-items-center gap-3 p-3 bg-light rounded-3 mb-4">
+                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fs-3" style="width: 52px; height: 52px;">
+                            <i class="bi bi-person-heart"></i>
+                        </div>
+                        <div>
+                            <h5 class="fw-bold text-dark mb-1" th:text="${selectedResident.fullName}">Nguyễn Văn An</h5>
+                            <span class="badge bg-primary-subtle text-primary me-2">
+                               Phòng <span th:text="${selectedResident.roomNumber}">P101</span> - Giường <span th:text="${selectedResident.bedNumber}">G01</span>
+                           </span>
+                            <span class="badge bg-secondary-subtle text-secondary" th:text="'Giới tính: ' + ${selectedResident.gender}">Nam</span>
+                        </div>
+                    </div>
+
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded bg-white">
+                                <span class="text-muted small fw-semibold d-block mb-1">NGÀY SINH & ĐỘ TUỔI</span>
+                                <div class="fw-bold text-dark" th:text="${selectedResident.dateOfBirth != null ? #temporals.format(selectedResident.dateOfBirth, 'dd/MM/yyyy') : 'Chưa cập nhật'}">15/06/1945</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded bg-white">
+                                <span class="text-muted small fw-semibold d-block mb-1">NGƯỜI THÂN BẢO HỘ</span>
+                                <div class="fw-bold text-dark" th:text="${selectedResident.relativeName != null ? selectedResident.relativeName + ' (' + selectedResident.relativePhone + ')' : 'Chưa có thông tin'}">Nguyễn Tuấn Dũng</div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="p-3 border rounded bg-danger-subtle text-danger-emphasis">
+                                <span class="small fw-bold d-block mb-1"><i class="bi bi-exclamation-triangle-fill me-1"></i>TIỀN SỬ BỆNH LÝ & BỆNH NỀN</span>
+                                <div class="small fw-semibold" th:text="${selectedResident.initialHealthStatus != null and !selectedResident.initialHealthStatus.isBlank() ? selectedResident.initialHealthStatus : 'Chưa ghi nhận tiền sử bệnh đặc biệt.'}">Tăng huyết áp nhẹ, suy giảm thính lực</div>
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <h6 class="fw-bold text-dark mb-3">
+                        <i class="bi bi-clock-history text-primary me-2"></i>3 Lần Khám Gần Nhất
+                    </h6>
+                    <div th:if="${not #lists.isEmpty(records)}" class="d-flex flex-column gap-3 mb-3">
+                        <div th:each="rec, stat : ${records}" th:if="${stat.index < 3}" class="border rounded p-3 bg-light">
+                            <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom flex-wrap gap-2">
+                               <span class="badge bg-primary">
+                                   <i class="bi bi-calendar3 me-1"></i>
+                                   <span th:text="${#temporals.format(rec.recordDate, 'dd/MM/yyyy HH:mm')}">08/11/2026 10:05</span>
+                               </span>
+                                <small class="text-muted">
+                                    <span th:if="${rec.doctor}">Bác sĩ: <strong class="text-dark" th:text="${rec.staffName}">BS. Minh</strong></span>
+                                    <span th:if="${rec.nurse}">Điều dưỡng: <strong class="text-dark" th:text="${rec.staffName}">ĐD. Hoa</strong></span>
+                                </small>
+                            </div>
+                            <div class="row g-2 text-center small mb-2">
+                                <div class="col-3">
+                                    <div class="p-1 border rounded bg-white">
+                                        <span class="text-muted d-block" style="font-size: 0.7rem;">Huyết áp</span>
+                                        <strong th:text="${rec.bloodPressure != null ? rec.bloodPressure : '-'}">120/80</strong>
+                                    </div>
+                                </div>
+                                <div class="col-3">
+                                    <div class="p-1 border rounded bg-white">
+                                        <span class="text-muted d-block" style="font-size: 0.7rem;">Nhịp tim</span>
+                                        <strong class="text-danger" th:text="${rec.heartRate != null ? rec.heartRate + ' bpm' : '-'}">75 bpm</strong>
+                                    </div>
+                                </div>
+                                <div class="col-3">
+                                    <div class="p-1 border rounded bg-white">
+                                        <span class="text-muted d-block" style="font-size: 0.7rem;">Thân nhiệt</span>
+                                        <strong class="text-warning-emphasis" th:text="${rec.temperature != null ? rec.temperature + ' °C' : '-'}">36.5 °C</strong>
+                                    </div>
+                                </div>
+                                <div class="col-3">
+                                    <div class="p-1 border rounded bg-white">
+                                        <span class="text-muted d-block" style="font-size: 0.7rem;">Đường huyết</span>
+                                        <strong class="text-info-emphasis" th:text="${rec.bloodSugar != null ? rec.bloodSugar : '-'}">5.6</strong>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="small" th:if="${rec.diagnosis != null and !rec.diagnosis.isBlank()}">
+                                <strong>Chẩn đoán/Ghi chú:</strong> <span th:text="${rec.diagnosis}">Sức khỏe ổn định</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div th:if="${#lists.isEmpty(records)}" class="alert alert-secondary py-2 small mb-3">
+                        <i class="bi bi-info-circle me-1"></i>Cư dân này hiện chưa có lịch sử khám bệnh nào.
+                    </div>
+                </div>
+                <div class="modal-footer bg-light p-3 rounded-bottom-4">
+                    <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Đóng</button>
+                    <button type="button" class="btn btn-outline-primary px-3" onclick="window.print()">
+                        <i class="bi bi-printer me-1"></i> In Hồ Sơ
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div th:unless="${selectedResident != null}" class="nh-card p-5 text-center text-muted">
+        <i class="bi bi-person-bounding-box fs-1 d-block mb-3 text-primary opacity-50"></i>
+        <h5>Vui lòng chọn một cư dân ở phía trên để xem toàn bộ lịch sử bệnh án và các đơn thuốc đã kê.</h5>
+    </div>
+
+
+    <script>
+        const PAGE_SIZE = 5;
+        let currentPage = 1;
+
+
+        function getFilteredCards() {
+            const cards = Array.from(document.querySelectorAll('.record-card'));
+            const selectedDate = document.getElementById('recordDateFilter') ? document.getElementById('recordDateFilter').value : '';
+            if (!selectedDate) {
+                return cards;
+            }
+            return cards.filter(card => card.getAttribute('data-record-date') === selectedDate);
+        }
+
+
+        function renderPagination() {
+            const allCards = Array.from(document.querySelectorAll('.record-card'));
+            const filteredCards = getFilteredCards();
+            const totalItems = filteredCards.length;
+            const totalPages = Math.ceil(totalItems / PAGE_SIZE) || 1;
+
+
+            if (currentPage > totalPages) currentPage = totalPages;
+            if (currentPage < 1) currentPage = 1;
+
+
+            // Hide all cards first
+            allCards.forEach(c => c.classList.add('d-none'));
+
+
+            // Show only cards for currentPage
+            const startIndex = (currentPage - 1) * PAGE_SIZE;
+            const endIndex = Math.min(startIndex + PAGE_SIZE, totalItems);
+
+
+            for (let i = startIndex; i < endIndex; i++) {
+                if (filteredCards[i]) {
+                    filteredCards[i].classList.remove('d-none');
+                }
+            }
+
+
+            // Update info text
+            const infoEl = document.getElementById('recordPaginationInfo');
+            if (infoEl) {
+                if (totalItems === 0) {
+                    infoEl.textContent = 'Không tìm thấy lần khám nào phù hợp với bộ lọc ngày.';
+                } else {
+                    infoEl.textContent = `Đang hiển thị ${startIndex + 1} - ${endIndex} trong số ${totalItems} lần khám`;
+                }
+            }
+
+
+            // Render pagination controls at bottom right
+            const paginationUl = document.getElementById('recordsPagination');
+            const paginationWrapper = document.getElementById('paginationWrapper');
+            if (!paginationUl) return;
+
+
+            if (totalItems === 0) {
+                if (paginationWrapper) paginationWrapper.classList.add('d-none');
+                return;
+            }
+
+
+            if (paginationWrapper) paginationWrapper.classList.remove('d-none');
+            let html = '';
+
+
+            // Previous button ("Trước" / Quay lại bước trước)
+            html += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                   <a class="page-link" href="javascript:void(0)" onclick="${currentPage > 1 ? 'goToPage(' + (currentPage - 1) + ', true)' : 'return false;'}" aria-label="Trang trước" ${currentPage === 1 ? 'tabindex="-1" aria-disabled="true"' : ''}>
+                       <i class="bi bi-chevron-left me-1"></i>Trước
+                   </a>
+                </li>`;
+
+
+            // Page number buttons
+            for (let p = 1; p <= totalPages; p++) {
+                if (p === currentPage) {
+                    html += `<li class="page-item active" aria-current="page"><a class="page-link fw-bold" href="javascript:void(0)">${p}</a></li>`;
+                } else {
+                    html += `<li class="page-item"><a class="page-link" href="javascript:void(0)" onclick="goToPage(${p}, true)">${p}</a></li>`;
+                }
+            }
+
+
+            // Next button ("Sau")
+            html += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                   <a class="page-link" href="javascript:void(0)" onclick="${currentPage < totalPages ? 'goToPage(' + (currentPage + 1) + ', true)' : 'return false;'}" aria-label="Trang sau" ${currentPage === totalPages ? 'tabindex="-1" aria-disabled="true"' : ''}>
+                       Sau<i class="bi bi-chevron-right ms-1"></i>
+                   </a>
+                </li>`;
+
+
+            paginationUl.innerHTML = html;
+        }
+
+
+        function goToPage(page, pushHistory = true) {
+            const filteredCards = getFilteredCards();
+            const totalPages = Math.ceil(filteredCards.length / PAGE_SIZE) || 1;
+            if (page < 1 || page > totalPages) return;
+
+
+            currentPage = page;
+            renderPagination();
+
+
+            if (pushHistory) {
+                try {
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('page', page);
+                    window.history.pushState({ page: page }, '', url.toString());
+                } catch (err) {
+                    console.warn('History pushState error:', err);
+                }
+            }
+
+
+            const timeline = document.getElementById('timeline-records');
+            if (timeline) {
+                timeline.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+
+
+        // Support browser Back and Forward navigation buttons
+        window.addEventListener('popstate', function (event) {
+            try {
+                const url = new URL(window.location.href);
+                const pageParam = parseInt(url.searchParams.get('page'), 10);
+                const historyPage = (event.state && event.state.page) || pageParam || 1;
+                const filteredCards = getFilteredCards();
+                const totalPages = Math.ceil(filteredCards.length / PAGE_SIZE) || 1;
+                if (historyPage !== currentPage && historyPage >= 1 && historyPage <= totalPages) {
+                    goToPage(historyPage, false);
+                }
+            } catch (err) {
+                console.warn('History popstate error:', err);
+            }
+        });
+
+
+        function filterRecordsByDate(dateVal) {
+            goToPage(1, true);
+        }
+
+
+        function applyRecordVisibility() {
+            renderPagination();
+        }
+
+
+        function toggleShowAllRecords() {
+            // Obsolete, replaced by pagination
+        }
+
+
+        function toggleRecordViewText(btn) {
+            // Kept for backward compatibility
+        }
+
+
+        document.addEventListener('DOMContentLoaded', function() {
+            try {
+                const url = new URL(window.location.href);
+                const initialPage = parseInt(url.searchParams.get('page'), 10);
+                if (!isNaN(initialPage) && initialPage >= 1) {
+                    currentPage = initialPage;
+                }
+            } catch (e) {}
+            renderPagination();
+        });
+    </script>
+</div>
+</body>
+</html>
+

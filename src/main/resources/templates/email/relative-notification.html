@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Thông Báo Viện Phí &amp; Sự Cố Cư Dân</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: Arial, Helvetica, sans-serif;">
+<div style="font-family: Arial, Helvetica, sans-serif; max-width: 680px; margin: 20px auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
+
+
+    <!-- Header -->
+    <div style="background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%); color: #ffffff; padding: 24px; text-align: center;">
+        <h2 style="margin: 0; font-size: 22px; font-weight: bold; letter-spacing: 0.5px;">VIỆN DƯỠNG LÃO NHMS CARE</h2>
+        <p style="margin: 6px 0 0 0; font-size: 14px; opacity: 0.95;">THÔNG BÁO VIỆN PHÍ CHƯA THANH TOÁN &amp; SỰ CỐ CẦN THEO DÕI</p>
+    </div>
+
+
+    <!-- Body -->
+    <div style="padding: 24px; color: #334155; line-height: 1.6;">
+        <p style="font-size: 15px; margin-top: 0;">
+            Kính gửi Quý thân nhân <strong th:text="${summary.relativeName != null ? summary.relativeName : 'Quý Thân Nhân'}">Nguyễn Tuấn Dũng</strong>
+            (Mối quan hệ: <span th:text="${summary.relationship != null ? summary.relationship : 'Thân nhân'}">Con trai</span>),
+        </p>
+        <p style="font-size: 14px; color: #475569;">
+            Bàn Lễ tân &amp; Thu ngân Viện dưỡng lão <strong>NHMS CARE</strong> xin trân trọng thông báo tới Quý thân nhân bảng tổng hợp viện phí chưa quyết toán và tình trạng các sự cố y tế / cơ sở vật chất chưa xử lý của cư dân bảo lãnh tính đến hiện tại:
+        </p>
+
+
+        <!-- Loop each resident -->
+        <div th:each="res : ${summary.residents}">
+            <!-- Resident Info Card -->
+            <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-left: 5px solid #0d6efd; border-radius: 6px; padding: 14px 18px; margin: 18px 0;">
+                <div style="font-size: 16px; font-weight: bold; color: #0f172a;">
+                    👤 Cư dân: <span th:text="${res.residentName}">Nguyễn Văn An</span>
+                </div>
+                <div style="font-size: 13px; color: #64748b; margin-top: 2px;">
+                    Vị trí lưu trú:
+                    <strong>
+                        Phòng <span th:text="${res.roomNumber != null ? res.roomNumber : 'Chưa xếp'}">P101</span>
+                        <span th:if="${res.bedNumber != null}"> - Giường <span th:text="${res.bedNumber}">G101-1</span></span>
+                    </strong>
+                </div>
+            </div>
+
+
+            <!-- Section 1: Unpaid Orders -->
+            <div style="margin-top: 18px;">
+                <h4 style="margin: 0 0 8px 0; color: #dc2626; font-size: 14px; font-weight: bold; text-transform: uppercase;">
+                    💳 1. Các khoản viện phí chưa thanh toán:
+                    <span th:if="${#lists.isEmpty(res.unpaidOrders)}" style="color: #16a34a; font-weight: normal; text-transform: none;">Hiện không nợ viện phí</span>
+                    <span th:unless="${#lists.isEmpty(res.unpaidOrders)}" style="color: #dc2626;"
+                          th:text="'(' + ${#lists.size(res.unpaidOrders)} + ' hóa đơn - Tổng: ' + ${#numbers.formatDecimal(res.totalUnpaidAmount, 0, 'COMMA', 0, 'POINT')} + ' VNĐ)'">
+                       (1 hóa đơn - Tổng: 8,000,000 VNĐ)
+                   </span>
+                </h4>
+
+
+                <div th:if="${#lists.isEmpty(res.unpaidOrders)}">
+                    <p style="font-size: 13px; color: #16a34a; margin: 4px 0 16px 0; background-color: #f0fdf4; padding: 8px 12px; border-radius: 4px; border: 1px solid #bbf7d0;">
+                        ✓ Cư dân hiện không có hóa đơn viện phí nào còn tồn đọng. Chân thành cảm ơn Quý thân nhân!
+                    </p>
+                </div>
+
+
+                <table th:unless="${#lists.isEmpty(res.unpaidOrders)}" style="width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 12px;">
+                    <thead>
+                    <tr style="background-color: #f1f5f9; text-align: left; color: #475569;">
+                        <th style="padding: 8px; border: 1px solid #cbd5e1;">Mã HĐ</th>
+                        <th style="padding: 8px; border: 1px solid #cbd5e1;">Ngày lập</th>
+                        <th style="padding: 8px; border: 1px solid #cbd5e1; text-align: right;">Tiền phòng</th>
+                        <th style="padding: 8px; border: 1px solid #cbd5e1; text-align: right;">Dịch vụ</th>
+                        <th style="padding: 8px; border: 1px solid #cbd5e1; text-align: right;">Tiền thuốc</th>
+                        <th style="padding: 8px; border: 1px solid #cbd5e1; text-align: right;">Tổng tiền</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="ord : ${res.unpaidOrders}">
+                        <td style="padding: 8px; border: 1px solid #cbd5e1; font-weight: bold;" th:text="'#HĐ-' + ${ord.id}">#HĐ-1</td>
+                        <td style="padding: 8px; border: 1px solid #cbd5e1;" th:text="${ord.issueDate != null ? #temporals.format(ord.issueDate, 'dd/MM/yyyy') : '-'}">01/11/2026</td>
+                        <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: right;" th:text="${ord.roomPrice != null ? #numbers.formatDecimal(ord.roomPrice, 0, 'COMMA', 0, 'POINT') + 'đ' : '0đ'}">8,000,000đ</td>
+                        <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: right;" th:text="${ord.servicesPrice != null ? #numbers.formatDecimal(ord.servicesPrice, 0, 'COMMA', 0, 'POINT') + 'đ' : '0đ'}">0đ</td>
+                        <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: right;" th:text="${ord.medicationsPrice != null ? #numbers.formatDecimal(ord.medicationsPrice, 0, 'COMMA', 0, 'POINT') + 'đ' : '0đ'}">0đ</td>
+                        <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: right; font-weight: bold; color: #dc2626;"
+                            th:text="${ord.totalAmount != null ? #numbers.formatDecimal(ord.totalAmount, 0, 'COMMA', 0, 'POINT') + ' VNĐ' : '0 VNĐ'}">8,000,000 VNĐ</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+
+            <!-- Section 2: Pending Incidents -->
+            <div style="margin-top: 14px; margin-bottom: 20px;">
+                <h4 style="margin: 0 0 8px 0; color: #ea580c; font-size: 14px; font-weight: bold; text-transform: uppercase;">
+                    ⚠️ 2. Sự cố y tế &amp; sinh hoạt đang chờ xử lý:
+                    <span th:if="${#lists.isEmpty(res.pendingIncidents)}" style="color: #16a34a; font-weight: normal; text-transform: none;">Hiện không có sự cố tồn đọng</span>
+                    <span th:unless="${#lists.isEmpty(res.pendingIncidents)}" style="color: #ea580c;"
+                          th:text="'(' + ${#lists.size(res.pendingIncidents)} + ' sự cố)'">(1 sự cố)</span>
+                </h4>
+
+
+                <div th:if="${#lists.isEmpty(res.pendingIncidents)}">
+                    <p style="font-size: 13px; color: #16a34a; margin: 4px 0 10px 0; background-color: #f0fdf4; padding: 8px 12px; border-radius: 4px; border: 1px solid #bbf7d0;">
+                        ✓ Cụ hiện không gặp sự cố lâm sàng nào tồn đọng. Tình trạng sức khỏe &amp; sinh hoạt đang ổn định.
+                    </p>
+                </div>
+
+
+                <table th:unless="${#lists.isEmpty(res.pendingIncidents)}" style="width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 12px;">
+                    <thead>
+                    <tr style="background-color: #fff7ed; text-align: left; color: #9a3412;">
+                        <th style="padding: 8px; border: 1px solid #fed7aa;">Thời gian</th>
+                        <th style="padding: 8px; border: 1px solid #fed7aa;">Mức độ</th>
+                        <th style="padding: 8px; border: 1px solid #fed7aa;">Tên sự cố</th>
+                        <th style="padding: 8px; border: 1px solid #fed7aa;">Chi tiết diễn biến</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="inc : ${res.pendingIncidents}">
+                        <td style="padding: 8px; border: 1px solid #fed7aa; white-space: nowrap;"
+                            th:text="${inc.createdDate != null ? #temporals.format(inc.createdDate, 'dd/MM/yyyy HH:mm') : '-'}">08/11/2026 10:30</td>
+                        <td style="padding: 8px; border: 1px solid #fed7aa; font-weight: bold;"
+                            th:styleappend="${inc.severityLevel == 'CRITICAL' ? 'color: #dc2626;' : (inc.severityLevel == 'HIGH' ? 'color: #ea580c;' : (inc.severityLevel == 'MEDIUM' ? 'color: #d97706;' : 'color: #2563eb;'))}"
+                            th:text="${inc.severityLevel}">LOW</td>
+                        <td style="padding: 8px; border: 1px solid #fed7aa; font-weight: bold;" th:text="${inc.title}">Tiêu đề</td>
+                        <td style="padding: 8px; border: 1px solid #fed7aa;" th:text="${inc.description}">Mô tả chi tiết</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+
+        <!-- Guidance for Relatives -->
+        <div style="margin-top: 24px; padding: 16px; background-color: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px; font-size: 13px;">
+            <strong style="color: #0369a1; display: block; margin-bottom: 6px;">ℹ️ HƯỚNG DẪN DÀNH CHO QUÝ THÂN NHÂN:</strong>
+            <ul style="margin: 0; padding-left: 20px; color: #0c4a6e; line-height: 1.5;">
+                <li>Quý thân nhân có thể đăng nhập vào <strong>Cổng Người Thân (Portal NHMS CARE)</strong> để theo dõi trực tiếp hồ sơ sinh hiệu, chi tiết đơn thuốc và tiến độ xử lý của từng sự cố.</li>
+                <li>Để thanh toán viện phí hoặc cần thêm thông tin trao đổi trực tiếp với Bác sĩ phụ trách, vui lòng liên hệ Bàn Lễ tân cơ sở.</li>
+            </ul>
+        </div>
+
+
+        <!-- Footer / Sign-off -->
+        <div style="margin-top: 24px; border-top: 1px solid #e2e8f0; padding-top: 16px;">
+            <p style="margin: 0; font-size: 14px;">Trân trọng cảm ơn sự phối hợp và tin tưởng của Quý thân nhân!</p>
+            <p style="margin: 4px 0 0 0; font-weight: bold; color: #0d6efd; font-size: 15px;">Bàn Lễ tân &amp; Thu ngân - Viện Dưỡng Lão NHMS CARE</p>
+            <p style="margin: 2px 0 0 0; font-size: 12px; color: #64748b;">Hotline hỗ trợ: 1900-NHMSCARE | Email: support@nhmscare.vn</p>
+        </div>
+
+
+    </div>
+</div>
+</body>
+</html>
+

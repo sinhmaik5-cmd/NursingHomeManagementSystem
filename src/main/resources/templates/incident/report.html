@@ -1,0 +1,1300 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout :: layout(~{::title}, ~{::content}, 'incident-report')}">
+<head>
+    <title>Báo Cáo & Xử Lý Sự Cố - NHMS Care</title>
+</head>
+<body>
+<div th:fragment="content">
+    <!-- Header -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <div>
+            <h4 class="fw-bold mb-1 text-dark">
+                <i class="bi bi-exclamation-octagon-fill text-danger me-2"></i>
+                <span sec:authorize="hasRole('CENTER_MANAGER')">Quản Lý & Chỉ Đạo Xử Lý Sự Cố</span>
+                <span sec:authorize="hasRole('DOCTOR')">Tiếp Nhận & Xử Lý Sự Cố Y Tế</span>
+                <span sec:authorize="hasRole('NURSE')">Báo Cáo Sự Cố Lâm Sàng</span>
+                <span sec:authorize="hasRole('RECEPTIONIST')">Báo Cáo Sự Cố Cơ Sở Vật Chất (Phòng & Giường)</span>
+            </h4>
+            <p class="text-muted small mb-0">
+                <span sec:authorize="hasRole('CENTER_MANAGER')">Thẩm quyền Giám đốc cơ sở: Quản lý 2 mảng báo cáo độc lập: Mảng Cơ sở vật chất (Lễ tân) và Mảng Y tế & Chăm sóc lâm sàng (Bác sĩ & Điều dưỡng).</span>
+                <span sec:authorize="hasRole('DOCTOR')">Thẩm quyền Bác sĩ: Tiếp nhận & xử lý chuyên môn các sự cố y tế mức độ Nhẹ (LOW), Vừa (MEDIUM) và Nặng (HIGH); Báo cáo sự cố khẩn cấp / nguy kịch (CRITICAL) lên Giám đốc cơ sở.</span>
+                <span sec:authorize="hasRole('NURSE')">Thẩm quyền Điều dưỡng: Ghi nhận & báo cáo sự cố mức độ nhẹ/vừa (LOW & MEDIUM) cho Bác sĩ trực xử lý y tế; không quản lý/xử lý sự cố.</span>
+                <span sec:authorize="hasRole('RECEPTIONIST')">Thẩm quyền Lễ tân: Ghi nhận sự cố cơ sở vật chất, xác nhận đã giải quyết sau khi nhân viên xử lý; theo dõi toàn diện sự cố để hỗ trợ thân nhân.</span>
+            </p>
+        </div>
+    </div>
+
+
+    <!-- Overview Stats for CENTER_MANAGER -->
+    <div class="row g-3 mb-4" sec:authorize="hasRole('CENTER_MANAGER')">
+        <div class="col-6 col-md-3">
+            <div class="stat-card">
+                <div>
+                    <span class="text-muted small fw-semibold d-block mb-1">TỔNG SỰ CỐ</span>
+                    <h3 class="fw-bold mb-0 text-dark" th:text="${incidents != null ? #lists.size(incidents) : 0}">0</h3>
+                </div>
+                <div class="stat-icon bg-primary-subtle text-primary">
+                    <i class="bi bi-exclamation-octagon"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card">
+                <div>
+                    <span class="text-muted small fw-semibold d-block mb-1">CHỜ XỬ LÝ (PENDING)</span>
+                    <h3 class="fw-bold mb-0 text-warning"
+                        th:text="${pendingCount != null ? pendingCount : 0}">0</h3>
+                </div>
+                <div class="stat-icon bg-warning-subtle text-warning">
+                    <i class="bi bi-clock-history"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card">
+                <div>
+                    <span class="text-muted small fw-semibold d-block mb-1">KHẨN CẤP / NẶNG</span>
+                    <h3 class="fw-bold mb-0 text-danger"
+                        th:text="${urgentCount != null ? urgentCount : 0}">0</h3>
+                </div>
+                <div class="stat-icon bg-danger-subtle text-danger">
+                    <i class="bi bi-shield-fill-exclamation"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card">
+                <div>
+                    <span class="text-muted small fw-semibold d-block mb-1">ĐÃ GIẢI QUYẾT (RESOLVED)</span>
+                    <h3 class="fw-bold mb-0 text-success"
+                        th:text="${resolvedCount != null ? resolvedCount : 0}">0</h3>
+                </div>
+                <div class="stat-icon bg-success-subtle text-success">
+                    <i class="bi bi-check2-circle"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- MAIN SECTION FOR CENTER_MANAGER: 2 MẢNG BÁO CÁO RIÊNG BIỆT (LỄ TÂN VS DOCTOR & NURSE) -->
+    <div sec:authorize="hasRole('CENTER_MANAGER')" class="mb-5">
+        <!-- Nav Pills chọn 2 mảng báo cáo -->
+        <ul class="nav nav-pills nav-fill p-2 bg-light rounded-3 mb-3 border shadow-sm" id="managerIncidentTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active py-3 px-4 fw-bold text-start d-flex justify-content-between align-items-center"
+                        id="tab-receptionist-btn" data-bs-toggle="pill" data-bs-target="#tab-receptionist" type="button" role="tab"
+                        aria-controls="tab-receptionist" aria-selected="true">
+                    <div>
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-tools text-warning fs-5"></i>
+                            <span class="fs-6">Mảng Cơ Sở Vật Chất (Lễ Tân Báo Cáo)</span>
+                        </div>
+                        <small class="d-block text-muted fw-normal mt-1">Sự cố phòng, giường, trang thiết bị, điện nước & khu vực sinh hoạt chung</small>
+                    </div>
+                    <div class="text-end ms-3">
+                       <span class="badge bg-warning text-dark fs-6 px-3 py-2 rounded-pill shadow-sm"
+                             th:text="${receptionistIncidents != null ? #lists.size(receptionistIncidents) : 0}">0</span>
+                    </div>
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link py-3 px-4 fw-bold text-start d-flex justify-content-between align-items-center"
+                        id="tab-clinical-btn" data-bs-toggle="pill" data-bs-target="#tab-clinical" type="button" role="tab"
+                        aria-controls="tab-clinical" aria-selected="false">
+                    <div>
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-heart-pulse-fill text-danger fs-5"></i>
+                            <span class="fs-6">Mảng Y Tế & Chăm Sóc (Bác Sĩ & Điều Dưỡng)</span>
+                        </div>
+                        <small class="d-block text-muted fw-normal mt-1">Sức khỏe cư dân: Cấp cứu y tế nguy kịch (Bác sĩ) & Sự cố lâm sàng (Điều dưỡng)</small>
+                    </div>
+                    <div class="text-end ms-3">
+                       <span class="badge bg-danger text-white fs-6 px-3 py-2 rounded-pill shadow-sm"
+                             th:text="${clinicalIncidents != null ? #lists.size(clinicalIncidents) : 0}">0</span>
+                    </div>
+                </button>
+            </li>
+        </ul>
+
+
+        <!-- Nội dung 2 mảng báo cáo -->
+        <div class="tab-content" id="managerIncidentTabContent">
+            <!-- MẢNG 1: SỰ CỐ CƠ SỞ VẬT CHẤT (LỄ TÂN) -->
+            <div class="tab-pane fade show active" id="tab-receptionist" role="tabpanel" aria-labelledby="tab-receptionist-btn">
+                <div class="nh-card">
+                    <div class="nh-card-header d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2">
+                        <div>
+                            <h6 class="fw-bold mb-0 text-dark">
+                                <i class="bi bi-tools text-warning me-2"></i>Báo Cáo Cơ Sở Vật Chất Do Lễ Tân Gửi Lên (<span th:text="${#lists.size(receptionistIncidents)}">0</span>)
+                            </h6>
+                            <small class="text-muted">Nhân viên kỹ thuật xử lý & Lễ tân xác nhận giải quyết; Giám đốc theo dõi tiến độ và chỉ đạo khi cần thiết</small>
+                        </div>
+                        <div class="d-flex flex-wrap align-items-center gap-2">
+                            <!-- Bộ lọc trạng thái -->
+                            <div class="btn-group btn-group-sm" role="group">
+                                <a th:href="@{/incidents/report(status=null, sort=${currentSort})}" class="btn btn-outline-secondary" th:classappend="${filterStatus == null ? 'active' : ''}">Tất cả</a>
+                                <a th:href="@{/incidents/report(status='PENDING', sort=${currentSort})}" class="btn btn-outline-warning" th:classappend="${filterStatus == 'PENDING' ? 'active' : ''}">Chờ xử lý</a>
+                                <a th:href="@{/incidents/report(status='RESOLVED', sort=${currentSort})}" class="btn btn-outline-success" th:classappend="${filterStatus == 'RESOLVED' ? 'active' : ''}">Đã giải quyết</a>
+                            </div>
+                            <!-- Sắp xếp thời gian -->
+                            <div class="btn-group btn-group-sm" role="group">
+                                <a th:href="@{/incidents/report(status=${filterStatus}, sort='newest')}" class="btn btn-outline-primary" th:classappend="${currentSort == 'newest' ? 'active' : ''}" title="Sự cố mới nhất lên trước">
+                                    <i class="bi bi-sort-down me-1"></i>Mới nhất
+                                </a>
+                                <a th:href="@{/incidents/report(status=${filterStatus}, sort='oldest')}" class="btn btn-outline-primary" th:classappend="${currentSort == 'oldest' ? 'active' : ''}" title="Sự cố cũ nhất lên trước">
+                                    <i class="bi bi-sort-up me-1"></i>Cũ nhất
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <div class="table-responsive">
+                        <table class="nh-table" id="managerFacTable">
+                            <thead>
+                            <tr>
+                                <th>Thời gian</th>
+                                <th>Vị trí / Đối tượng</th>
+                                <th>Người báo cáo</th>
+                                <th>Mức độ</th>
+                                <th>Tên sự cố & Mô tả</th>
+                                <th>Trạng thái</th>
+                                <th class="text-end">Xử lý</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:if="${#lists.isEmpty(receptionistIncidents)}">
+                                <td colspan="7" class="text-center py-5 text-muted">
+                                    <i class="bi bi-check2-circle fs-2 text-success d-block mb-1"></i>
+                                    Tuyệt vời! Không có sự cố cơ sở vật chất nào từ Lễ tân đang chờ giải quyết.
+                                </td>
+                            </tr>
+                            <tr th:each="inc : ${receptionistIncidents}">
+                                <td class="small" th:text="${#temporals.format(inc.createdDate, 'dd/MM/yyyy HH:mm')}">23/10/2026 08:15</td>
+                                <td>
+                                    <div th:if="${inc.residentName != null}">
+                                        <span class="fw-bold text-dark small" th:text="${inc.residentName}">Nguyễn Văn An</span>
+                                        <small class="text-muted d-block" th:if="${inc.roomNumber}">
+                                            Phòng <span th:text="${inc.roomNumber}">P101</span>
+                                            <span th:if="${inc.bedNumber}"> - G.<span th:text="${inc.bedNumber}">G101-1</span></span>
+                                        </small>
+                                    </div>
+                                    <div th:unless="${inc.residentName != null}">
+                                       <span class="badge bg-secondary-subtle text-secondary mb-1">
+                                           <i class="bi bi-geo-alt me-1"></i>CSVC
+                                       </span>
+                                        <span class="fw-semibold text-dark small d-block" th:text="${inc.displayTarget}">Khuôn viên Sân Vườn</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="fw-semibold text-dark small d-block" th:text="${inc.reportedByStaffName}">Lê Thu Trang</span>
+                                    <span class="badge bg-warning-subtle text-warning-emphasis">
+                                       <i class="bi bi-tools me-1"></i>Lễ tân & Thu ngân
+                                   </span>
+                                </td>
+                                <td>
+                                    <span th:if="${inc.severityLevel == 'LOW'}" class="badge badge-severity-low">LOW</span>
+                                    <span th:if="${inc.severityLevel == 'MEDIUM'}" class="badge badge-severity-medium">MEDIUM</span>
+                                    <span th:if="${inc.severityLevel == 'HIGH'}" class="badge badge-severity-high">HIGH</span>
+                                    <span th:if="${inc.severityLevel == 'CRITICAL'}" class="badge badge-severity-critical">CRITICAL</span>
+                                </td>
+                                <td>
+                                    <span class="fw-semibold text-dark small" th:text="${inc.title}">Hỏng khóa cửa</span>
+                                    <small class="text-muted d-block text-truncate" style="max-width: 220px;" th:text="${inc.description}">Mô tả chi tiết...</small>
+                                </td>
+                                <td>
+                                    <span th:if="${inc.status == 'PENDING'}" class="badge bg-warning-subtle text-warning-emphasis">CHỜ XỬ LÝ</span>
+                                    <span th:if="${inc.status == 'RESOLVED'}" class="badge badge-status-available">ĐÃ XỬ LÝ</span>
+                                </td>
+                                <td class="text-end">
+                                    <div th:if="${inc.status == 'PENDING'}" class="d-flex flex-column align-items-end gap-1">
+                                       <span class="badge bg-light text-secondary border">
+                                           <i class="bi bi-person-gear me-1"></i>Nhân viên xử lý
+                                       </span>
+                                        <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2"
+                                                th:data-id="${inc.id}"
+                                                th:data-title="${inc.title}"
+                                                th:data-name="${inc.displayTarget}"
+                                                onclick="openResolveModal(this)">
+                                            <i class="bi bi-wrench-adjustable me-1"></i> Xử lý & Chỉ đạo
+                                        </button>
+                                    </div>
+                                    <div th:unless="${inc.status == 'PENDING'}">
+                                       <span class="text-success small fw-semibold d-block">
+                                           <i class="bi bi-check-circle-fill"></i> Đã giải quyết
+                                       </span>
+                                        <small class="text-muted d-block text-truncate" style="max-width: 140px;"
+                                               th:title="${inc.actionTaken}" th:text="${inc.actionTaken}">
+                                            Đã xử lý
+                                        </small>
+                                    </div>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+
+                    <!-- Pagination for Manager Facilities Incidents at bottom right -->
+                    <div class="d-flex justify-content-between align-items-center p-3 border-top flex-wrap gap-2" id="managerFacPaginationWrapper">
+                        <div class="small text-muted fw-semibold" id="managerFacPaginationInfo">
+                            Đang hiển thị 1 - 5 trong số <span th:text="${#lists.size(receptionistIncidents)}">0</span> sự cố
+                        </div>
+                        <nav aria-label="Phân trang sự cố">
+                            <ul class="pagination pagination-sm mb-0 shadow-sm" id="managerFacPagination"></ul>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- MẢNG 2: SỰ CỐ Y TẾ & CHĂM SÓC (BÁC SĨ & ĐIỀU DƯỠNG) -->
+            <div class="tab-pane fade" id="tab-clinical" role="tabpanel" aria-labelledby="tab-clinical-btn">
+                <div class="nh-card">
+                    <div class="nh-card-header d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2">
+                        <div>
+                            <h6 class="fw-bold mb-0 text-dark">
+                                <i class="bi bi-heart-pulse-fill text-danger me-2"></i>Báo Cáo Y Tế & Chăm Sóc Do Bác Sĩ & Điều Dưỡng Gửi Lên (<span th:text="${#lists.size(clinicalIncidents)}">0</span>)
+                            </h6>
+                            <small class="text-muted">Bác sĩ tiếp nhận xử lý các mức LOW, MEDIUM, HIGH; Giám đốc trực tiếp chỉ đạo khẩn cấp mức CRITICAL</small>
+                        </div>
+                        <div class="d-flex flex-wrap align-items-center gap-2">
+                            <!-- Bộ lọc trạng thái -->
+                            <div class="btn-group btn-group-sm" role="group">
+                                <a th:href="@{/incidents/report(status=null, sort=${currentSort})}" class="btn btn-outline-secondary" th:classappend="${filterStatus == null ? 'active' : ''}">Tất cả</a>
+                                <a th:href="@{/incidents/report(status='PENDING', sort=${currentSort})}" class="btn btn-outline-warning" th:classappend="${filterStatus == 'PENDING' ? 'active' : ''}">Chờ xử lý</a>
+                                <a th:href="@{/incidents/report(status='RESOLVED', sort=${currentSort})}" class="btn btn-outline-success" th:classappend="${filterStatus == 'RESOLVED' ? 'active' : ''}">Đã giải quyết</a>
+                            </div>
+                            <!-- Sắp xếp thời gian -->
+                            <div class="btn-group btn-group-sm" role="group">
+                                <a th:href="@{/incidents/report(status=${filterStatus}, sort='newest')}" class="btn btn-outline-primary" th:classappend="${currentSort == 'newest' ? 'active' : ''}" title="Sự cố mới nhất lên trước">
+                                    <i class="bi bi-sort-down me-1"></i>Mới nhất
+                                </a>
+                                <a th:href="@{/incidents/report(status=${filterStatus}, sort='oldest')}" class="btn btn-outline-primary" th:classappend="${currentSort == 'oldest' ? 'active' : ''}" title="Sự cố cũ nhất lên trước">
+                                    <i class="bi bi-sort-up me-1"></i>Cũ nhất
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <div class="table-responsive">
+                        <table class="nh-table" id="managerClinTable">
+                            <thead>
+                            <tr>
+                                <th>Thời gian</th>
+                                <th>Cư dân / Vị trí</th>
+                                <th>Người báo cáo</th>
+                                <th>Mức độ</th>
+                                <th>Tên sự cố & Mô tả</th>
+                                <th>Trạng thái</th>
+                                <th class="text-end">Xử lý</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:if="${#lists.isEmpty(clinicalIncidents)}">
+                                <td colspan="7" class="text-center py-5 text-muted">
+                                    <i class="bi bi-shield-check fs-2 text-success d-block mb-1"></i>
+                                    Tuyệt vời! Không có sự cố y tế lâm sàng nào từ Bác sĩ hoặc Điều dưỡng.
+                                </td>
+                            </tr>
+                            <tr th:each="inc : ${clinicalIncidents}">
+                                <td class="small" th:text="${#temporals.format(inc.createdDate, 'dd/MM/yyyy HH:mm')}">23/10/2026 08:15</td>
+                                <td>
+                                    <div th:if="${inc.residentName != null}">
+                                        <span class="fw-bold text-dark small" th:text="${inc.residentName}">Nguyễn Văn An</span>
+                                        <small class="text-muted d-block" th:if="${inc.roomNumber}">
+                                            Phòng <span th:text="${inc.roomNumber}">P101</span>
+                                            <span th:if="${inc.bedNumber}"> - G.<span th:text="${inc.bedNumber}">G101-1</span></span>
+                                        </small>
+                                    </div>
+                                    <div th:unless="${inc.residentName != null}">
+                                        <span class="badge bg-secondary-subtle text-secondary mb-1">Khu vực</span>
+                                        <span class="fw-semibold text-dark small d-block" th:text="${inc.displayTarget}">Khuôn viên</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="fw-semibold text-dark small d-block" th:text="${inc.reportedByStaffName}">BS. Nguyễn Văn Minh</span>
+                                    <span th:if="${inc.reportedByDoctor}" class="badge bg-danger-subtle text-danger-emphasis">
+                                       <i class="bi bi-hospital me-1"></i>Bác sĩ
+                                   </span>
+                                    <span th:if="${inc.reportedByNurse}" class="badge bg-info-subtle text-info-emphasis">
+                                       <i class="bi bi-heart-pulse me-1"></i>Điều dưỡng
+                                   </span>
+                                </td>
+                                <td>
+                                    <span th:if="${inc.severityLevel == 'LOW'}" class="badge badge-severity-low">LOW</span>
+                                    <span th:if="${inc.severityLevel == 'MEDIUM'}" class="badge badge-severity-medium">MEDIUM</span>
+                                    <span th:if="${inc.severityLevel == 'HIGH'}" class="badge badge-severity-high">HIGH</span>
+                                    <span th:if="${inc.severityLevel == 'CRITICAL'}" class="badge badge-severity-critical">CRITICAL</span>
+                                </td>
+                                <td>
+                                    <span class="fw-semibold text-dark small" th:text="${inc.title}">Cấp cứu y tế</span>
+                                    <small class="text-muted d-block text-truncate" style="max-width: 220px;" th:text="${inc.description}">Mô tả chi tiết...</small>
+                                </td>
+                                <td>
+                                    <span th:if="${inc.status == 'PENDING'}" class="badge bg-warning-subtle text-warning-emphasis">CHỜ XỬ LÝ</span>
+                                    <span th:if="${inc.status == 'RESOLVED'}" class="badge badge-status-available">ĐÃ XỬ LÝ</span>
+                                </td>
+                                <td class="text-end">
+                                    <th:block th:if="${inc.status == 'PENDING'}">
+                                        <!-- Sự cố CRITICAL: Giám đốc trực tiếp xử lý & chỉ đạo khẩn cấp -->
+                                        <button th:if="${inc.severityLevel == 'CRITICAL'}"
+                                                type="button" class="btn btn-sm btn-outline-danger"
+                                                th:data-id="${inc.id}"
+                                                th:data-title="${inc.title}"
+                                                th:data-name="${inc.displayTarget}"
+                                                onclick="openResolveModal(this)">
+                                            <i class="bi bi-shield-fill-exclamation me-1"></i> Xử lý & Chỉ đạo khẩn cấp
+                                        </button>
+                                        <!-- Sự cố LOW / MEDIUM / HIGH: Bác sĩ trực xử lý y tế; Giám đốc có thể chỉ đạo thêm nếu cần -->
+                                        <div th:unless="${inc.severityLevel == 'CRITICAL'}" class="d-flex flex-column align-items-end gap-1">
+                                           <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle">
+                                               <i class="bi bi-person-heart me-1"></i> Bác sĩ trực xử lý
+                                           </span>
+                                            <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2"
+                                                    th:data-id="${inc.id}"
+                                                    th:data-title="${inc.title}"
+                                                    th:data-name="${inc.displayTarget}"
+                                                    onclick="openResolveModal(this)">
+                                                <i class="bi bi-wrench-adjustable me-1"></i> Chỉ đạo
+                                            </button>
+                                        </div>
+                                    </th:block>
+                                    <div th:unless="${inc.status == 'PENDING'}">
+                                       <span class="text-success small fw-semibold d-block">
+                                           <i class="bi bi-check-circle-fill"></i> Đã giải quyết
+                                       </span>
+                                        <small class="text-muted d-block text-truncate" style="max-width: 140px;"
+                                               th:title="${inc.actionTaken}" th:text="${inc.actionTaken}">
+                                            Đã xử lý
+                                        </small>
+                                    </div>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+
+                    <!-- Pagination for Manager Clinical Incidents at bottom right -->
+                    <div class="d-flex justify-content-between align-items-center p-3 border-top flex-wrap gap-2" id="managerClinPaginationWrapper">
+                        <div class="small text-muted fw-semibold" id="managerClinPaginationInfo">
+                            Đang hiển thị 1 - 5 trong số <span th:text="${#lists.size(clinicalIncidents)}">0</span> sự cố
+                        </div>
+                        <nav aria-label="Phân trang sự cố">
+                            <ul class="pagination pagination-sm mb-0 shadow-sm" id="managerClinPagination"></ul>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- MAIN SECTION FOR OTHER ROLES (RECEPTIONIST, DOCTOR, NURSE) -->
+    <div class="row g-4" sec:authorize="!hasRole('CENTER_MANAGER')">
+        <!-- Report Form (Left Col) -->
+        <div class="col-12 col-lg-5">
+            <div class="nh-card h-100">
+                <div class="nh-card-header bg-light">
+                    <!-- Title for Receptionist -->
+                    <h6 class="fw-bold mb-0 text-dark" sec:authorize="hasRole('RECEPTIONIST')">
+                        <i class="bi bi-tools text-warning me-2"></i>Báo Cáo Sự Cố Cơ Sở Vật Chất (Phòng, Giường & Hạ Tầng)
+                    </h6>
+                    <!-- Title for Nurse -->
+                    <h6 class="fw-bold mb-0 text-dark" sec:authorize="hasRole('NURSE')">
+                        <i class="bi bi-heart-pulse-fill text-danger me-2"></i>Ghi Nhận Sự Cố Lâm Sàng (LOW / MEDIUM)
+                    </h6>
+                    <!-- Title for Doctor -->
+                    <h6 class="fw-bold mb-0 text-dark" sec:authorize="hasRole('DOCTOR')">
+                        <i class="bi bi-hospital text-danger me-2"></i>Báo Cáo Sự Cố Y Tế Nặng / Khẩn Cấp (HIGH / CRITICAL)
+                    </h6>
+                </div>
+                <div class="nh-card-body p-4">
+
+
+
+                    <form th:action="@{/incidents/report}" method="post" th:object="${incidentRequest}">
+                        <!-- Target Type Selection for RECEPTIONIST: Tách riêng Báo cáo Giường, Báo cáo Phòng và Khu sinh hoạt chung -->
+                        <div sec:authorize="hasRole('RECEPTIONIST')" class="mb-3">
+                            <label class="form-label small fw-semibold">Đối tượng / Phạm vi cơ sở vật chất <span class="text-danger">*</span></label>
+                            <div class="btn-group w-100" role="group">
+                                <input type="radio" class="btn-check" name="targetType" id="targetBed" value="BED" checked onchange="toggleIncidentTarget('BED')">
+                                <label class="btn btn-outline-primary btn-sm py-2 fw-semibold" for="targetBed">
+                                    <i class="bi bi-hospital me-1"></i>Báo cáo Giường
+                                </label>
+
+
+                                <input type="radio" class="btn-check" name="targetType" id="targetRoom" value="ROOM" onchange="toggleIncidentTarget('ROOM')">
+                                <label class="btn btn-outline-primary btn-sm py-2 fw-semibold" for="targetRoom">
+                                    <i class="bi bi-door-closed me-1"></i>Báo cáo Phòng
+                                </label>
+
+
+                                <input type="radio" class="btn-check" name="targetType" id="targetCommon" value="COMMON" onchange="toggleIncidentTarget('COMMON')">
+                                <label class="btn btn-outline-primary btn-sm py-2 fw-semibold" for="targetCommon">
+                                    <i class="bi bi-building me-1"></i>Khu sinh hoạt chung
+                                </label>
+                            </div>
+                        </div>
+
+
+                        <!-- 1. Cư dân gặp sự cố: CHỈ DÀNH CHO BÁC SĨ & ĐIỀU DƯỠNG (LỄ TÂN KHÔNG BÁO CÁO CƯ DÂN) -->
+                        <div class="mb-3" id="secResidentTarget" sec:authorize="hasAnyRole('DOCTOR', 'NURSE')">
+                            <label for="residentId" class="form-label small fw-semibold">
+                                Cư dân gặp sự cố y tế / lâm sàng <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select" id="residentId" th:field="*{residentId}" required>
+                                <option value="" disabled selected>-- Chọn cư dân --</option>
+                                <option th:each="r : ${residents}"
+                                        th:value="${r.id}"
+                                        th:text="${r.fullName} + ' (Phòng ' + ${r.roomNumber} + ' - ' + ${r.bedNumber} + ')'">
+                                    Nguyễn Văn An (Phòng P101 - G01)
+                                </option>
+                            </select>
+                        </div>
+
+
+                        <!-- 2. Giường hỏng hóc (Cho Lễ tân - Mặc định hiển thị khi chọn BED) -->
+                        <div class="mb-3" id="secBedTarget" sec:authorize="hasRole('RECEPTIONIST')">
+                            <label for="bedId" class="form-label small fw-semibold">Chọn Giường cần sửa chữa / bảo trì <span class="text-danger">*</span></label>
+                            <select class="form-select" id="bedId" th:field="*{bedId}" required>
+                                <option value="" disabled selected>-- Chọn Giường cụ thể --</option>
+                                <option th:each="b : ${beds}"
+                                        th:value="${b.id}"
+                                        th:text="'Phòng ' + ${b.roomNumber} + ' - Giường ' + ${b.bedNumber} + ' [' + ${b.status} + ']'">
+                                    Phòng P101 - Giường G101-1 [AVAILABLE]
+                                </option>
+                            </select>
+                        </div>
+
+
+                        <!-- 3. Phòng gặp sự cố (Cho Lễ tân - Hiển thị khi chọn ROOM) -->
+                        <div class="mb-3 d-none" id="secRoomTarget" sec:authorize="hasRole('RECEPTIONIST')">
+                            <label for="roomId" class="form-label small fw-semibold">Chọn Phòng gặp sự cố cơ sở vật chất <span class="text-danger">*</span></label>
+                            <select class="form-select" id="roomId" th:field="*{roomId}">
+                                <option value="" disabled selected>-- Chọn Phòng cụ thể --</option>
+                                <option th:each="rm : ${rooms}"
+                                        th:value="${rm.id}"
+                                        th:text="'Phòng ' + ${rm.roomNumber} + ' (' + ${rm.roomType} + ')'">
+                                    Phòng P101 (STANDARD)
+                                </option>
+                            </select>
+                        </div>
+
+
+                        <!-- 4. Khu vực công cộng chung (Cho Lễ tân - Hiển thị khi chọn COMMON) -->
+                        <div class="mb-3 d-none" id="secCommonTarget" sec:authorize="hasRole('RECEPTIONIST')">
+                            <label for="location" class="form-label small fw-semibold">Khu vực xảy ra sự cố <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="location" th:field="*{location}"
+                                   placeholder="VD: Hành lang Tầng 2, Nhà ăn tập thể, Khu vệ sinh công cộng, Sân tập phục hồi...">
+                        </div>
+
+
+                        <!-- Auto-lock bed maintenance toggle for Receptionist (Chỉ hiển thị khi báo cáo Giường) -->
+                        <div class="mb-3 p-3 bg-light rounded-3 border" id="secMaintenanceToggle" sec:authorize="hasRole('RECEPTIONIST')">
+                            <div class="form-check form-switch mb-0">
+                                <input class="form-check-input" type="checkbox" id="setMaintenance" th:field="*{setMaintenance}" checked>
+                                <label class="form-check-label small fw-semibold text-dark" for="setMaintenance">
+                                    <i class="bi bi-lock-fill text-warning me-1"></i>Tự động chuyển Giường sang Bảo trì (MAINTENANCE)
+                                </label>
+                            </div>
+                            <small class="text-muted d-block mt-1" style="font-size: 0.75rem;">
+                                Khi bật, giường liên quan sẽ tự động khóa trên sơ đồ phòng giường, tránh xếp cư dân mới vào giường đang hỏng.
+                            </small>
+                        </div>
+
+
+                        <!-- Title -->
+                        <div class="mb-3">
+                            <label for="title" class="form-label small fw-semibold">Tên / Loại sự cố <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="title" th:field="*{title}" required
+                                   sec:authorize="hasRole('RECEPTIONIST')"
+                                   placeholder="VD: Gãy nan dát giường, Hỏng thanh chắn an toàn, Kẹt bánh xe...">
+                            <input type="text" class="form-control" id="titleNurse" th:field="*{title}" required
+                                   sec:authorize="hasRole('NURSE')"
+                                   placeholder="VD: Xây xát nhẹ ngón chân, Chóng mặt sau ăn, Trượt chân không chấn thương">
+                            <input type="text" class="form-control" id="titleDoc" th:field="*{title}" required
+                                   sec:authorize="hasRole('DOCTOR')"
+                                   placeholder="VD: Ngã rạn xương cẳng tay, Đột quỵ cấp, Khó thở ngưng tim cần cấp cứu">
+                        </div>
+
+
+                        <!-- Severity Level for RECEPTIONIST (All 4 levels, dynamic notes) -->
+                        <div class="mb-3" sec:authorize="hasRole('RECEPTIONIST')">
+                            <label class="form-label small fw-semibold d-block">Mức độ nghiêm trọng cơ sở vật chất <span class="text-danger">*</span></label>
+                            <div class="d-flex flex-column gap-2">
+                                <div class="form-check p-2 border rounded">
+                                    <input class="form-check-input ms-0 me-2" type="radio" name="severityLevel" id="sevLowRec" value="LOW" th:field="*{severityLevel}">
+                                    <label class="form-check-label d-flex justify-content-between align-items-center w-100" for="sevLowRec">
+                                        <span class="small fw-semibold text-dark">LOW (Mức độ Nhẹ)</span>
+                                        <span class="badge badge-severity-low" id="descSevLow">Dát giường lỏng, đệm ga rách nhỏ</span>
+                                    </label>
+                                </div>
+                                <div class="form-check p-2 border rounded">
+                                    <input class="form-check-input ms-0 me-2" type="radio" name="severityLevel" id="sevMedRec" value="MEDIUM" th:field="*{severityLevel}">
+                                    <label class="form-check-label d-flex justify-content-between align-items-center w-100" for="sevMedRec">
+                                        <span class="small fw-semibold text-dark">MEDIUM (Mức độ Vừa)</span>
+                                        <span class="badge badge-severity-medium" id="descSevMed">Hỏng thanh chắn, đệm xẹp lún</span>
+                                    </label>
+                                </div>
+                                <div class="form-check p-2 border rounded">
+                                    <input class="form-check-input ms-0 me-2" type="radio" name="severityLevel" id="sevHighRec" value="HIGH" th:field="*{severityLevel}">
+                                    <label class="form-check-label d-flex justify-content-between align-items-center w-100" for="sevHighRec">
+                                        <span class="small fw-semibold text-dark">HIGH (Mức độ Nặng)</span>
+                                        <span class="badge badge-severity-high" id="descSevHigh">Gãy khung giường, hỏng motor nâng</span>
+                                    </label>
+                                </div>
+                                <div class="form-check p-2 border rounded bg-danger-subtle">
+                                    <input class="form-check-input ms-0 me-2" type="radio" name="severityLevel" id="sevCritRec" value="CRITICAL" th:field="*{severityLevel}">
+                                    <label class="form-check-label d-flex justify-content-between align-items-center w-100" for="sevCritRec">
+                                        <span class="small fw-bold text-danger">CRITICAL (Khẩn cấp)</span>
+                                        <span class="badge badge-severity-critical" id="descSevCrit">Sập gãy kết cấu, chập điện motor</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+
+                        <!-- Severity Level for NURSE (Only LOW and MEDIUM) -->
+                        <div class="mb-3" sec:authorize="hasRole('NURSE')">
+                            <label class="form-label small fw-semibold d-block">Mức độ nghiêm trọng lâm sàng <span class="text-danger">*</span></label>
+                            <div class="d-flex flex-column gap-2">
+                                <div class="form-check p-2 border rounded">
+                                    <input class="form-check-input ms-0 me-2" type="radio" name="severityLevel" id="sevLowNurse" value="LOW" th:field="*{severityLevel}">
+                                    <label class="form-check-label d-flex justify-content-between align-items-center w-100" for="sevLowNurse">
+                                        <span class="small fw-semibold text-dark">LOW (Mức độ Nhẹ)</span>
+                                        <span class="badge badge-severity-low">Trầy xước nhẹ, va chạm nhẹ</span>
+                                    </label>
+                                </div>
+                                <div class="form-check p-2 border rounded">
+                                    <input class="form-check-input ms-0 me-2" type="radio" name="severityLevel" id="sevMedNurse" value="MEDIUM" th:field="*{severityLevel}">
+                                    <label class="form-check-label d-flex justify-content-between align-items-center w-100" for="sevMedNurse">
+                                        <span class="small fw-semibold text-dark">MEDIUM (Mức độ Vừa)</span>
+                                        <span class="badge badge-severity-medium">Chóng mặt té ngã, xây xát, bầm tím</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+
+                        <!-- Severity Level for DOCTOR (Only HIGH and CRITICAL) -->
+                        <div class="mb-3" sec:authorize="hasRole('DOCTOR')">
+                            <label class="form-label small fw-semibold d-block">Mức độ nghiêm trọng y tế <span class="text-danger">*</span></label>
+                            <div class="d-flex flex-column gap-2">
+                                <div class="form-check p-2 border rounded">
+                                    <input class="form-check-input ms-0 me-2" type="radio" name="severityLevel" id="sevHighDoc" value="HIGH" th:field="*{severityLevel}">
+                                    <label class="form-check-label d-flex justify-content-between align-items-center w-100" for="sevHighDoc">
+                                        <span class="small fw-semibold text-dark">HIGH (Mức độ Nặng)</span>
+                                        <span class="badge badge-severity-high">Nghi ngờ rạn xương, ngã chấn thương</span>
+                                    </label>
+                                </div>
+                                <div class="form-check p-2 border rounded bg-danger-subtle">
+                                    <input class="form-check-input ms-0 me-2" type="radio" name="severityLevel" id="sevCritDoc" value="CRITICAL" th:field="*{severityLevel}">
+                                    <label class="form-check-label d-flex justify-content-between align-items-center w-100" for="sevCritDoc">
+                                        <span class="small fw-bold text-danger">CRITICAL (Khẩn cấp / Nguy kịch)</span>
+                                        <span class="badge badge-severity-critical">Đột quỵ, ngưng thở, cấp cứu</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+
+                        <!-- Description -->
+                        <div class="mb-4">
+                            <label for="description" class="form-label small fw-semibold">Mô tả chi tiết sự việc <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="description" th:field="*{description}" rows="3" required
+                                      placeholder="Mô tả hoàn cảnh diễn ra sự cố, thời điểm phát hiện, hiện trạng thiết bị hoặc tình trạng ban đầu của cụ..."></textarea>
+                        </div>
+
+
+                        <!-- Submit Button -->
+                        <button type="submit" class="btn btn-warning w-100 py-2 fw-semibold shadow-sm text-dark" sec:authorize="hasRole('RECEPTIONIST')">
+                            <i class="bi bi-send-fill me-1"></i> Báo Cáo Sự Cố Cơ Sở Vật Chất
+                        </button>
+                        <button type="submit" class="btn btn-danger w-100 py-2 fw-semibold shadow-sm" sec:authorize="hasRole('NURSE')">
+                            <i class="bi bi-send-fill me-1"></i> Gửi Báo Cáo Cho Bác Sĩ Trực
+                        </button>
+                        <button type="submit" class="btn btn-danger w-100 py-2 fw-semibold shadow-sm" sec:authorize="hasRole('DOCTOR')">
+                            <i class="bi bi-shield-fill-exclamation me-1"></i> Báo Cáo Khẩn Cấp Cho Giám Đốc
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Incidents List for Non-Manager (Right Col) -->
+        <div class="col-12 col-lg-7">
+            <!-- PHÂN HỆ DÀNH RIÊNG CHO LỄ TÂN: CHIA 2 MẢNG BÁO CÁO (CƠ SỞ VẬT CHẤT VS Y TẾ & CHĂM SÓC) -->
+            <div sec:authorize="hasRole('RECEPTIONIST')">
+                <!-- Nav Pills chọn 2 mảng báo cáo cho Lễ tân -->
+                <ul class="nav nav-pills nav-fill p-2 bg-light rounded-3 mb-3 border shadow-sm" id="receptionistIncidentTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active py-2 px-3 fw-bold text-start d-flex justify-content-between align-items-center"
+                                id="rec-tab-facility-btn" data-bs-toggle="pill" data-bs-target="#rec-tab-facility" type="button" role="tab"
+                                aria-controls="rec-tab-facility" aria-selected="true">
+                            <div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="bi bi-tools text-warning fs-5"></i>
+                                    <span class="fs-6">Mảng Cơ Sở Vật Chất (Lễ Tân Báo Cáo)</span>
+                                </div>
+                                <small class="d-block text-muted fw-normal mt-1" style="font-size: 0.75rem;">Sự cố phòng, giường, trang thiết bị do Nhân viên kỹ thuật xử lý & Lễ tân xác nhận</small>
+                            </div>
+                            <div class="text-end ms-2">
+                               <span class="badge bg-warning text-dark fs-6 px-3 py-1 rounded-pill shadow-sm"
+                                     th:text="${receptionistIncidents != null ? #lists.size(receptionistIncidents) : 0}">0</span>
+                            </div>
+                        </button>
+                    </li>
+                    <li class="nav-item ms-2" role="presentation">
+                        <button class="nav-link py-2 px-3 fw-bold text-start d-flex justify-content-between align-items-center"
+                                id="rec-tab-clinical-btn" data-bs-toggle="pill" data-bs-target="#rec-tab-clinical" type="button" role="tab"
+                                aria-controls="rec-tab-clinical" aria-selected="false">
+                            <div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="bi bi-heart-pulse-fill text-danger fs-5"></i>
+                                    <span class="fs-6">Mảng Y Tế & Chăm Sóc (Bác Sĩ & Điều Dưỡng)</span>
+                                </div>
+                                <small class="d-block text-muted fw-normal mt-1" style="font-size: 0.75rem;">Tiếp nhận theo dõi sự cố y tế để hỗ trợ người thân</small>
+                            </div>
+                            <div class="text-end ms-2">
+                               <span class="badge bg-danger text-white fs-6 px-3 py-1 rounded-pill shadow-sm"
+                                     th:text="${clinicalIncidents != null ? #lists.size(clinicalIncidents) : 0}">0</span>
+                            </div>
+                        </button>
+                    </li>
+                </ul>
+
+
+                <!-- Nội dung 2 mảng báo cáo cho Lễ tân -->
+                <div class="tab-content" id="receptionistIncidentTabContent">
+                    <!-- MẢNG 1: SỰ CỐ CƠ SỞ VẬT CHẤT (LỄ TÂN) -->
+                    <div class="tab-pane fade show active" id="rec-tab-facility" role="tabpanel" aria-labelledby="rec-tab-facility-btn">
+                        <div class="nh-card">
+                            <div class="nh-card-header d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2">
+                                <div>
+                                    <h6 class="fw-bold mb-0 text-dark">
+                                        <i class="bi bi-tools text-warning me-2"></i>Báo Cáo Cơ Sở Vật Chất Do Lễ Tân Gửi Lên (<span th:text="${#lists.size(receptionistIncidents)}">0</span>)
+                                    </h6>
+                                    <small class="text-muted">Báo cáo do Lễ tân ghi nhận, Nhân viên kỹ thuật xử lý và Lễ tân xác nhận hoàn tất</small>
+                                </div>
+                                <div class="d-flex flex-wrap align-items-center gap-2">
+                                    <!-- Bộ lọc trạng thái -->
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <a th:href="@{/incidents/report(status=null, sort=${currentSort})}" class="btn btn-outline-secondary" th:classappend="${filterStatus == null ? 'active' : ''}">Tất cả</a>
+                                        <a th:href="@{/incidents/report(status='PENDING', sort=${currentSort})}" class="btn btn-outline-warning" th:classappend="${filterStatus == 'PENDING' ? 'active' : ''}">Chờ xử lý</a>
+                                        <a th:href="@{/incidents/report(status='RESOLVED', sort=${currentSort})}" class="btn btn-outline-success" th:classappend="${filterStatus == 'RESOLVED' ? 'active' : ''}">Đã giải quyết</a>
+                                    </div>
+                                    <!-- Sắp xếp thời gian -->
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <a th:href="@{/incidents/report(status=${filterStatus}, sort='newest')}" class="btn btn-outline-primary" th:classappend="${currentSort == 'newest' ? 'active' : ''}" title="Sự cố mới nhất lên trước">
+                                            <i class="bi bi-sort-down me-1"></i>Mới nhất
+                                        </a>
+                                        <a th:href="@{/incidents/report(status=${filterStatus}, sort='oldest')}" class="btn btn-outline-primary" th:classappend="${currentSort == 'oldest' ? 'active' : ''}" title="Sự cố cũ nhất lên trước">
+                                            <i class="bi bi-sort-up me-1"></i>Cũ nhất
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="nh-table" id="recFacTable">
+                                    <thead>
+                                    <tr>
+                                        <th>Thời gian</th>
+                                        <th>Vị trí / Đối tượng</th>
+                                        <th>Người báo cáo</th>
+                                        <th>Mức độ</th>
+                                        <th>Tên sự cố & Mô tả</th>
+                                        <th>Trạng thái</th>
+                                        <th class="text-end">Xử lý</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    <tr th:if="${#lists.isEmpty(receptionistIncidents)}">
+                                        <td colspan="7" class="text-center py-5 text-muted">
+                                            <i class="bi bi-shield-check fs-2 text-success d-block mb-1"></i>
+                                            Tuyệt vời! Không có sự cố cơ sở vật chất nào.
+                                        </td>
+                                    </tr>
+                                    <tr th:each="inc : ${receptionistIncidents}">
+                                        <td class="small" th:text="${#temporals.format(inc.createdDate, 'dd/MM/yyyy HH:mm')}">23/10/2026 08:15</td>
+                                        <td>
+                                            <div th:if="${inc.residentName != null}">
+                                                <span class="fw-bold text-dark small" th:text="${inc.residentName}">Nguyễn Văn An</span>
+                                                <small class="text-muted d-block" th:if="${inc.roomNumber}">
+                                                    Phòng <span th:text="${inc.roomNumber}">P101</span>
+                                                    <span th:if="${inc.bedNumber}"> - G.<span th:text="${inc.bedNumber}">G101-1</span></span>
+                                                </small>
+                                            </div>
+                                            <div th:unless="${inc.residentName != null}">
+                                               <span class="badge bg-secondary-subtle text-secondary mb-1">
+                                                   <i class="bi bi-geo-alt me-1"></i>CSVC
+                                               </span>
+                                                <span class="fw-semibold text-dark small d-block" th:text="${inc.displayTarget}">Khuôn viên Sân Vườn</span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="fw-semibold text-dark small d-block" th:text="${inc.reportedByStaffName}">Lê Thu Trang</span>
+                                            <span class="badge bg-warning-subtle text-warning-emphasis">
+                                               <i class="bi bi-tools me-1"></i>Lễ tân (CSVC)
+                                           </span>
+                                        </td>
+                                        <td>
+                                            <span th:if="${inc.severityLevel == 'LOW'}" class="badge badge-severity-low">LOW</span>
+                                            <span th:if="${inc.severityLevel == 'MEDIUM'}" class="badge badge-severity-medium">MEDIUM</span>
+                                            <span th:if="${inc.severityLevel == 'HIGH'}" class="badge badge-severity-high">HIGH</span>
+                                            <span th:if="${inc.severityLevel == 'CRITICAL'}" class="badge badge-severity-critical">CRITICAL</span>
+                                        </td>
+                                        <td>
+                                            <span class="fw-semibold text-dark small" th:text="${inc.title}">Hỏng khóa cửa</span>
+                                            <small class="text-muted d-block text-truncate" style="max-width: 160px;" th:text="${inc.description}">Kẹt ổ khóa...</small>
+                                        </td>
+                                        <td>
+                                            <span th:if="${inc.status == 'PENDING'}" class="badge bg-warning-subtle text-warning-emphasis">CHỜ XỬ LÝ</span>
+                                            <span th:if="${inc.status == 'RESOLVED'}" class="badge badge-status-available">ĐÃ XỬ LÝ</span>
+                                        </td>
+                                        <td class="text-end">
+                                            <div th:if="${inc.status == 'PENDING'}" class="d-flex flex-column align-items-end gap-1">
+                                               <span class="badge bg-light text-secondary border">
+                                                   <i class="bi bi-person-gear me-1"></i>Nhân viên xử lý
+                                               </span>
+                                                <button type="button" class="btn btn-sm btn-outline-success py-0 px-2 fw-semibold"
+                                                        th:data-id="${inc.id}"
+                                                        th:data-title="${inc.title}"
+                                                        th:data-name="${inc.displayTarget}"
+                                                        onclick="openResolveModal(this)">
+                                                    <i class="bi bi-check2-circle me-1"></i>Báo cáo đã giải quyết
+                                                </button>
+                                            </div>
+                                            <div th:unless="${inc.status == 'PENDING'}">
+                                               <span class="text-success small fw-semibold d-block">
+                                                   <i class="bi bi-check-circle-fill"></i> Đã giải quyết
+                                               </span>
+                                                <small class="text-muted d-block text-truncate" style="max-width: 140px;"
+                                                       th:title="${inc.actionTaken}" th:text="${inc.actionTaken}">
+                                                    Đã thay khóa mới
+                                                </small>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+
+                            <!-- Pagination for Receptionist Facilities Incidents at bottom right -->
+                            <div class="d-flex justify-content-between align-items-center p-3 border-top flex-wrap gap-2" id="recFacPaginationWrapper">
+                                <div class="small text-muted fw-semibold" id="recFacPaginationInfo">
+                                    Đang hiển thị 1 - 5 trong số <span th:text="${#lists.size(receptionistIncidents)}">0</span> sự cố
+                                </div>
+                                <nav aria-label="Phân trang sự cố">
+                                    <ul class="pagination pagination-sm mb-0 shadow-sm" id="recFacPagination"></ul>
+                                </nav>
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <!-- MẢNG 2: SỰ CỐ Y TẾ & CHĂM SÓC (BÁC SĨ & ĐIỀU DƯỠNG) -->
+                    <div class="tab-pane fade" id="rec-tab-clinical" role="tabpanel" aria-labelledby="rec-tab-clinical-btn">
+                        <div class="nh-card">
+                            <div class="nh-card-header d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2">
+                                <div>
+                                    <h6 class="fw-bold mb-0 text-dark">
+                                        <i class="bi bi-heart-pulse-fill text-danger me-2"></i>Sự Cố Y Tế & Chăm Sóc Cư Dân (<span th:text="${#lists.size(clinicalIncidents)}">0</span>)
+                                    </h6>
+                                    <small class="text-muted">Tiếp nhận theo dõi tiến trình xử lý từ Bác sĩ & Điều dưỡng để kịp thời hỗ trợ thông tin cho người thân</small>
+                                </div>
+                                <div class="d-flex flex-wrap align-items-center gap-2">
+                                    <!-- Bộ lọc trạng thái -->
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <a th:href="@{/incidents/report(status=null, sort=${currentSort})}" class="btn btn-outline-secondary" th:classappend="${filterStatus == null ? 'active' : ''}">Tất cả</a>
+                                        <a th:href="@{/incidents/report(status='PENDING', sort=${currentSort})}" class="btn btn-outline-warning" th:classappend="${filterStatus == 'PENDING' ? 'active' : ''}">Chờ xử lý</a>
+                                        <a th:href="@{/incidents/report(status='RESOLVED', sort=${currentSort})}" class="btn btn-outline-success" th:classappend="${filterStatus == 'RESOLVED' ? 'active' : ''}">Đã giải quyết</a>
+                                    </div>
+                                    <!-- Sắp xếp thời gian -->
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <a th:href="@{/incidents/report(status=${filterStatus}, sort='newest')}" class="btn btn-outline-primary" th:classappend="${currentSort == 'newest' ? 'active' : ''}" title="Sự cố mới nhất lên trước">
+                                            <i class="bi bi-sort-down me-1"></i>Mới nhất
+                                        </a>
+                                        <a th:href="@{/incidents/report(status=${filterStatus}, sort='oldest')}" class="btn btn-outline-primary" th:classappend="${currentSort == 'oldest' ? 'active' : ''}" title="Sự cố cũ nhất lên trước">
+                                            <i class="bi bi-sort-up me-1"></i>Cũ nhất
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="nh-table" id="recClinTable">
+                                    <thead>
+                                    <tr>
+                                        <th>Thời gian</th>
+                                        <th>Cư dân</th>
+                                        <th>Người báo cáo</th>
+                                        <th>Mức độ</th>
+                                        <th>Tên sự cố & Mô tả</th>
+                                        <th>Trạng thái</th>
+                                        <th class="text-end">Tiến trình</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    <tr th:if="${#lists.isEmpty(clinicalIncidents)}">
+                                        <td colspan="7" class="text-center py-5 text-muted">
+                                            <i class="bi bi-shield-check fs-2 text-success d-block mb-1"></i>
+                                            Không có sự cố y tế nào từ Bác sĩ & Điều dưỡng.
+                                        </td>
+                                    </tr>
+                                    <tr th:each="inc : ${clinicalIncidents}">
+                                        <td class="small" th:text="${#temporals.format(inc.createdDate, 'dd/MM/yyyy HH:mm')}">23/10/2026 08:15</td>
+                                        <td>
+                                            <span class="fw-bold text-dark small" th:text="${inc.residentName}">Nguyễn Văn An</span>
+                                            <small class="text-muted d-block" th:if="${inc.roomNumber}">
+                                                Phòng <span th:text="${inc.roomNumber}">P101</span>
+                                                <span th:if="${inc.bedNumber}"> - G.<span th:text="${inc.bedNumber}">G101-1</span></span>
+                                            </small>
+                                        </td>
+                                        <td>
+                                            <span class="fw-semibold text-dark small d-block" th:text="${inc.reportedByStaffName}">Lê Thị Hoa</span>
+                                            <span th:if="${inc.reportedByNurse}" class="badge bg-info-subtle text-info-emphasis">
+                                               <i class="bi bi-heart-pulse me-1"></i>Điều dưỡng
+                                           </span>
+                                            <span th:if="${inc.reportedByDoctor}" class="badge bg-danger-subtle text-danger-emphasis">
+                                               <i class="bi bi-hospital me-1"></i>Bác sĩ
+                                           </span>
+                                        </td>
+                                        <td>
+                                            <span th:if="${inc.severityLevel == 'LOW'}" class="badge badge-severity-low">LOW</span>
+                                            <span th:if="${inc.severityLevel == 'MEDIUM'}" class="badge badge-severity-medium">MEDIUM</span>
+                                            <span th:if="${inc.severityLevel == 'HIGH'}" class="badge badge-severity-high">HIGH</span>
+                                            <span th:if="${inc.severityLevel == 'CRITICAL'}" class="badge badge-severity-critical">CRITICAL</span>
+                                        </td>
+                                        <td>
+                                            <span class="fw-semibold text-dark small" th:text="${inc.title}">Trầy da ngón tay</span>
+                                            <small class="text-muted d-block text-truncate" style="max-width: 160px;" th:text="${inc.description}">Xước nhẹ...</small>
+                                        </td>
+                                        <td>
+                                            <span th:if="${inc.status == 'PENDING'}" class="badge bg-warning-subtle text-warning-emphasis">CHỜ XỬ LÝ</span>
+                                            <span th:if="${inc.status == 'RESOLVED'}" class="badge badge-status-available">ĐÃ XỬ LÝ</span>
+                                        </td>
+                                        <td class="text-end">
+                                            <div th:if="${inc.status == 'PENDING'}">
+                                               <span th:if="${inc.severityLevel != 'CRITICAL'}" class="badge bg-info-subtle text-info-emphasis border">
+                                                   <i class="bi bi-person-heart me-1"></i>Bác sĩ trực xử lý
+                                               </span>
+                                                <span th:if="${inc.severityLevel == 'CRITICAL'}" class="badge bg-danger-subtle text-danger-emphasis border">
+                                                   <i class="bi bi-shield-lock me-1"></i>Giám đốc xử lý
+                                               </span>
+                                            </div>
+                                            <div th:unless="${inc.status == 'PENDING'}">
+                                               <span class="text-success small fw-semibold d-block">
+                                                   <i class="bi bi-check-circle-fill"></i> Đã giải quyết
+                                               </span>
+                                                <small class="text-muted d-block text-truncate" style="max-width: 140px;"
+                                                       th:title="${inc.actionTaken}" th:text="${inc.actionTaken}">
+                                                    Đã xử lý
+                                                </small>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+
+                            <!-- Pagination for Receptionist Clinical Incidents at bottom right -->
+                            <div class="d-flex justify-content-between align-items-center p-3 border-top flex-wrap gap-2" id="recClinPaginationWrapper">
+                                <div class="small text-muted fw-semibold" id="recClinPaginationInfo">
+                                    Đang hiển thị 1 - 5 trong số <span th:text="${#lists.size(clinicalIncidents)}">0</span> sự cố
+                                </div>
+                                <nav aria-label="Phân trang sự cố">
+                                    <ul class="pagination pagination-sm mb-0 shadow-sm" id="recClinPagination"></ul>
+                                </nav>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- PHÂN HỆ DÀNH CHO BÁC SĨ & ĐIỀU DƯỠNG (DOCTOR & NURSE) -->
+            <div sec:authorize="hasAnyRole('DOCTOR', 'NURSE')" class="nh-card h-100">
+                <div class="nh-card-header d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2">
+                    <h6 class="fw-bold mb-0 text-dark">
+                        <i class="bi bi-list-task me-2 text-primary"></i>Danh Sách Sự Cố Y Tế & Chăm Sóc (<span th:text="${#lists.size(clinicalIncidents)}">0</span>)
+                    </h6>
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                        <!-- Bộ lọc trạng thái -->
+                        <div class="btn-group btn-group-sm" role="group">
+                            <a th:href="@{/incidents/report(status=null, sort=${currentSort})}" class="btn btn-outline-secondary" th:classappend="${filterStatus == null ? 'active' : ''}">Tất cả</a>
+                            <a th:href="@{/incidents/report(status='PENDING', sort=${currentSort})}" class="btn btn-outline-warning" th:classappend="${filterStatus == 'PENDING' ? 'active' : ''}">Chờ xử lý</a>
+                            <a th:href="@{/incidents/report(status='RESOLVED', sort=${currentSort})}" class="btn btn-outline-success" th:classappend="${filterStatus == 'RESOLVED' ? 'active' : ''}">Đã giải quyết</a>
+                        </div>
+                        <!-- Sắp xếp thời gian -->
+                        <div class="btn-group btn-group-sm" role="group">
+                            <a th:href="@{/incidents/report(status=${filterStatus}, sort='newest')}" class="btn btn-outline-primary" th:classappend="${currentSort == 'newest' ? 'active' : ''}" title="Sự cố mới nhất lên trước">
+                                <i class="bi bi-sort-down me-1"></i>Mới nhất
+                            </a>
+                            <a th:href="@{/incidents/report(status=${filterStatus}, sort='oldest')}" class="btn btn-outline-primary" th:classappend="${currentSort == 'oldest' ? 'active' : ''}" title="Sự cố cũ nhất lên trước">
+                                <i class="bi bi-sort-up me-1"></i>Cũ nhất
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+
+                <div class="table-responsive">
+                    <table class="nh-table" id="nurseDocTable">
+                        <thead>
+                        <tr>
+                            <th>Thời gian</th>
+                            <th>Cư dân / Vị trí</th>
+                            <th>Người báo cáo</th>
+                            <th>Mức độ</th>
+                            <th>Tên sự cố</th>
+                            <th>Trạng thái</th>
+                            <th class="text-end">Xử lý</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:if="${#lists.isEmpty(clinicalIncidents)}">
+                            <td colspan="7" class="text-center py-5 text-muted">
+                                <i class="bi bi-shield-check fs-2 text-success d-block mb-1"></i>
+                                Tuyệt vời! Không có sự cố y tế & chăm sóc nào đang cần xử lý.
+                            </td>
+                        </tr>
+                        <tr th:each="inc : ${clinicalIncidents}">
+                            <td class="small" th:text="${#temporals.format(inc.createdDate, 'dd/MM/yyyy HH:mm')}">23/10/2026 08:15</td>
+                            <td>
+                                <div th:if="${inc.residentName != null}">
+                                    <span class="fw-bold text-dark small" th:text="${inc.residentName}">Nguyễn Văn An</span>
+                                    <small class="text-muted d-block" th:if="${inc.roomNumber}">
+                                        Phòng <span th:text="${inc.roomNumber}">P101</span>
+                                        <span th:if="${inc.bedNumber}"> - G.<span th:text="${inc.bedNumber}">G101-1</span></span>
+                                    </small>
+                                </div>
+                                <div th:unless="${inc.residentName != null}">
+                                   <span class="badge bg-secondary-subtle text-secondary mb-1">
+                                       <i class="bi bi-geo-alt me-1"></i>CSVC
+                                   </span>
+                                    <span class="fw-semibold text-dark small d-block" th:text="${inc.displayTarget}">Khuôn viên Sân Vườn</span>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="fw-semibold text-dark small d-block" th:text="${inc.reportedByStaffName}">Lê Thị Hoa</span>
+                                <span th:if="${inc.reportedByNurse}" class="badge bg-info-subtle text-info-emphasis">
+                                   <i class="bi bi-heart-pulse me-1"></i>Điều dưỡng
+                               </span>
+                                <span th:if="${inc.reportedByDoctor}" class="badge bg-danger-subtle text-danger-emphasis">
+                                   <i class="bi bi-hospital me-1"></i>Bác sĩ
+                               </span>
+                                <span th:if="${inc.reportedByReceptionist}" class="badge bg-warning-subtle text-warning-emphasis">
+                                   <i class="bi bi-tools me-1"></i>Lễ tân (CSVC)
+                               </span>
+                            </td>
+                            <td>
+                                <span th:if="${inc.severityLevel == 'LOW'}" class="badge badge-severity-low">LOW</span>
+                                <span th:if="${inc.severityLevel == 'MEDIUM'}" class="badge badge-severity-medium">MEDIUM</span>
+                                <span th:if="${inc.severityLevel == 'HIGH'}" class="badge badge-severity-high">HIGH</span>
+                                <span th:if="${inc.severityLevel == 'CRITICAL'}" class="badge badge-severity-critical">CRITICAL</span>
+                            </td>
+                            <td>
+                                <span class="fw-semibold text-dark small" th:text="${inc.title}">Trượt chân ngã</span>
+                                <small class="text-muted d-block text-truncate" style="max-width: 160px;" th:text="${inc.description}">Đã kiểm tra sơ bộ...</small>
+                            </td>
+                            <td>
+                                <span th:if="${inc.status == 'PENDING'}" class="badge bg-warning-subtle text-warning-emphasis">CHỜ XỬ LÝ</span>
+                                <span th:if="${inc.status == 'RESOLVED'}" class="badge badge-status-available">ĐÃ XỬ LÝ</span>
+                            </td>
+                            <td class="text-end">
+                                <th:block th:if="${inc.status == 'PENDING'}">
+                                   <span sec:authorize="hasRole('NURSE')" class="badge bg-light text-muted border">
+                                       <i class="bi bi-hourglass-split me-1"></i>Chờ Bác sĩ xử lý
+                                   </span>
+                                    <div sec:authorize="hasRole('DOCTOR')">
+                                        <!-- Bác sĩ có thể giải quyết ở mức độ LOW, MEDIUM và HIGH -->
+                                        <button th:if="${inc.severityLevel != 'CRITICAL'}"
+                                                type="button" class="btn btn-sm btn-outline-success py-0 px-2 fw-semibold"
+                                                th:data-id="${inc.id}"
+                                                th:data-title="${inc.title}"
+                                                th:data-name="${inc.displayTarget}"
+                                                onclick="openResolveModal(this)">
+                                            <i class="bi bi-check2-circle me-1"></i> Xử lý y tế
+                                        </button>
+                                        <!-- Mức CRITICAL: Giám đốc xử lý & chỉ đạo khẩn cấp -->
+                                        <span th:if="${inc.severityLevel == 'CRITICAL'}" class="badge bg-danger-subtle text-danger-emphasis border">
+                                           <i class="bi bi-shield-lock me-1"></i> Giám đốc xử lý
+                                       </span>
+                                    </div>
+                                </th:block>
+                                <div th:unless="${inc.status == 'PENDING'}">
+                                   <span class="text-success small fw-semibold d-block">
+                                       <i class="bi bi-check-circle-fill"></i> Đã giải quyết
+                                   </span>
+                                    <small class="text-muted d-block text-truncate" style="max-width: 140px;"
+                                           th:title="${inc.actionTaken}" th:text="${inc.actionTaken}">
+                                        Đã xử lý
+                                    </small>
+                                </div>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+
+                <!-- Pagination for Doctor & Nurse Clinical Incidents at bottom right -->
+                <div class="d-flex justify-content-between align-items-center p-3 border-top flex-wrap gap-2" id="nurseDocPaginationWrapper">
+                    <div class="small text-muted fw-semibold" id="nurseDocPaginationInfo">
+                        Đang hiển thị 1 - 5 trong số <span th:text="${#lists.size(clinicalIncidents)}">0</span> sự cố
+                    </div>
+                    <nav aria-label="Phân trang sự cố">
+                        <ul class="pagination pagination-sm mb-0 shadow-sm" id="nurseDocPagination"></ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Modal Resolve Incident -->
+    <div class="modal fade" id="resolveIncidentModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <form id="resolveForm" method="post" action="">
+                    <div class="modal-header">
+                        <h5 class="modal-title fw-bold text-success">
+                            <i class="bi bi-shield-check me-2"></i>Cập Nhật Phương Án / Báo Cáo Đã Giải Quyết
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-2">
+                            <span class="text-muted small d-block">Sự cố:</span>
+                            <span class="fw-bold text-dark" id="modalIncidentTitle">Trượt chân ngã</span>
+                            <small class="text-muted d-block" id="modalResidentName">Mục tiêu: Nguyễn Văn An</small>
+                        </div>
+
+
+                        <div class="mb-3">
+                            <label for="actionTaken" class="form-label small fw-semibold">Biện pháp / Kết quả xử lý của nhân viên <span class="text-danger">*</span></label>
+                            <textarea class="form-control" name="actionTaken" id="actionTaken" rows="3" required
+                                      placeholder="VD: Nhân viên kỹ thuật đã thay ổ khóa mới / Đã sửa xong bóng đèn / Đã khám và băng bó..."></textarea>
+                            <small class="text-muted mt-1 d-block">
+                                <i class="bi bi-info-circle me-1"></i> Nếu sự cố liên quan đến Giường đang BẢO TRÌ (MAINTENANCE), hệ thống sẽ tự động khôi phục trạng thái Giường về SẴN SÀNG (AVAILABLE) hoặc ĐANG NẰM (OCCUPIED).
+                            </small>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Đóng</button>
+                        <button type="submit" class="btn btn-success fw-semibold shadow-sm">
+                            <i class="bi bi-check-lg me-1"></i> Xác Nhận Đã Giải Quyết (RESOLVED)
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        const severityNotes = {
+            BED: {
+                titlePlaceholder: "VD: Hỏng thanh chắn giường G101-1, Kẹt tay quay nâng hạ, Gãy nan dát giường...",
+                low: "Dát giường lỏng, ga nệm bẩn/rách nhỏ, kẹt chốt bánh xe",
+                med: "Hỏng thanh chắn an toàn, gãy nan dát giường, đệm xẹp lún",
+                high: "Gãy khung giường, hỏng motor/tay quay nâng hạ, đệm rách nát",
+                crit: "Sập gãy kết cấu giường, chập điện motor giường nguy hiểm"
+            },
+            ROOM: {
+                titlePlaceholder: "VD: Hỏng khóa cửa phòng P102, Điều hòa rỉ nước ngập sàn, Vỡ kính cửa sổ...",
+                low: "Bóng đèn phòng chập chờn, kẹt ổ khóa cửa, tróc sơn tường",
+                med: "Điều hòa rỉ nước/kém lạnh, bồn cầu/vòi sen rỉ nước, quạt thông gió hỏng",
+                high: "Mất điện toàn phòng, vỡ ống nước ngập sàn phòng, vỡ kính cửa sổ",
+                crit: "Chập cháy điện phòng, rò rỉ khí gas/khói lửa, nguy cơ sập trần"
+            },
+            COMMON: {
+                titlePlaceholder: "VD: Cháy bóng đèn hành lang Tầng 2, Sàn nhà ăn trơn trượt, Hỏng tay vịn cầu thang...",
+                low: "Rác bừa bãi, đèn hành lang mờ, biển chỉ dẫn bong tróc",
+                med: "Sàn hành lang trơn trượt đọng nước, quạt trần ồn, hỏng khóa WC chung",
+                high: "Cầu thang hỏng tay vịn, vỡ gạch lát sàn dễ ngã, mất nước toàn khu",
+                crit: "Chập cháy tủ điện tổng, rò rỉ hóa chất/nước sôi, sập kết cấu nguy hiểm"
+            }
+        };
+
+
+        function toggleIncidentTarget(type) {
+            const secRes = document.getElementById('secResidentTarget');
+            const secBed = document.getElementById('secBedTarget');
+            const secRoom = document.getElementById('secRoomTarget');
+            const secCommon = document.getElementById('secCommonTarget');
+            const secToggle = document.getElementById('secMaintenanceToggle');
+            const resSelect = document.getElementById('residentId');
+            const bedSelect = document.getElementById('bedId');
+            const roomSelect = document.getElementById('roomId');
+            const locInput = document.getElementById('location');
+            const setMaint = document.getElementById('setMaintenance');
+            const titleInput = document.getElementById('title');
+
+
+            const descLow = document.getElementById('descSevLow');
+            const descMed = document.getElementById('descSevMed');
+            const descHigh = document.getElementById('descSevHigh');
+            const descCrit = document.getElementById('descSevCrit');
+
+
+            // Cập nhật chú thích mức độ nghiêm trọng và placeholder tiêu đề theo loại báo cáo
+            if (severityNotes[type]) {
+                const notes = severityNotes[type];
+                if (descLow) descLow.innerText = notes.low;
+                if (descMed) descMed.innerText = notes.med;
+                if (descHigh) descHigh.innerText = notes.high;
+                if (descCrit) descCrit.innerText = notes.crit;
+                if (titleInput) titleInput.placeholder = notes.titlePlaceholder;
+            }
+
+
+            if (type === 'BED') {
+                if (secRes) { secRes.classList.add('d-none'); }
+                if (secBed) { secBed.classList.remove('d-none'); }
+                if (secRoom) { secRoom.classList.add('d-none'); }
+                if (secCommon) { secCommon.classList.add('d-none'); }
+                if (secToggle) { secToggle.classList.remove('d-none'); }
+
+
+                if (resSelect) { resSelect.required = false; resSelect.value = ''; }
+                if (bedSelect) { bedSelect.required = true; }
+                if (roomSelect) { roomSelect.required = false; roomSelect.value = ''; }
+                if (locInput) { locInput.required = false; locInput.value = ''; }
+                if (setMaint) { setMaint.checked = true; }
+            } else if (type === 'ROOM') {
+                if (secRes) { secRes.classList.add('d-none'); }
+                if (secBed) { secBed.classList.add('d-none'); }
+                if (secRoom) { secRoom.classList.remove('d-none'); }
+                if (secCommon) { secCommon.classList.add('d-none'); }
+                if (secToggle) { secToggle.classList.add('d-none'); }
+
+
+                if (resSelect) { resSelect.required = false; resSelect.value = ''; }
+                if (bedSelect) { bedSelect.required = false; bedSelect.value = ''; }
+                if (roomSelect) { roomSelect.required = true; }
+                if (locInput) { locInput.required = false; locInput.value = ''; }
+                if (setMaint) { setMaint.checked = false; }
+            } else if (type === 'COMMON') {
+                if (secRes) { secRes.classList.add('d-none'); }
+                if (secBed) { secBed.classList.add('d-none'); }
+                if (secRoom) { secRoom.classList.add('d-none'); }
+                if (secCommon) { secCommon.classList.remove('d-none'); }
+                if (secToggle) { secToggle.classList.add('d-none'); }
+
+
+                if (resSelect) { resSelect.required = false; resSelect.value = ''; }
+                if (bedSelect) { bedSelect.required = false; bedSelect.value = ''; }
+                if (roomSelect) { roomSelect.required = false; roomSelect.value = ''; }
+                if (locInput) { locInput.required = true; }
+                if (setMaint) { setMaint.checked = false; }
+            } else if (type === 'RESIDENT') {
+                if (secRes) { secRes.classList.remove('d-none'); }
+                if (secBed) { secBed.classList.add('d-none'); }
+                if (secRoom) { secRoom.classList.add('d-none'); }
+                if (secCommon) { secCommon.classList.add('d-none'); }
+                if (secToggle) { secToggle.classList.add('d-none'); }
+
+
+                if (resSelect) { resSelect.required = true; }
+                if (bedSelect) { bedSelect.required = false; bedSelect.value = ''; }
+                if (roomSelect) { roomSelect.required = false; roomSelect.value = ''; }
+                if (locInput) { locInput.required = false; locInput.value = ''; }
+                if (setMaint) { setMaint.checked = false; }
+            }
+        }
+
+
+        function openResolveModal(button) {
+            const id = button.getAttribute('data-id');
+            const title = button.getAttribute('data-title');
+            const name = button.getAttribute('data-name');
+
+
+            document.getElementById('modalIncidentTitle').innerText = title;
+            document.getElementById('modalResidentName').innerText = 'Đối tượng: ' + name;
+
+
+            const actionInput = document.getElementById('actionTaken');
+            if (actionInput) {
+                actionInput.value = '';
+            }
+
+
+            const form = document.getElementById('resolveForm');
+            form.action = '/incidents/' + id + '/resolve';
+
+
+            const modal = new bootstrap.Modal(document.getElementById('resolveIncidentModal'));
+            modal.show();
+        }
+
+
+        // Giữ trạng thái tab đang chọn cho Manager và Receptionist khi lọc hoặc tải lại trang
+        document.addEventListener('DOMContentLoaded', function() {
+            // Đồng bộ loại đối tượng cơ sở vật chất (Giường / Phòng / Khu chung)
+            const targetBedRadio = document.getElementById('targetBed');
+            const targetRoomRadio = document.getElementById('targetRoom');
+            const targetCommonRadio = document.getElementById('targetCommon');
+            if (targetBedRadio && targetBedRadio.checked) {
+                toggleIncidentTarget('BED');
+            } else if (targetRoomRadio && targetRoomRadio.checked) {
+                toggleIncidentTarget('ROOM');
+            } else if (targetCommonRadio && targetCommonRadio.checked) {
+                toggleIncidentTarget('COMMON');
+            }
+
+
+            const activeMgrTab = localStorage.getItem('activeManagerIncidentTab');
+            if (activeMgrTab) {
+                const tabBtn = document.getElementById(activeMgrTab);
+                if (tabBtn) {
+                    const tab = new bootstrap.Tab(tabBtn);
+                    tab.show();
+                }
+            }
+            const mgrTabBtns = document.querySelectorAll('#managerIncidentTabs button[data-bs-toggle="pill"]');
+            mgrTabBtns.forEach(btn => {
+                btn.addEventListener('shown.bs.tab', function(e) {
+                    localStorage.setItem('activeManagerIncidentTab', e.target.id);
+                });
+            });
+
+
+            const activeRecTab = localStorage.getItem('activeReceptionistIncidentTab');
+            if (activeRecTab) {
+                const tabBtn = document.getElementById(activeRecTab);
+                if (tabBtn) {
+                    const tab = new bootstrap.Tab(tabBtn);
+                    tab.show();
+                }
+            }
+            const recTabBtns = document.querySelectorAll('#receptionistIncidentTabs button[data-bs-toggle="pill"]');
+            recTabBtns.forEach(btn => {
+                btn.addEventListener('shown.bs.tab', function(e) {
+                    localStorage.setItem('activeReceptionistIncidentTab', e.target.id);
+                });
+            });
+
+
+            // Initialize client-side pagination for incident tables (5 incidents per page, bottom-right pagination)
+            initTablePagination('#managerFacTable', 'managerFacPaginationWrapper', 'managerFacPagination', 'managerFacPaginationInfo', 5, 'sự cố');
+            initTablePagination('#managerClinTable', 'managerClinPaginationWrapper', 'managerClinPagination', 'managerClinPaginationInfo', 5, 'sự cố');
+            initTablePagination('#recFacTable', 'recFacPaginationWrapper', 'recFacPagination', 'recFacPaginationInfo', 5, 'sự cố');
+            initTablePagination('#recClinTable', 'recClinPaginationWrapper', 'recClinPagination', 'recClinPaginationInfo', 5, 'sự cố');
+            initTablePagination('#nurseDocTable', 'nurseDocPaginationWrapper', 'nurseDocPagination', 'nurseDocPaginationInfo', 5, 'sự cố');
+        });
+    </script>
+</div>
+</body>
+</html>
+
+
+

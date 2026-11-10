@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout :: layout(~{::title}, ~{::content}, 'billing-monthly')}">
+<head>
+    <title th:text="'Chi Tiết Hóa Đơn #HĐ-' + ${order.id} + ' - NHMS Care'">Chi Tiết Hóa Đơn - NHMS Care</title>
+</head>
+<body>
+<div th:fragment="content">
+    <!-- Header -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4 d-print-none">
+        <div>
+            <h4 class="fw-bold mb-1 text-dark">
+                <i class="bi bi-receipt-cutoff text-success me-2"></i>Chi Tiết Hóa Đơn Viện Phí #<span th:text="${order.id}">1</span>
+            </h4>
+            <p class="text-muted small mb-0">Hóa đơn tổng hợp chi phí lưu trú, chăm sóc y tế và dược phẩm của cư dân</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button onclick="window.print()" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-printer me-1"></i> In Hóa Đơn
+            </button>
+            <a th:href="@{/portal/bills}" class="btn btn-light btn-sm" sec:authorize="hasRole('RELATIVE')">
+                <i class="bi bi-arrow-left me-1"></i> Quay lại hóa đơn hàng tháng
+            </a>
+            <a th:href="@{/billing/monthly}" class="btn btn-light btn-sm" sec:authorize="!hasRole('RELATIVE')">
+                <i class="bi bi-arrow-left me-1"></i> Quay lại danh sách
+            </a>
+        </div>
+    </div>
+
+
+    <!-- Invoice Card Container (Printable) -->
+    <div class="nh-card p-4 p-md-5 bg-white border shadow-sm mx-auto" style="max-width: 900px;" id="invoicePrintArea">
+        <!-- Invoice Header -->
+        <div class="d-flex justify-content-between align-items-start border-bottom pb-4 mb-4">
+            <div class="d-flex align-items-center">
+                <div class="sidebar-brand-icon bg-primary text-white me-3 fs-3" style="width: 48px; height: 48px;">
+                    <i class="bi bi-heart-pulse-fill"></i>
+                </div>
+                <div>
+                    <h4 class="fw-bold text-dark mb-0">NHMS CARE</h4>
+                    <span class="small text-muted">Hệ Thống Viện Dưỡng Lão Cao Cấp</span>
+                    <div class="small text-muted" style="font-size: 0.75rem;">Hotline: 1900 6868 | Email: contact@nhms.vn</div>
+                </div>
+            </div>
+
+
+            <div class="text-end">
+                <h4 class="fw-bold text-primary mb-1">HÓA ĐƠN VIỆN PHÍ</h4>
+                <div class="fw-semibold text-dark mb-1">Mã số: #HĐ-<span th:text="${order.id}">1</span></div>
+                <div>
+                   <span th:if="${order.paymentStatus == 'PAID'}" class="badge badge-status-available fs-6 px-3 py-1">
+                       <i class="bi bi-check-circle-fill me-1"></i>ĐÃ THANH TOÁN (PAID)
+                   </span>
+                    <span th:if="${order.paymentStatus == 'PENDING' or order.paymentStatus == 'UNPAID'}" class="badge bg-danger-subtle text-danger fs-6 px-3 py-1">
+                       <i class="bi bi-clock-fill me-1"></i>CHƯA THANH TOÁN (UNPAID)
+                   </span>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Meta Info (Resident & Dates) -->
+        <div class="row g-4 mb-4 pb-4 border-bottom">
+            <div class="col-12 col-sm-6">
+                <small class="text-muted text-uppercase fw-bold d-block mb-1" style="font-size: 0.72rem;">THÔNG TIN CƯ DÂN:</small>
+                <h5 class="fw-bold text-dark mb-1" th:text="${order.residentName}">Nguyễn Văn An</h5>
+                <div class="small text-muted">
+                    <i class="bi bi-door-closed me-1"></i>Phòng: <strong class="text-dark" th:text="${order.roomNumber != null ? 'Phòng ' + order.roomNumber : 'Chưa xếp'}">Phòng P101</strong>
+                </div>
+                <div class="small text-muted" th:if="${resident != null and resident.relativeName != null}">
+                    <i class="bi bi-person me-1"></i>Người bảo lãnh: <span th:text="${resident.relativeName}">Nguyễn Tuấn Dũng</span>
+                    (<span th:text="${resident.relativePhone}">0911223344</span>)
+                </div>
+            </div>
+
+
+            <div class="col-12 col-sm-6 text-sm-end">
+                <small class="text-muted text-uppercase fw-bold d-block mb-1" style="font-size: 0.72rem;">THÔNG TIN PHÁT HÀNH:</small>
+                <div class="small text-muted mb-1">
+                    Ngày phát hành: <strong class="text-dark" th:text="${order.issueDate != null ? #temporals.format(order.issueDate, 'dd/MM/yyyy') : '-'}">23/10/2026</strong>
+                </div>
+                <div class="small text-muted mb-1">
+                    Hạn thanh toán: <strong class="text-danger" th:text="${order.dueDate != null ? #temporals.format(order.dueDate, 'dd/MM/yyyy') : '-'}">02/11/2026</strong>
+                </div>
+                <div class="small text-muted" th:if="${order.paymentDate != null}">
+                    Ngày thực thu: <strong class="text-success" th:text="${#temporals.format(order.paymentDate, 'dd/MM/yyyy HH:mm')}">23/10/2026 10:15</strong>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Breakdown Details Table -->
+        <h6 class="fw-bold text-dark mb-3">
+            <i class="bi bi-list-check text-primary me-2"></i>Bảng Phân Bổ Chi Phí Tháng
+        </h6>
+        <div class="table-responsive mb-4">
+            <table class="table table-bordered align-middle">
+                <thead class="table-light small">
+                <tr>
+                    <th style="width: 10%;">STT</th>
+                    <th style="width: 50%;">Khoản mục chi phí</th>
+                    <th style="width: 15%;">Số lượng</th>
+                    <th style="width: 25%;" class="text-end">Số tiền</th>
+                </tr>
+                </thead>
+                <tbody>
+                <!-- 1. Tiền phòng cơ bản -->
+                <tr>
+                    <td class="text-center">1</td>
+                    <td>
+                        <div class="fw-bold text-dark">Tiền phòng cơ bản (Base Room Rate)</div>
+                        <small class="text-muted">Chi phí phòng lưu trú, điện nước sinh hoạt, dọn vệ sinh hàng ngày</small>
+                    </td>
+                    <td>1 tháng</td>
+                    <td class="text-end fw-bold text-dark"
+                        th:text="${order.roomPrice != null ? #numbers.formatDecimal(order.roomPrice, 0, 'COMMA', 0, 'POINT') + ' VNĐ' : '0 VNĐ'}">
+                        5,000,000 VNĐ
+                    </td>
+                </tr>
+
+
+                <!-- 2. Tiền dịch vụ phát sinh -->
+                <tr>
+                    <td class="text-center">2</td>
+                    <td>
+                        <div class="fw-bold text-primary">Tiền dịch vụ chăm sóc phát sinh trong tháng</div>
+                        <small class="text-muted">Chế độ dinh dưỡng đặc biệt, vật lý trị liệu, tắm thảo dược...</small>
+                        <!-- Order Details List if any -->
+                        <ul class="list-unstyled mb-0 mt-2 ps-3 border-start small text-muted" th:if="${not #lists.isEmpty(order.orderDetails)}">
+                            <li th:each="det : ${order.orderDetails}" class="d-flex justify-content-between">
+                                <span>- <span th:text="${det.serviceName}">Vật lý trị liệu</span></span>
+                                <span class="fw-semibold text-dark" th:text="${#numbers.formatDecimal(det.amount, 0, 'COMMA', 0, 'POINT')} + 'đ'">1,500,000đ</span>
+                            </li>
+                        </ul>
+                    </td>
+                    <td>Theo gói</td>
+                    <td class="text-end fw-bold text-primary"
+                        th:text="${order.servicesPrice != null ? #numbers.formatDecimal(order.servicesPrice, 0, 'COMMA', 0, 'POINT') + ' VNĐ' : '0 VNĐ'}">
+                        1,500,000 VNĐ
+                    </td>
+                </tr>
+
+
+                <!-- 3. Tiền thuốc kê đơn -->
+                <tr>
+                    <td class="text-center">3</td>
+                    <td>
+                        <div class="fw-bold text-danger">Tiền thuốc kê đơn theo y lệnh bác sĩ</div>
+                        <small class="text-muted">Tổng các loại thuốc xuất kho theo các lần khám trong kỳ chốt viện phí</small>
+                    </td>
+                    <td>Theo toa</td>
+                    <td class="text-end fw-bold text-danger"
+                        th:text="${order.medicationsPrice != null ? #numbers.formatDecimal(order.medicationsPrice, 0, 'COMMA', 0, 'POINT') + ' VNĐ' : '0 VNĐ'}">
+                        350,000 VNĐ
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+
+        <!-- Summary Totals Section -->
+        <div class="row justify-content-end mb-4">
+            <div class="col-12 col-md-6">
+                <div class="billing-breakdown p-3 bg-light rounded border">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Tiền phòng:</span>
+                        <span class="fw-semibold text-dark" th:text="${order.roomPrice != null ? #numbers.formatDecimal(order.roomPrice, 0, 'COMMA', 0, 'POINT') + ' VNĐ' : '0 VNĐ'}">5,000,000 VNĐ</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Tiền dịch vụ:</span>
+                        <span class="fw-semibold text-primary" th:text="${order.servicesPrice != null ? #numbers.formatDecimal(order.servicesPrice, 0, 'COMMA', 0, 'POINT') + ' VNĐ' : '0 VNĐ'}">1,500,000 VNĐ</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Tiền thuốc kê đơn:</span>
+                        <span class="fw-semibold text-danger" th:text="${order.medicationsPrice != null ? #numbers.formatDecimal(order.medicationsPrice, 0, 'COMMA', 0, 'POINT') + ' VNĐ' : '0 VNĐ'}">350,000 VNĐ</span>
+                    </div>
+                    <hr class="my-2">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="fw-bold text-dark fs-6">TỔNG THANH TOÁN:</span>
+                        <h4 class="fw-bold text-primary mb-0"
+                            th:text="${order.totalAmount != null ? #numbers.formatDecimal(order.totalAmount, 0, 'COMMA', 0, 'POINT') + ' VNĐ' : '0 VNĐ'}">
+                            6,850,000 VNĐ
+                        </h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Confirm Payment Action Button (d-print-none) -->
+        <div class="d-print-none pt-3 border-top d-flex justify-content-between align-items-center">
+           <span class="text-muted small">
+               <i class="bi bi-info-circle me-1"></i>Hóa đơn có giá trị pháp lý nội bộ của NHMS Care.
+           </span>
+
+
+            <div class="d-flex gap-2">
+                <form th:if="${order.paymentStatus == 'PENDING' or order.paymentStatus == 'UNPAID'}"
+                      th:action="@{'/billing/orders/' + ${order.id} + '/pay'}" method="post" class="m-0">
+                    <button type="submit" class="btn btn-success px-4 fw-bold shadow-sm"
+                            sec:authorize="hasRole('RECEPTIONIST')"
+                            onclick="return confirm('Xác nhận đã nhận đủ tiền và hoàn tất thanh toán hóa đơn này?')">
+                        <i class="bi bi-check-circle-fill me-1"></i> Xác Nhận Thanh Toán (PAID)
+                    </button>
+                </form>
+
+
+                <button th:unless="${order.paymentStatus == 'PENDING' or order.paymentStatus == 'UNPAID'}"
+                        class="btn btn-secondary px-4" disabled>
+                    <i class="bi bi-check-all me-1"></i> Đã Thu Tiền Hoàn Tất
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
+
