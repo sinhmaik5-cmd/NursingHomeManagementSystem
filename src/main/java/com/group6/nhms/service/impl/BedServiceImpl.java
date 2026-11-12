@@ -14,13 +14,20 @@ import com.group6.nhms.repository.BedRepository;
 import com.group6.nhms.repository.ResidentRepository;
 import com.group6.nhms.repository.RoomRepository;
 import com.group6.nhms.service.BedService;
+import com.group6.nhms.util.NaturalSortUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.List;
 
 @Service
 public class BedServiceImpl implements BedService {
+
+    private static final Comparator<BedResponse> BED_ROOM_ORDER = Comparator
+            .comparing(BedResponse::getRoomNumber, NaturalSortUtils::compareNatural)
+            .thenComparing(BedResponse::getBedNumber, NaturalSortUtils::compareNatural)
+            .thenComparing(BedResponse::getId, Comparator.nullsLast(Integer::compareTo));
 
     private final BedRepository bedRepository;
     private final RoomRepository roomRepository;
@@ -45,6 +52,7 @@ public class BedServiceImpl implements BedService {
         return bedRepository.findByStatus(BedStatus.AVAILABLE.name())
                 .stream()
                 .map(bedMapper::toResponse)
+                .sorted(BED_ROOM_ORDER)
                 .toList();
     }
 
@@ -54,6 +62,7 @@ public class BedServiceImpl implements BedService {
         return bedRepository.findByRoomId(roomId)
                 .stream()
                 .map(bedMapper::toResponse)
+                .sorted(BED_ROOM_ORDER)
                 .toList();
     }
 
@@ -185,7 +194,10 @@ public class BedServiceImpl implements BedService {
     @Override
     @Transactional(readOnly = true)
     public List<BedResponse> getAllBeds() {
-        return bedRepository.findAll().stream().map(bedMapper::toResponse).toList();
+        return bedRepository.findAll().stream()
+                .map(bedMapper::toResponse)
+                .sorted(BED_ROOM_ORDER)
+                .toList();
     }
 
     @Override

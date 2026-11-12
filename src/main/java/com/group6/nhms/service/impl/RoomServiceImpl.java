@@ -14,11 +14,13 @@ import com.group6.nhms.repository.ResidentRepository;
 import com.group6.nhms.repository.RoomRepository;
 import com.group6.nhms.repository.TaskScheduleRepository;
 import com.group6.nhms.service.RoomService;
+import com.group6.nhms.util.NaturalSortUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 
 import java.math.BigDecimal;
+import java.util.Comparator;
 import java.util.List;
 
 
@@ -51,7 +53,12 @@ public class RoomServiceImpl implements RoomService {
     @Override
     @Transactional(readOnly = true)
     public List<RoomResponse> getAllRooms() {
-        return roomRepository.findAll().stream().map(roomMapper::toResponse).toList();
+        return roomRepository.findAll().stream()
+                .map(roomMapper::toResponse)
+                .sorted(Comparator
+                        .comparing(RoomResponse::getRoomNumber, NaturalSortUtils::compareNatural)
+                        .thenComparing(RoomResponse::getId, Comparator.nullsLast(Integer::compareTo)))
+                .toList();
     }
 
 
