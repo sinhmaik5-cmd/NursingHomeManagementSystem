@@ -20,8 +20,6 @@ public interface HealthRecordService {
 
     HealthRecordResponse getRecordById(Integer id);
 
-    void cancelHealthRecord(Integer recordId);
-
     List<MedicationResponse> getAvailableMedications();
 
     List<MedicationResponse> getLowStockMedications();

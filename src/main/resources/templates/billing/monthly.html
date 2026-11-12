@@ -37,6 +37,10 @@
             <div class="nh-card p-3 h-100">
                 <span class="text-muted small d-block mb-1">TỔNG SỐ HÓA ĐƠN</span>
                 <h4 class="fw-bold mb-0 text-dark" th:text="${totalPeriodOrders != null ? totalPeriodOrders : #lists.size(orders)}">0</h4>
+                <small class="text-warning-emphasis fw-semibold d-block mt-1" th:if="${draftCount != null and draftCount > 0}"
+                       th:text="'+ ' + ${draftCount} + ' bản nháp dịch vụ (' + #numbers.formatDecimal(draftTotalAmount, 0, 'COMMA', 0, 'POINT') + 'đ)'">
+                    + 0 bản nháp dịch vụ
+                </small>
             </div>
         </div>
         <div class="col-6 col-md-3">
@@ -168,6 +172,8 @@
                 <div class="btn-group btn-group-sm" role="group">
                     <a th:href="@{/billing/monthly(month=${selectedMonth}, year=${selectedYear})}" class="btn btn-outline-secondary" th:classappend="${filterStatus == null ? 'active' : ''}">Tất cả</a>
                     <a th:href="@{/billing/monthly(status='PENDING', month=${selectedMonth}, year=${selectedYear})}" class="btn btn-outline-danger" th:classappend="${filterStatus == 'PENDING' ? 'active' : ''}">Chưa thanh toán</a>
+                    <a th:href="@{/billing/monthly(status='DRAFT', month=${selectedMonth}, year=${selectedYear})}" class="btn btn-outline-warning" th:classappend="${filterStatus == 'DRAFT' ? 'active' : ''}"
+                       th:text="${draftCount != null and draftCount > 0 ? 'Bản nháp (' + draftCount + ')' : 'Bản nháp'}">Bản nháp</a>
                     <a th:href="@{/billing/monthly(status='PAID', month=${selectedMonth}, year=${selectedYear})}" class="btn btn-outline-success" th:classappend="${filterStatus == 'PAID' ? 'active' : ''}">Đã thanh toán</a>
                 </div>
             </div>
@@ -230,7 +236,12 @@
                        <span th:if="${ord.paymentStatus == 'PAID'}" class="badge badge-status-available">
                            <i class="bi bi-check-circle-fill me-1"></i>PAID (Đã thu)
                        </span>
-                        <span th:if="${ord.paymentStatus == 'PENDING' or ord.paymentStatus == 'UNPAID'}" class="badge bg-danger-subtle text-danger">
+                        <span th:if="${(ord.paymentStatus == 'PENDING' or ord.paymentStatus == 'UNPAID') and draftOrderIds != null and draftOrderIds.contains(ord.id)}"
+                              class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">
+                           <i class="bi bi-pencil-square me-1"></i>BẢN NHÁP (Chưa chốt tháng)
+                       </span>
+                        <span th:if="${(ord.paymentStatus == 'PENDING' or ord.paymentStatus == 'UNPAID') and (draftOrderIds == null or !draftOrderIds.contains(ord.id))}"
+                              class="badge bg-danger-subtle text-danger">
                            <i class="bi bi-clock-fill me-1"></i>UNPAID (Chưa thu)
                        </span>
                     </td>
@@ -239,8 +250,8 @@
                             <a th:href="@{'/billing/orders/' + ${ord.id}}" class="btn btn-sm btn-outline-primary text-nowrap px-2" title="Xem chi tiết hóa đơn">
                                 <i class="bi bi-eye"></i> Chi tiết
                             </a>
-                            <!-- Quick pay & cancel buttons ONLY if UNPAID/PENDING -->
-                            <form th:if="${ord.paymentStatus == 'PENDING' or ord.paymentStatus == 'UNPAID'}"
+                            <!-- Quick pay ONLY for official settled unpaid invoices (not pre-settlement service drafts) -->
+                            <form th:if="${(ord.paymentStatus == 'PENDING' or ord.paymentStatus == 'UNPAID') and (draftOrderIds == null or !draftOrderIds.contains(ord.id))}"
                                   th:action="@{'/billing/orders/' + ${ord.id} + '/pay'}" method="post" class="m-0"
                                   sec:authorize="hasRole('RECEPTIONIST')">
                                 <button type="submit" class="btn btn-sm btn-success text-nowrap px-2" title="Xác nhận thanh toán"

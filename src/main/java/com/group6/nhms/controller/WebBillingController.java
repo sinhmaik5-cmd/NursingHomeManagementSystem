@@ -66,6 +66,12 @@ public class WebBillingController {
             Model model
     ) {
         List<OrderResponse> allOrders = orderService.getAllOrders(null);
+        java.util.Set<String> settledResidentPeriods = OrderService.findSettledResidentPeriods(allOrders);
+        java.util.Set<Integer> draftOrderIds = allOrders.stream()
+                .filter(o -> o.getId() != null && OrderService.isPreSettlementDraft(o, settledResidentPeriods))
+                .map(OrderResponse::getId)
+                .collect(java.util.stream.Collectors.toSet());
+
         List<MonthlyRevenueSummary> monthlySummaries = orderService.getMonthlyRevenueSummaries(allOrders);
 
         List<OrderResponse> periodOrders = allOrders.stream()
@@ -73,28 +79,49 @@ public class WebBillingController {
                 .filter(o -> year == null || (o.getIssueDate() != null && o.getIssueDate().getYear() == year))
                 .toList();
 
-        List<OrderResponse> orders = (status == null || status.isBlank())
-                ? periodOrders
-                : periodOrders.stream()
-                        .filter(o -> status.trim().equalsIgnoreCase(o.getPaymentStatus()))
-                        .toList();
+        List<OrderResponse> officialPeriodOrders = periodOrders.stream()
+                .filter(o -> !OrderService.isPreSettlementDraft(o, settledResidentPeriods))
+                .toList();
+        List<OrderResponse> draftPeriodOrders = periodOrders.stream()
+                .filter(o -> OrderService.isPreSettlementDraft(o, settledResidentPeriods))
+                .toList();
+
+        List<OrderResponse> orders;
+        if (status == null || status.isBlank()) {
+            orders = periodOrders;
+        } else if ("DRAFT".equalsIgnoreCase(status.trim())) {
+            orders = draftPeriodOrders;
+        } else if ("PENDING".equalsIgnoreCase(status.trim()) || "UNPAID".equalsIgnoreCase(status.trim())) {
+            orders = officialPeriodOrders.stream()
+                    .filter(o -> "PENDING".equalsIgnoreCase(o.getPaymentStatus()) || "UNPAID".equalsIgnoreCase(o.getPaymentStatus()))
+                    .toList();
+        } else {
+            orders = periodOrders.stream()
+                    .filter(o -> status.trim().equalsIgnoreCase(o.getPaymentStatus()))
+                    .toList();
+        }
 
         List<ResidentResponse> activeResidents = residentService.getAllResidents(null, "ACTIVE");
 
-        long unpaidCount = periodOrders.stream()
+        long unpaidCount = officialPeriodOrders.stream()
                 .filter(o -> "PENDING".equalsIgnoreCase(o.getPaymentStatus()) || "UNPAID".equalsIgnoreCase(o.getPaymentStatus()))
                 .count();
-        long paidCount = periodOrders.stream()
+        long paidCount = officialPeriodOrders.stream()
                 .filter(o -> "PAID".equalsIgnoreCase(o.getPaymentStatus()))
                 .count();
-        BigDecimal totalCollected = periodOrders.stream()
+        BigDecimal totalCollected = officialPeriodOrders.stream()
                 .filter(o -> "PAID".equalsIgnoreCase(o.getPaymentStatus()) && o.getTotalAmount() != null)
                 .map(OrderResponse::getTotalAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal totalPendingAmount = periodOrders.stream()
+        BigDecimal totalPendingAmount = officialPeriodOrders.stream()
                 .filter(o -> ("PENDING".equalsIgnoreCase(o.getPaymentStatus()) || "UNPAID".equalsIgnoreCase(o.getPaymentStatus()))
                         && o.getTotalAmount() != null)
                 .map(OrderResponse::getTotalAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        long draftCount = draftPeriodOrders.size();
+        BigDecimal draftTotalAmount = draftPeriodOrders.stream()
+                .map(OrderResponse::getTotalAmount)
+                .filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         LocalDate now = LocalDate.now();
@@ -107,11 +134,14 @@ public class WebBillingController {
                 .toList();
 
         model.addAttribute("orders", orders);
+        model.addAttribute("draftOrderIds", draftOrderIds);
         model.addAttribute("monthlySummaries", monthlySummaries);
         model.addAttribute("activeResidents", activeResidents);
-        model.addAttribute("totalPeriodOrders", periodOrders.size());
+        model.addAttribute("totalPeriodOrders", officialPeriodOrders.size());
         model.addAttribute("unpaidCount", unpaidCount);
         model.addAttribute("paidCount", paidCount);
+        model.addAttribute("draftCount", draftCount);
+        model.addAttribute("draftTotalAmount", draftTotalAmount);
         model.addAttribute("totalCollected", totalCollected);
         model.addAttribute("totalPendingAmount", totalPendingAmount);
         model.addAttribute("currentMonth", now.getMonthValue());
@@ -222,9 +252,20 @@ public class WebBillingController {
         }
 
         try {
+            OrderResponse target = orderService.getOrderById(id);
+            boolean hadSettledRoomOrMeds = (target.getRoomPrice() != null && target.getRoomPrice().compareTo(BigDecimal.ZERO) > 0)
+                    || (target.getMedicationsPrice() != null && target.getMedicationsPrice().compareTo(BigDecimal.ZERO) > 0);
+            int detailCount = target.getOrderDetails() != null ? target.getOrderDetails().size() : 0;
+
             orderService.cancelUnpaidOrder(id);
-            redirectAttributes.addFlashAttribute("successMessage",
-                    "Đã hủy hóa đơn #HĐ-" + id + " thành công! Bạn có thể chốt lại hóa đơn mới nếu cần.");
+            if (hadSettledRoomOrMeds && detailCount > 0) {
+                redirectAttributes.addFlashAttribute("successMessage",
+                        "Đã hủy chốt hóa đơn tháng #HĐ-" + id + " thành công! "
+                                + detailCount + " dịch vụ chăm sóc phát sinh do Điều dưỡng gắn vẫn được giữ lại ở trạng thái chờ chốt lại.");
+            } else {
+                redirectAttributes.addFlashAttribute("successMessage",
+                        "Đã hủy hóa đơn #HĐ-" + id + " thành công! Bạn có thể chốt lại hóa đơn mới nếu cần.");
+            }
             return "redirect:/billing/monthly";
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage", "Không thể hủy hóa đơn: " + e.getMessage());

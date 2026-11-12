@@ -55,11 +55,6 @@ public class HealthRecordMapper {
        }
 
 
-       if (entity.getNotes() != null && entity.getNotes().contains("[ĐÃ HOÀN KHO")) {
-           response.setReturnedStock(true);
-       }
-
-
        response.setMedications(new ArrayList<>());
        return response;
    }

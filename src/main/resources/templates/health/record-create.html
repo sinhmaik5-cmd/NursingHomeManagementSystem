@@ -17,7 +17,12 @@
             <p class="text-muted small mb-0" th:unless="${isNurse}">Ghi nhận chỉ số sinh hiệu (Huyết áp, Tim mạch, Nhiệt độ, Đường huyết) và kê đơn thuốc tự động trừ kho</p>
             <p class="text-muted small mb-0" th:if="${isNurse}">Ghi nhận chỉ số sinh hiệu và hướng dẫn chăm sóc cho cư dân.</p>
         </div>
-        <div>
+        <div class="d-flex gap-2">
+            <a th:href="@{/health/services(residentId=${recordRequest.residentId})}"
+               class="btn btn-outline-primary btn-sm"
+               sec:authorize="hasRole('NURSE')">
+                <i class="bi bi-bag-heart me-1"></i> Gắn dịch vụ phát sinh
+            </a>
             <a th:href="@{/health/history}" class="btn btn-outline-secondary btn-sm">
                 <i class="bi bi-clock-history me-1"></i> Xem lịch sử bệnh án
             </a>

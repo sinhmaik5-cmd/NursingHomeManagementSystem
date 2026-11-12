@@ -1120,4 +1120,42 @@ class ViewRenderIntegrationTest {
                     .andExpect(MockMvcResultMatchers.content().string(org.hamcrest.Matchers.containsString("Chẩn Đoán Lâm Sàng & Dặn Dò")));
         }
     }
+
+    @Test
+    @WithMockUser(username = "nurse", roles = {"NURSE"})
+    void testNurseCanAccessCareServicesPage() throws Exception {
+        createMockMvc().perform(get("/health/services"))
+                .andExpect(status().isOk())
+                .andExpect(MockMvcResultMatchers.content().string(org.hamcrest.Matchers.containsString("Dịch Vụ Chăm Sóc Phát Sinh")))
+                .andExpect(MockMvcResultMatchers.content().string(org.hamcrest.Matchers.containsString("Gắn Dịch Vụ Cho Cư Dân")))
+                .andExpect(MockMvcResultMatchers.content().string(org.hamcrest.Matchers.containsString("Dịch Vụ Chăm Sóc")));
+    }
+
+    @Test
+    @WithMockUser(username = "doctor", roles = {"DOCTOR"})
+    void testDoctorCannotAccessNurseCareServices() throws Exception {
+        createMockMvc().perform(get("/health/services"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(username = "receptionist", roles = {"RECEPTIONIST"})
+    void testReceptionistCannotAccessNurseCareServices() throws Exception {
+        createMockMvc().perform(get("/health/services"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(username = "manager", roles = {"CENTER_MANAGER"})
+    void testManagerCannotAccessNurseCareServices() throws Exception {
+        createMockMvc().perform(get("/health/services"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(username = "doctor", roles = {"DOCTOR"})
+    void testHealthRecordCancelEndpointIsRemoved() throws Exception {
+        createMockMvc().perform(post("/health/records/1/cancel").param("residentId", "1"))
+                .andExpect(status().isNotFound());
+    }
 }

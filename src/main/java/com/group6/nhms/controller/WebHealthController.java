@@ -239,28 +239,4 @@ public class WebHealthController {
         }
         return "redirect:/health/history?residentId=" + id;
     }
-
-    // 6. Hoàn trả tồn kho thuốc & Trừ tiền hóa đơn (Chỉ Bác sĩ, Giám đốc cơ sở)
-    @PostMapping("/records/{id}/cancel")
-    public String cancelHealthRecord(
-            @PathVariable Integer id,
-            @RequestParam Integer residentId,
-            Authentication authentication,
-            RedirectAttributes redirectAttributes
-    ) {
-        if (authentication != null && authentication.getAuthorities().stream().noneMatch(a ->
-                a.getAuthority().equals("ROLE_DOCTOR") || a.getAuthority().equals("ROLE_CENTER_MANAGER"))) {
-            redirectAttributes.addFlashAttribute("errorMessage", "Bạn không có quyền hoàn kho thuốc.");
-            return "redirect:/health/history?residentId=" + residentId;
-        }
-
-        try {
-            healthRecordService.cancelHealthRecord(id);
-            redirectAttributes.addFlashAttribute("successMessage",
-                    "Đã hoàn kho thuốc và khấu trừ lại tiền trên hóa đơn thành công!");
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("errorMessage", "Lỗi hoàn kho thuốc: " + e.getMessage());
-        }
-        return "redirect:/health/history?residentId=" + residentId;
-    }
 }

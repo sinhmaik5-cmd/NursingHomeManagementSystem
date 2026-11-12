@@ -126,14 +126,14 @@ public class SecurityConfig {
                        .hasAnyRole("DOCTOR", "NURSE", "CENTER_MANAGER", "RELATIVE")
 
 
-                       // Hủy phiếu khám & hoàn trả kho thuốc: Chỉ Bác sĩ & Giám đốc cơ sở
-                       .requestMatchers(HttpMethod.POST, "/health/records/*/cancel")
-                       .hasAnyRole("DOCTOR", "CENTER_MANAGER")
-
-
                        // Tạo phiếu khám & Đo sinh hiệu: Chỉ Bác sĩ và Điều dưỡng
                        .requestMatchers("/health/records/create")
                        .hasAnyRole("DOCTOR", "NURSE")
+
+
+                       // Dịch vụ chăm sóc phát sinh cho cư dân: Chỉ Điều dưỡng
+                       .requestMatchers("/health/services/**")
+                       .hasRole("NURSE")
 
 
                        // 6. Phân hệ Y tế, Bệnh án & Sinh hiệu: Bác sĩ, Điều dưỡng và Giám đốc (giám sát)

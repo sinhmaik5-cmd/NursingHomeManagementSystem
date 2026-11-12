@@ -97,12 +97,19 @@ public class OrderMapper {
                : null;
 
        response.setRoomBillingPeriod(periodStart.format(DATE_FORMATTER) + " - " + monthEnd.format(DATE_FORMATTER));
-       if (billableDays < totalDays
+       if (entity.getRoomPrice() != null && entity.getRoomPrice().compareTo(BigDecimal.ZERO) == 0) {
+           response.setRoomQuantityLabel("Chưa chốt phòng");
+       } else if (billableDays < totalDays
                && entity.getRoomPrice() != null
                && entity.getRoomPrice().compareTo(BigDecimal.ZERO) > 0
                && roomBasePrice != null
                && entity.getRoomPrice().compareTo(roomBasePrice) < 0) {
            response.setRoomQuantityLabel(billableDays + "/" + totalDays + " ngày");
+       } else if (entity.getRoomPrice() != null
+               && entity.getRoomPrice().compareTo(BigDecimal.ZERO) > 0
+               && roomBasePrice != null
+               && entity.getRoomPrice().compareTo(roomBasePrice) != 0) {
+           response.setRoomQuantityLabel("Theo ngày thực tế (" + totalDays + " ngày/tháng)");
        } else {
            response.setRoomQuantityLabel("1 tháng");
        }

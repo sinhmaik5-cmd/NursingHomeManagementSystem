@@ -33,6 +33,9 @@ public interface OrderRepository extends JpaRepository<Order, Integer> {
     // Tìm hóa đơn phát hành trong khoảng thời gian
     List<Order> findByIssueDateBetween(LocalDate startDate, LocalDate endDate);
 
+    // Lấy hóa đơn của 1 cư dân trong khoảng thời gian (phục vụ kiểm tra & gộp chốt hóa đơn tháng)
+    List<Order> findByResidentIdAndIssueDateBetween(Integer residentId, LocalDate startDate, LocalDate endDate);
+
     // Kiểm tra xem cư dân đã được tạo hóa đơn trong khoảng thời gian này chưa (tránh tạo trùng hóa đơn tháng)
     boolean existsByResidentIdAndIssueDateBetween(Integer residentId, LocalDate startDate, LocalDate endDate);
 

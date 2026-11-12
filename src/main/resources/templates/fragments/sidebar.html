@@ -77,6 +77,12 @@
                 <i class="bi bi-heart-pulse-fill"></i>
                 <span>Sinh Hiệu & Chăm Sóc</span>
             </a>
+            <a th:href="@{/health/services}" class="sidebar-nav-link"
+               sec:authorize="hasRole('NURSE')"
+               th:classappend="${activeMenu == 'care-services' ? 'active' : ''}">
+                <i class="bi bi-bag-heart-fill"></i>
+                <span>Dịch Vụ Chăm Sóc</span>
+            </a>
             <a th:href="@{/health/records/create}" class="sidebar-nav-link"
                sec:authorize="hasRole('DOCTOR')"
                th:classappend="${activeMenu == 'record-create' ? 'active' : ''}">

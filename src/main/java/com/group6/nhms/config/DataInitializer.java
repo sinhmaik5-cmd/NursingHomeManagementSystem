@@ -218,78 +218,27 @@ public class DataInitializer implements CommandLineRunner {
 
    private void initRoomsAndBeds() {
        if (roomRepository.count() == 0) {
-           Room r101 = new Room();
-           r101.setRoomNumber("P101");
-           r101.setRoomType("STANDARD");
-           r101.setBasePrice(new BigDecimal("8000000"));
-           r101.setCapacity(2);
-           Room savedR101 = roomRepository.save(r101);
+           createRoomWithBeds("P101", "STANDARD", "5000000", "G101-1", "G101-2", "G101-3", "G101-4");
+           createRoomWithBeds("P102", "STANDARD", "5000000", "G102-1", "G102-2", "G102-3", "G102-4");
+           createRoomWithBeds("P201", "VIP", "8000000", "G201-1");
+           createRoomWithBeds("P202", "VIP", "8000000", "G202-1");
+       }
+   }
 
+   private void createRoomWithBeds(String roomNumber, String roomType, String basePrice, String... bedNumbers) {
+       Room room = new Room();
+       room.setRoomNumber(roomNumber);
+       room.setRoomType(roomType);
+       room.setBasePrice(new BigDecimal(basePrice));
+       room.setCapacity(bedNumbers.length);
+       Room savedRoom = roomRepository.save(room);
 
-           Bed b1011 = new Bed();
-           b1011.setBedNumber("G01");
-           b1011.setRoom(savedR101);
-           b1011.setStatus(BedStatus.AVAILABLE.name());
-           bedRepository.save(b1011);
-
-
-           Bed b1012 = new Bed();
-           b1012.setBedNumber("G02");
-           b1012.setRoom(savedR101);
-           b1012.setStatus(BedStatus.AVAILABLE.name());
-           bedRepository.save(b1012);
-
-
-           Room r102 = new Room();
-           r102.setRoomNumber("P102");
-           r102.setRoomType("VIP");
-           r102.setBasePrice(new BigDecimal("15000000"));
-           r102.setCapacity(1);
-           Room savedR102 = roomRepository.save(r102);
-
-
-           Bed b1021 = new Bed();
-           b1021.setBedNumber("G01");
-           b1021.setRoom(savedR102);
-           b1021.setStatus(BedStatus.AVAILABLE.name());
-           bedRepository.save(b1021);
-
-
-           Room r201 = new Room();
-           r201.setRoomNumber("P201");
-           r201.setRoomType("STANDARD");
-           r201.setBasePrice(new BigDecimal("8000000"));
-           r201.setCapacity(2);
-           Room savedR201 = roomRepository.save(r201);
-
-
-           Bed b2011 = new Bed();
-           b2011.setBedNumber("G01");
-           b2011.setRoom(savedR201);
-           b2011.setStatus(BedStatus.AVAILABLE.name());
-           bedRepository.save(b2011);
-
-
-           Bed b2012 = new Bed();
-           b2012.setBedNumber("G02");
-           b2012.setRoom(savedR201);
-           b2012.setStatus(BedStatus.AVAILABLE.name());
-           bedRepository.save(b2012);
-
-
-           Room r202 = new Room();
-           r202.setRoomNumber("P202");
-           r202.setRoomType("SPECIAL_CARE");
-           r202.setBasePrice(new BigDecimal("20000000"));
-           r202.setCapacity(1);
-           Room savedR202 = roomRepository.save(r202);
-
-
-           Bed b2021 = new Bed();
-           b2021.setBedNumber("G01");
-           b2021.setRoom(savedR202);
-           b2021.setStatus(BedStatus.AVAILABLE.name());
-           bedRepository.save(b2021);
+       for (String bedNumber : bedNumbers) {
+           Bed bed = new Bed();
+           bed.setBedNumber(bedNumber);
+           bed.setRoom(savedRoom);
+           bed.setStatus(BedStatus.AVAILABLE.name());
+           bedRepository.save(bed);
        }
 
 
@@ -342,10 +291,11 @@ public class DataInitializer implements CommandLineRunner {
 
    private void initServices() {
        if (serviceRepository.count() == 0) {
-           saveService("Vật lý trị liệu chuyên sâu", "Bài tập phục hồi chức năng vận động cơ xương khớp", new BigDecimal("1500000"));
-           saveService("Chế độ dinh dưỡng đặc biệt", "Suất ăn chia theo bệnh lý tiểu đường, tim mạch, xay nhuyễn", new BigDecimal("2000000"));
-           saveService("Ngâm chân thảo dược & Massage", "Thư giãn huyệt đạo, giúp ngủ ngon và lưu thông khí huyết", new BigDecimal("800000"));
-           saveService("Chăm sóc y tế 24/7", "Theo dõi sinh hiệu, hỗ trợ vệ sinh và vận động hàng ngày", new BigDecimal("3000000"));
+           saveService("Vật lý trị liệu phục hồi (1 buổi)", "Tập vận động cơ xương khớp, phục hồi chức năng theo buổi", new BigDecimal("250000"));
+           saveService("Ngâm chân thảo dược & Massage (1 buổi)", "Ngâm chân thảo dược ấm, xoa bóp huyệt đạo giúp ngủ ngon", new BigDecimal("150000"));
+           saveService("Chăm sóc vết thương & Thay băng (1 lần)", "Sát khuẩn, thay băng y tế, chăm sóc vùng da tỳ đè", new BigDecimal("120000"));
+           saveService("Tắm gội & Vệ sinh tại giường (1 lần)", "Hỗ trợ tắm gội, vệ sinh chuyên biệt cho cư dân yếu/hạn chế vận động", new BigDecimal("150000"));
+           saveService("Hộ tống tái khám bệnh viện (1 lượt)", "Điều dưỡng đi kèm theo dõi, hỗ trợ thủ tục khi tái khám ngoại viện", new BigDecimal("500000"));
        }
    }
 

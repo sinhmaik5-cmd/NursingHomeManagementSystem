@@ -19,7 +19,11 @@ public class OrderDetailMapper {
 
        if (entity.getService() != null) {
            response.setServiceId(entity.getService().getId());
-           response.setServiceName(entity.getService().getServiceName());
+           response.setServiceName(entity.getItemName() != null && !entity.getItemName().isBlank()
+                   ? entity.getItemName()
+                   : entity.getService().getServiceName());
+       } else if (entity.getItemName() != null && !entity.getItemName().isBlank()) {
+           response.setServiceName(entity.getItemName());
        }
        return response;
    }

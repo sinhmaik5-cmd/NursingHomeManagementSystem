@@ -22,7 +22,6 @@ public class HealthRecordResponse {
     private Double temperature;
     private String diagnosis;
     private String staffRole;
-    private boolean returnedStock;
 
 
     private List<MedicationItemResponse> medications;
@@ -45,16 +44,6 @@ public class HealthRecordResponse {
 
     public boolean isNurse() {
         return "NURSE".equalsIgnoreCase(staffRole) || (staffName != null && staffName.startsWith("ĐD."));
-    }
-
-
-    public boolean isReturnedStock() {
-        return returnedStock || (diagnosis != null && diagnosis.contains("[ĐÃ HOÀN KHO]"));
-    }
-
-
-    public void setReturnedStock(boolean returnedStock) {
-        this.returnedStock = returnedStock;
     }
 
 

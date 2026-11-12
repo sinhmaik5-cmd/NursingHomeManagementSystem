@@ -9,6 +9,7 @@ import com.group6.nhms.entity.Medication;
 import com.group6.nhms.entity.Order;
 import com.group6.nhms.entity.Resident;
 import com.group6.nhms.entity.Staff;
+import com.group6.nhms.enums.PaymentStatus;
 import com.group6.nhms.enums.ResidentStatus;
 import com.group6.nhms.exception.BadRequestException;
 import com.group6.nhms.exception.ResourceNotFoundException;
@@ -28,12 +29,12 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -47,19 +48,6 @@ public class HealthRecordServiceImpl implements HealthRecordService {
     private final HealthRecordMapper healthRecordMapper;
     private final MedicationMapper medicationMapper;
     private final OrderRepository orderRepository;
-
-    public HealthRecordServiceImpl(
-            HealthRecordRepository healthRecordRepository,
-            HealthRecordDetailRepository healthRecordDetailRepository,
-            MedicationRepository medicationRepository,
-            ResidentRepository residentRepository,
-            StaffRepository staffRepository,
-            HealthRecordMapper healthRecordMapper,
-            MedicationMapper medicationMapper
-    ) {
-        this(healthRecordRepository, healthRecordDetailRepository, medicationRepository,
-                residentRepository, staffRepository, healthRecordMapper, medicationMapper, null);
-    }
 
     @Autowired
     public HealthRecordServiceImpl(
@@ -80,6 +68,27 @@ public class HealthRecordServiceImpl implements HealthRecordService {
         this.healthRecordMapper = healthRecordMapper;
         this.medicationMapper = medicationMapper;
         this.orderRepository = orderRepository;
+    }
+
+    public HealthRecordServiceImpl(
+            HealthRecordRepository healthRecordRepository,
+            HealthRecordDetailRepository healthRecordDetailRepository,
+            MedicationRepository medicationRepository,
+            ResidentRepository residentRepository,
+            StaffRepository staffRepository,
+            HealthRecordMapper healthRecordMapper,
+            MedicationMapper medicationMapper
+    ) {
+        this(
+                healthRecordRepository,
+                healthRecordDetailRepository,
+                medicationRepository,
+                residentRepository,
+                staffRepository,
+                healthRecordMapper,
+                medicationMapper,
+                null
+        );
     }
 
     @Override
@@ -158,7 +167,78 @@ public class HealthRecordServiceImpl implements HealthRecordService {
             }
         }
 
+        // Đồng bộ tiền thuốc mới vào hóa đơn PENDING cùng tháng (hoặc tạo hóa đơn bổ sung nếu tháng đã PAID)
+        syncNewMedicationCostToOrder(resident, savedRecord.getRecordDate(), savedDetails);
+
         return buildRecordResponse(savedRecord, savedDetails);
+    }
+
+    private void syncNewMedicationCostToOrder(
+            Resident resident,
+            Instant recordDate,
+            List<HealthRecordDetail> savedDetails
+    ) {
+        if (orderRepository == null || savedDetails == null || savedDetails.isEmpty()) {
+            return;
+        }
+        BigDecimal newMedicationCost = savedDetails.stream()
+                .map(HealthRecordDetail::getTotalPrice)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        if (newMedicationCost.compareTo(BigDecimal.ZERO) <= 0) {
+            return;
+        }
+
+        LocalDate recordDay = (recordDate != null ? recordDate : Instant.now())
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate();
+        LocalDate startOfMonth = recordDay.withDayOfMonth(1);
+        LocalDate endOfMonth = recordDay.withDayOfMonth(recordDay.lengthOfMonth());
+
+        List<Order> monthlyOrders = orderRepository.findByResidentIdAndIssueDateBetween(
+                resident.getId(), startOfMonth, endOfMonth);
+        if (monthlyOrders == null || monthlyOrders.isEmpty()) {
+            return;
+        }
+
+        Order pendingOrder = monthlyOrders.stream()
+                .filter(o -> PaymentStatus.PENDING.name().equalsIgnoreCase(o.getPaymentStatus())
+                        || "UNPAID".equalsIgnoreCase(o.getPaymentStatus()))
+                .filter(o -> o.getRoomPrice() != null && o.getRoomPrice().compareTo(BigDecimal.ZERO) > 0)
+                .findFirst()
+                .orElseGet(() -> monthlyOrders.stream()
+                        .filter(o -> PaymentStatus.PENDING.name().equalsIgnoreCase(o.getPaymentStatus())
+                                || "UNPAID".equalsIgnoreCase(o.getPaymentStatus()))
+                        .findFirst()
+                        .orElse(null));
+
+        if (pendingOrder != null) {
+            BigDecimal currentMeds = pendingOrder.getMedicationsPrice() != null
+                    ? pendingOrder.getMedicationsPrice()
+                    : BigDecimal.ZERO;
+            BigDecimal updatedMeds = currentMeds.add(newMedicationCost);
+            BigDecimal room = pendingOrder.getRoomPrice() != null ? pendingOrder.getRoomPrice() : BigDecimal.ZERO;
+            BigDecimal services = pendingOrder.getServicesPrice() != null ? pendingOrder.getServicesPrice() : BigDecimal.ZERO;
+            pendingOrder.setMedicationsPrice(updatedMeds);
+            pendingOrder.setTotalAmount(room.add(services).add(updatedMeds));
+            orderRepository.save(pendingOrder);
+            return;
+        }
+
+        boolean hasPaidOrder = monthlyOrders.stream()
+                .anyMatch(o -> PaymentStatus.PAID.name().equalsIgnoreCase(o.getPaymentStatus()));
+        if (hasPaidOrder) {
+            Order supplementaryOrder = new Order();
+            supplementaryOrder.setResident(resident);
+            supplementaryOrder.setIssueDate(recordDay);
+            supplementaryOrder.setDueDate(recordDay.plusDays(10));
+            supplementaryOrder.setPaymentStatus(PaymentStatus.PENDING.name());
+            supplementaryOrder.setRoomPrice(BigDecimal.ZERO);
+            supplementaryOrder.setServicesPrice(BigDecimal.ZERO);
+            supplementaryOrder.setMedicationsPrice(newMedicationCost);
+            supplementaryOrder.setTotalAmount(newMedicationCost);
+            orderRepository.save(supplementaryOrder);
+        }
     }
 
     @Override
@@ -211,62 +291,6 @@ public class HealthRecordServiceImpl implements HealthRecordService {
     }
 
     @Override
-    @Transactional
-    public void cancelHealthRecord(Integer recordId) {
-        HealthRecord record = healthRecordRepository.findById(recordId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy hồ sơ khám ID " + recordId));
-
-        List<HealthRecordDetail> details = healthRecordDetailRepository.findByHealthRecordId(recordId);
-
-        BigDecimal totalRefund = BigDecimal.ZERO;
-        for (HealthRecordDetail detail : details) {
-            if (detail.getTotalPrice() != null && detail.getTotalPrice().compareTo(BigDecimal.ZERO) > 0) {
-                totalRefund = totalRefund.add(detail.getTotalPrice());
-            }
-
-            Medication medication = medicationRepository.findByIdForUpdate(detail.getMedication().getId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thuốc ID " + detail.getMedication().getId()));
-
-            medication.setQuantityInStock(medication.getQuantityInStock() + detail.getQuantity());
-            medicationRepository.save(medication);
-
-            detail.setTotalPrice(BigDecimal.ZERO);
-            String currentDosage = detail.getDosage() != null ? detail.getDosage() : "";
-            if (!currentDosage.contains("(Đã hoàn kho)")) {
-                detail.setDosage((currentDosage + " (Đã hoàn kho)").trim());
-            }
-            healthRecordDetailRepository.save(detail);
-        }
-
-        // Deduct from pending invoice if exists
-        if (orderRepository != null && record.getResident() != null && totalRefund.compareTo(BigDecimal.ZERO) > 0) {
-            List<Order> pendingOrders = orderRepository.findByResidentIdAndPaymentStatus(
-                    record.getResident().getId(), "PENDING");
-            for (Order pendingOrder : pendingOrders) {
-                if (pendingOrder.getMedicationsPrice() != null && pendingOrder.getMedicationsPrice().compareTo(BigDecimal.ZERO) > 0) {
-                    BigDecimal currentMedPrice = pendingOrder.getMedicationsPrice();
-                    BigDecimal deduction = currentMedPrice.min(totalRefund);
-                    pendingOrder.setMedicationsPrice(currentMedPrice.subtract(deduction));
-                    if (pendingOrder.getTotalAmount() != null) {
-                        pendingOrder.setTotalAmount(pendingOrder.getTotalAmount().subtract(deduction).max(BigDecimal.ZERO));
-                    }
-                    orderRepository.save(pendingOrder);
-                    totalRefund = totalRefund.subtract(deduction);
-                    if (totalRefund.compareTo(BigDecimal.ZERO) <= 0) break;
-                }
-            }
-        }
-
-        // Keep the HealthRecord history, update notes with audit timestamp
-        String refundTag = "[ĐÃ HOÀN KHO THUỐC " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")) + "]";
-        String currentNotes = record.getNotes() != null ? record.getNotes() : "";
-        if (!currentNotes.contains("[ĐÃ HOÀN KHO")) {
-            record.setNotes((currentNotes.isBlank() ? "" : currentNotes + " | ") + refundTag);
-            healthRecordRepository.save(record);
-        }
-    }
-
-    @Override
     @Transactional(readOnly = true)
     public List<MedicationResponse> getAvailableMedications() {
         return medicationRepository.findAvailableForPrescription(LocalDate.now())
@@ -304,9 +328,6 @@ public class HealthRecordServiceImpl implements HealthRecordService {
         }
 
         response.setMedications(medicationResponses);
-        if (record.getNotes() != null && record.getNotes().contains("[ĐÃ HOÀN KHO")) {
-            response.setReturnedStock(true);
-        }
         return response;
     }
 }

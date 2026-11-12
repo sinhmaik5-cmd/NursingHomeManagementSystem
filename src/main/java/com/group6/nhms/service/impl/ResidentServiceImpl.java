@@ -270,6 +270,25 @@ public class ResidentServiceImpl implements ResidentService {
         resident.setBed(newBed);
         Resident saved = residentRepository.save(resident);
 
+        if (!oldBed.getId().equals(newBed.getId())) {
+            String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+            String oldRoomNum = oldBed.getRoom() != null ? oldBed.getRoom().getRoomNumber() : "N/A";
+            String newRoomNum = newBed.getRoom() != null ? newBed.getRoom().getRoomNumber() : "N/A";
+            String reasonSuffix = (request.getReason() != null && !request.getReason().isBlank())
+                    ? " Lý do: " + request.getReason().trim() + "."
+                    : "";
+            String transferRoomLog = String.format(
+                    "[Đổi phòng %s]: Từ phòng %s (%s VNĐ/tháng) sang phòng %s (%s VNĐ/tháng).%s",
+                    timestamp,
+                    oldRoomNum,
+                    oldPrice != null ? oldPrice.stripTrailingZeros().toPlainString() : "0",
+                    newRoomNum,
+                    newPrice != null ? newPrice.stripTrailingZeros().toPlainString() : "0",
+                    reasonSuffix
+            );
+            saveAuditHealthRecord(saved, transferRoomLog);
+        }
+
 
         return residentMapper.toResponse(saved);
     }
@@ -349,18 +368,7 @@ public class ResidentServiceImpl implements ResidentService {
 
 
         if (healthRecordRepository != null) {
-            HealthRecord record = new HealthRecord();
-            record.setResident(resident);
-            Staff staff = staffRepository != null
-                    ? staffRepository.findByJobTitle("DOCTOR").stream().findFirst().orElse(null)
-                    : null;
-            if (staff == null && staffRepository != null) {
-                staff = staffRepository.findAll().stream().findFirst().orElse(null);
-            }
-            record.setStaff(staff);
-            record.setRecordDate(java.time.Instant.now());
-            record.setNotes(transferLog);
-            healthRecordRepository.save(record);
+            saveAuditHealthRecord(resident, transferLog);
         }
 
 
@@ -397,23 +405,30 @@ public class ResidentServiceImpl implements ResidentService {
 
 
         if (healthRecordRepository != null) {
-            HealthRecord record = new HealthRecord();
-            record.setResident(resident);
-            Staff staff = staffRepository != null
-                    ? staffRepository.findByJobTitle("DOCTOR").stream().findFirst().orElse(null)
-                    : null;
-            if (staff == null && staffRepository != null) {
-                staff = staffRepository.findAll().stream().findFirst().orElse(null);
-            }
-            record.setStaff(staff);
-            record.setRecordDate(java.time.Instant.now());
-            record.setNotes(returnLog);
-            healthRecordRepository.save(record);
+            saveAuditHealthRecord(resident, returnLog);
         }
 
 
         Resident saved = residentRepository.save(resident);
         return residentMapper.toResponse(saved);
+    }
+
+    private void saveAuditHealthRecord(Resident resident, String notes) {
+        if (healthRecordRepository == null) {
+            return;
+        }
+        HealthRecord record = new HealthRecord();
+        record.setResident(resident);
+        Staff staff = staffRepository != null
+                ? staffRepository.findByJobTitle("DOCTOR").stream().findFirst().orElse(null)
+                : null;
+        if (staff == null && staffRepository != null) {
+            staff = staffRepository.findAll().stream().findFirst().orElse(null);
+        }
+        record.setStaff(staff);
+        record.setRecordDate(java.time.Instant.now());
+        record.setNotes(notes);
+        healthRecordRepository.save(record);
     }
 
 

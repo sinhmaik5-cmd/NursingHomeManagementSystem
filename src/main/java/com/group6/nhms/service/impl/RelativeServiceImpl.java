@@ -101,15 +101,35 @@ public class RelativeServiceImpl implements RelativeService {
         if (!cleanEmail.matches("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")) {
             throw new BadRequestException("Địa chỉ email không đúng định dạng (VD: example@gmail.com)!");
         }
-        // 5. Khởi tạo và lưu hồ sơ Relative
-        Relative relative = new Relative();
-        relative.setFullName(request.getFullName().trim());
-        relative.setPhoneNumber(cleanPhone);
-        relative.setEmail(cleanEmail);
-        relative.setAddress(request.getAddress() != null && !request.getAddress().isBlank() ? request.getAddress().trim() : null);
-        relative.setRelationship(request.getRelationship() != null && !request.getRelationship().isBlank()
-                ? request.getRelationship().trim() : "Người thân");
-        Relative savedRelative = relativeRepository.save(relative);
+        // 5. Tìm hồ sơ Relative đã tồn tại theo SĐT (trường hợp Lễ tân đã Check-in cư dân trước) hoặc tạo mới
+        Relative targetRelative = relativeRepository.findFirstByPhoneNumber(cleanPhone)
+                .map(existing -> {
+                    if (accountRepository.findByReferenceIdAndRole(existing.getId(), RoleEnum.RELATIVE.name()).isPresent()) {
+                        throw new BadRequestException("Số điện thoại '" + cleanPhone + "' đã được liên kết với một tài khoản Người thân khác. Vui lòng đăng nhập hoặc liên hệ Lễ tân để được hỗ trợ!");
+                    }
+                    existing.setFullName(request.getFullName().trim());
+                    existing.setEmail(cleanEmail);
+                    if (request.getAddress() != null && !request.getAddress().isBlank()) {
+                        existing.setAddress(request.getAddress().trim());
+                    }
+                    if (request.getRelationship() != null && !request.getRelationship().isBlank()) {
+                        existing.setRelationship(request.getRelationship().trim());
+                    } else if (existing.getRelationship() == null || existing.getRelationship().isBlank()) {
+                        existing.setRelationship("Người thân");
+                    }
+                    return existing;
+                })
+                .orElseGet(() -> {
+                    Relative newRel = new Relative();
+                    newRel.setFullName(request.getFullName().trim());
+                    newRel.setPhoneNumber(cleanPhone);
+                    newRel.setEmail(cleanEmail);
+                    newRel.setAddress(request.getAddress() != null && !request.getAddress().isBlank() ? request.getAddress().trim() : null);
+                    newRel.setRelationship(request.getRelationship() != null && !request.getRelationship().isBlank()
+                            ? request.getRelationship().trim() : "Người thân");
+                    return newRel;
+                });
+        Relative savedRelative = relativeRepository.save(targetRelative);
 
 
         // 4. Khởi tạo tài khoản Account với quyền duy nhất là RELATIVE
