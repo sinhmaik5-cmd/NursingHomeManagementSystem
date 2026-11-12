@@ -2,12 +2,14 @@ package com.group6.nhms;
 
 import com.group6.nhms.entity.Bed;
 import com.group6.nhms.entity.IncidentReport;
+import com.group6.nhms.entity.Order;
 import com.group6.nhms.entity.Relative;
 import com.group6.nhms.entity.Resident;
 import com.group6.nhms.entity.Room;
 import com.group6.nhms.entity.Staff;
 import com.group6.nhms.repository.BedRepository;
 import com.group6.nhms.repository.IncidentReportRepository;
+import com.group6.nhms.repository.OrderRepository;
 import com.group6.nhms.repository.RelativeRepository;
 import com.group6.nhms.repository.ResidentRepository;
 import com.group6.nhms.repository.RoomRepository;
@@ -66,6 +68,9 @@ class ViewRenderIntegrationTest {
 
     @Autowired
     private RelativeNotificationService relativeNotificationService;
+
+    @Autowired
+    private OrderRepository orderRepository;
 
     private MockMvc createMockMvc() {
         return MockMvcBuilders
@@ -289,7 +294,12 @@ class ViewRenderIntegrationTest {
     @Test
     @WithMockUser(username = "manager", roles = {"CENTER_MANAGER"})
     void testManagerCannotDeleteOccupiedRoom() throws Exception {
-        createMockMvc().perform(post("/rooms/beds/rooms/1/delete"))
+        Room occupiedRoom = bedRepository.findAll().stream()
+                .map(Bed::getRoom)
+                .filter(java.util.Objects::nonNull)
+                .findFirst()
+                .orElseThrow();
+        createMockMvc().perform(post("/rooms/beds/rooms/" + occupiedRoom.getId() + "/delete"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(MockMvcResultMatchers.flash().attributeExists("errorMessage"));
     }
@@ -297,7 +307,15 @@ class ViewRenderIntegrationTest {
     @Test
     @WithMockUser(username = "manager", roles = {"CENTER_MANAGER"})
     void testManagerCannotDeleteOccupiedBed() throws Exception {
-        createMockMvc().perform(post("/rooms/beds/1/delete"))
+        Bed occupiedBed = bedRepository.findAll().stream()
+                .filter(b -> "OCCUPIED".equals(b.getStatus()) || residentRepository.findByBedId(b.getId()).isPresent())
+                .findFirst()
+                .orElseGet(() -> {
+                    Bed bed = bedRepository.findAll().stream().findFirst().orElseThrow();
+                    bed.setStatus("OCCUPIED");
+                    return bedRepository.save(bed);
+                });
+        createMockMvc().perform(post("/rooms/beds/" + occupiedBed.getId() + "/delete"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(MockMvcResultMatchers.flash().attributeExists("errorMessage"));
     }
@@ -1157,5 +1175,43 @@ class ViewRenderIntegrationTest {
     void testHealthRecordCancelEndpointIsRemoved() throws Exception {
         createMockMvc().perform(post("/health/records/1/cancel").param("residentId", "1"))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser(username = "receptionist", roles = {"RECEPTIONIST"})
+    void testBillingMonthlyRendersFullPageWhenServiceDraftOrdersExist() throws Exception {
+        Relative relative = new Relative();
+        relative.setFullName("Thân nhân Test Draft");
+        relative.setPhoneNumber("0999888777");
+        relative.setEmail("draft.test@example.com");
+        relative.setRelationship("Con");
+        Relative savedRelative = relativeRepository.save(relative);
+
+        Resident resident = new Resident();
+        resident.setFullName("Cư dân Test Draft");
+        resident.setStatus("ACTIVE");
+        resident.setAdmissionDate(LocalDate.of(2099, 1, 1));
+        resident.setRelative(savedRelative);
+        Resident savedResident = residentRepository.save(resident);
+
+        Order draftOrder = new Order();
+        draftOrder.setResident(savedResident);
+        draftOrder.setIssueDate(LocalDate.of(2099, 1, 15));
+        draftOrder.setDueDate(LocalDate.of(2099, 1, 25));
+        draftOrder.setPaymentStatus("PENDING");
+        draftOrder.setRoomPrice(java.math.BigDecimal.ZERO);
+        draftOrder.setServicesPrice(new java.math.BigDecimal("400000"));
+        draftOrder.setMedicationsPrice(java.math.BigDecimal.ZERO);
+        draftOrder.setTotalAmount(new java.math.BigDecimal("400000"));
+        orderRepository.save(draftOrder);
+
+        createMockMvc().perform(get("/billing/monthly")
+                        .param("month", "1")
+                        .param("year", "2099"))
+                .andExpect(status().isOk())
+                .andExpect(MockMvcResultMatchers.content().string(org.hamcrest.Matchers.containsString("bản nháp dịch vụ")))
+                .andExpect(MockMvcResultMatchers.content().string(org.hamcrest.Matchers.containsString("BẢN NHÁP (Chưa chốt tháng)")))
+                .andExpect(MockMvcResultMatchers.content().string(org.hamcrest.Matchers.containsString("TỔNG TIỀN ĐÃ THU")))
+                .andExpect(MockMvcResultMatchers.content().string(org.hamcrest.Matchers.containsString("billingPaginationWrapper")));
     }
 }

@@ -38,7 +38,7 @@
                 <span class="text-muted small d-block mb-1">TỔNG SỐ HÓA ĐƠN</span>
                 <h4 class="fw-bold mb-0 text-dark" th:text="${totalPeriodOrders != null ? totalPeriodOrders : #lists.size(orders)}">0</h4>
                 <small class="text-warning-emphasis fw-semibold d-block mt-1" th:if="${draftCount != null and draftCount > 0}"
-                       th:text="'+ ' + ${draftCount} + ' bản nháp dịch vụ (' + #numbers.formatDecimal(draftTotalAmount, 0, 'COMMA', 0, 'POINT') + 'đ)'">
+                       th:text="'+ ' + ${draftCount} + ' bản nháp dịch vụ (' + ${draftTotalAmount != null ? #numbers.formatDecimal(draftTotalAmount, 0, 'COMMA', 0, 'POINT') : '0'} + 'đ)'">
                     + 0 bản nháp dịch vụ
                 </small>
             </div>
