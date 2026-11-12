@@ -119,7 +119,7 @@
             <a th:href="@{/billing/monthly}" class="sidebar-nav-link" th:classappend="${activeMenu == 'billing-monthly' ? 'active' : ''}">
                 <i class="bi bi-receipt"></i>
                 <span sec:authorize="hasRole('RECEPTIONIST')">Chốt Hóa đơn Tháng</span>
-                <span sec:authorize="hasRole('CENTER_MANAGER')">Bảng Kê Hóa Đơn</span>
+                <span sec:authorize="hasRole('CENTER_MANAGER')">Doanh thu & Hóa đơn</span>
             </a>
             <a th:href="@{/billing/notifications}" class="sidebar-nav-link"
                sec:authorize="hasRole('RECEPTIONIST')"

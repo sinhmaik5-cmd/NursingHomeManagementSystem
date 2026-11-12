@@ -66,8 +66,8 @@ public class SecurityConfig {
                        .hasAnyRole("RECEPTIONIST", "CENTER_MANAGER", "RELATIVE")
 
 
-                       // Chốt hóa đơn & xác nhận thanh toán (POST): Dành riêng cho Lễ tân
-                       .requestMatchers(HttpMethod.POST, "/billing/generate", "/billing/orders/*/pay")
+                       // Chốt hóa đơn, xác nhận thanh toán & hủy hóa đơn chưa thanh toán (POST): Dành riêng cho Lễ tân
+                       .requestMatchers(HttpMethod.POST, "/billing/generate", "/billing/orders/*/pay", "/billing/orders/*/cancel")
                        .hasRole("RECEPTIONIST")
 
 

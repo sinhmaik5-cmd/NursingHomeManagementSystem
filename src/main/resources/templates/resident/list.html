@@ -63,7 +63,7 @@
             <table class="nh-table" id="residentTable">
                 <thead>
                 <tr>
-                    <th>Mã</th>
+                    <th>STT</th>
                     <th>Họ và Tên</th>
                     <th>Giới tính / Tuổi</th>
                     <th>Phòng & Giường</th>
@@ -80,8 +80,8 @@
                         Không tìm thấy cư dân nào phù hợp với điều kiện tìm kiếm.
                     </td>
                 </tr>
-                <tr th:each="r : ${residents}">
-                    <td class="fw-semibold text-muted" th:text="'#' + ${r.id}">#1</td>
+                <tr th:each="r, iterStat : ${residents}">
+                    <td class="fw-semibold text-muted" th:text="${iterStat.count}">1</td>
                     <td>
                         <div class="d-flex align-items-center">
                             <div class="sidebar-user-avatar bg-primary-subtle text-primary me-2">

@@ -1,6 +1,7 @@
 package com.group6.nhms.service;
 
 
+import com.group6.nhms.dto.response.MonthlyRevenueSummary;
 import com.group6.nhms.dto.response.OrderResponse;
 
 
@@ -26,6 +27,12 @@ public interface OrderService {
 
 
     OrderResponse confirmPayment(Integer id);
+
+
+    void cancelUnpaidOrder(Integer id);
+
+
+    List<MonthlyRevenueSummary> getMonthlyRevenueSummaries(List<OrderResponse> orders);
 
 
     OrderResponse createCheckInFee(Integer residentId);

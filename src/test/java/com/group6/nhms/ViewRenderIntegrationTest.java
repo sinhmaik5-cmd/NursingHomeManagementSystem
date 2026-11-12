@@ -202,7 +202,25 @@ class ViewRenderIntegrationTest {
     @WithMockUser(username = "manager", roles = {"CENTER_MANAGER"})
     void testManagerCanAccessBillingMonthlyView() throws Exception {
         createMockMvc().perform(get("/billing/monthly"))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(MockMvcResultMatchers.content().string(org.hamcrest.Matchers.containsString("Quản Lý Doanh Thu Hàng Tháng & Hóa Đơn")))
+                .andExpect(MockMvcResultMatchers.content().string(org.hamcrest.Matchers.containsString("Tổng Hợp Doanh Thu Hàng Tháng")));
+    }
+
+    @Test
+    @WithMockUser(username = "receptionist", roles = {"RECEPTIONIST"})
+    void testReceptionistSeesSettlementAndCancelOrderAction() throws Exception {
+        createMockMvc().perform(get("/billing/monthly"))
+                .andExpect(status().isOk())
+                .andExpect(MockMvcResultMatchers.content().string(org.hamcrest.Matchers.containsString("Quyết Toán & Chốt Hóa Đơn Hàng Tháng")))
+                .andExpect(MockMvcResultMatchers.content().string(org.hamcrest.Matchers.containsString("openCancelOrderModal")));
+    }
+
+    @Test
+    @WithMockUser(username = "manager", roles = {"CENTER_MANAGER"})
+    void testManagerCannotPostBillingCancel() throws Exception {
+        createMockMvc().perform(post("/billing/orders/1/cancel"))
+                .andExpect(status().isForbidden());
     }
 
     @Test

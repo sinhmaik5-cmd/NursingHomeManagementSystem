@@ -32,6 +32,8 @@ public class OrderResponse {
 
 
     private List<OrderDetailResponse> orderDetails;
+    private String roomBillingPeriod;
+    private String roomQuantityLabel;
 
 
     public OrderResponse() {
@@ -216,6 +218,22 @@ public class OrderResponse {
 
     public void setOrderDetails(List<OrderDetailResponse> orderDetails) {
         this.orderDetails = orderDetails;
+    }
+
+    public String getRoomBillingPeriod() {
+        return roomBillingPeriod;
+    }
+
+    public void setRoomBillingPeriod(String roomBillingPeriod) {
+        this.roomBillingPeriod = roomBillingPeriod;
+    }
+
+    public String getRoomQuantityLabel() {
+        return roomQuantityLabel;
+    }
+
+    public void setRoomQuantityLabel(String roomQuantityLabel) {
+        this.roomQuantityLabel = roomQuantityLabel;
     }
 }
 

@@ -79,6 +79,9 @@
                 <div class="small text-muted mb-1">
                     Ngày phát hành: <strong class="text-dark" th:text="${order.issueDate != null ? #temporals.format(order.issueDate, 'dd/MM/yyyy') : '-'}">23/10/2026</strong>
                 </div>
+                <div class="small text-muted mb-1" th:if="${order.roomBillingPeriod != null}">
+                    Kỳ tính phí: <strong class="text-primary" th:text="${order.roomBillingPeriod}">01/11/2026 - 30/11/2026</strong>
+                </div>
                 <div class="small text-muted mb-1">
                     Hạn thanh toán: <strong class="text-danger" th:text="${order.dueDate != null ? #temporals.format(order.dueDate, 'dd/MM/yyyy') : '-'}">02/11/2026</strong>
                 </div>
@@ -110,8 +113,12 @@
                     <td>
                         <div class="fw-bold text-dark">Tiền phòng cơ bản (Base Room Rate)</div>
                         <small class="text-muted">Chi phí phòng lưu trú, điện nước sinh hoạt, dọn vệ sinh hàng ngày</small>
+                        <div class="small text-primary mt-1"
+                             th:if="${order.roomQuantityLabel != null and order.roomQuantityLabel != '1 tháng' and order.roomBillingPeriod != null}">
+                            <i class="bi bi-calendar-range me-1"></i>Tính theo tỷ lệ ngày lưu trú thực tế (<span th:text="${order.roomBillingPeriod}">12/11/2026 - 30/11/2026</span>)
+                        </div>
                     </td>
-                    <td>1 tháng</td>
+                    <td th:text="${order.roomQuantityLabel != null ? order.roomQuantityLabel : '1 tháng'}">1 tháng</td>
                     <td class="text-end fw-bold text-dark"
                         th:text="${order.roomPrice != null ? #numbers.formatDecimal(order.roomPrice, 0, 'COMMA', 0, 'POINT') + ' VNĐ' : '0 VNĐ'}">
                         5,000,000 VNĐ
@@ -196,6 +203,13 @@
 
 
             <div class="d-flex gap-2">
+                <button th:if="${order.paymentStatus == 'PENDING' or order.paymentStatus == 'UNPAID'}"
+                        type="button"
+                        class="btn btn-outline-danger px-3 fw-semibold"
+                        sec:authorize="hasRole('RECEPTIONIST')"
+                        data-bs-toggle="modal" data-bs-target="#cancelOrderDetailModal">
+                    <i class="bi bi-x-circle me-1"></i> Hủy Hóa Đơn
+                </button>
                 <form th:if="${order.paymentStatus == 'PENDING' or order.paymentStatus == 'UNPAID'}"
                       th:action="@{'/billing/orders/' + ${order.id} + '/pay'}" method="post" class="m-0">
                     <button type="submit" class="btn btn-success px-4 fw-bold shadow-sm"
@@ -210,6 +224,36 @@
                         class="btn btn-secondary px-4" disabled>
                     <i class="bi bi-check-all me-1"></i> Đã Thu Tiền Hoàn Tất
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Hủy hóa đơn trên trang chi tiết (RECEPTIONIST) -->
+    <div class="modal fade d-print-none" id="cancelOrderDetailModal" tabindex="-1" aria-hidden="true"
+         sec:authorize="hasRole('RECEPTIONIST')"
+         th:if="${order.paymentStatus == 'PENDING' or order.paymentStatus == 'UNPAID'}">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <form th:action="@{'/billing/orders/' + ${order.id} + '/cancel'}" method="post">
+                    <div class="modal-header">
+                        <h5 class="modal-title fw-bold text-danger">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>Xác Nhận Hủy Hóa Đơn
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="mb-2">Bạn có chắc chắn muốn hủy hóa đơn <strong th:text="'#HĐ-' + ${order.id}">#HĐ-1</strong> của cư dân <strong th:text="${order.residentName}">Nguyễn Văn An</strong>?</p>
+                        <div class="alert alert-warning py-2 small mb-0">
+                            <i class="bi bi-info-circle-fill me-1"></i> Sau khi hủy, bạn có thể quay lại chốt lại đúng tháng/năm mới cho cư dân.
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Giữ lại</button>
+                        <button type="submit" class="btn btn-danger fw-semibold">
+                            <i class="bi bi-trash3 me-1"></i> Xác nhận Hủy hóa đơn
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>

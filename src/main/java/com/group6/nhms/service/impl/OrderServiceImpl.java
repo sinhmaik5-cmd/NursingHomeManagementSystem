@@ -1,6 +1,7 @@
 package com.group6.nhms.service.impl;
 
 
+import com.group6.nhms.dto.response.MonthlyRevenueSummary;
 import com.group6.nhms.dto.response.OrderResponse;
 import com.group6.nhms.entity.Order;
 import com.group6.nhms.entity.OrderDetail;
@@ -22,10 +23,16 @@ import org.springframework.transaction.annotation.Transactional;
 
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -126,6 +133,67 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional
+    public void cancelUnpaidOrder(Integer id) {
+        Order order = orderRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy hóa đơn ID " + id));
+
+        String status = order.getPaymentStatus();
+        boolean isUnpaid = PaymentStatus.PENDING.name().equalsIgnoreCase(status)
+                || "UNPAID".equalsIgnoreCase(status);
+        if (!isUnpaid) {
+            throw new BadRequestException("Chỉ được hủy hóa đơn chưa thanh toán (UNPAID/PENDING). Hóa đơn đã thanh toán không thể hủy.");
+        }
+
+        orderRepository.delete(order);
+    }
+
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<MonthlyRevenueSummary> getMonthlyRevenueSummaries(List<OrderResponse> orders) {
+        if (orders == null || orders.isEmpty()) {
+            return List.of();
+        }
+
+        Map<YearMonth, MonthlyRevenueSummary> summaryMap = new LinkedHashMap<>();
+        orders.stream()
+                .filter(o -> o.getIssueDate() != null)
+                .sorted(Comparator.comparing(OrderResponse::getIssueDate).reversed())
+                .forEach(order -> {
+                    YearMonth ym = YearMonth.from(order.getIssueDate());
+                    MonthlyRevenueSummary summary = summaryMap.computeIfAbsent(ym, k -> {
+                        MonthlyRevenueSummary s = new MonthlyRevenueSummary();
+                        s.setYear(k.getYear());
+                        s.setMonth(k.getMonthValue());
+                        return s;
+                    });
+
+                    summary.setTotalOrders(summary.getTotalOrders() + 1);
+
+                    BigDecimal room = order.getRoomPrice() != null ? order.getRoomPrice() : BigDecimal.ZERO;
+                    BigDecimal services = order.getServicesPrice() != null ? order.getServicesPrice() : BigDecimal.ZERO;
+                    BigDecimal meds = order.getMedicationsPrice() != null ? order.getMedicationsPrice() : BigDecimal.ZERO;
+                    BigDecimal total = order.getTotalAmount() != null ? order.getTotalAmount() : BigDecimal.ZERO;
+
+                    summary.setTotalRoomRevenue(summary.getTotalRoomRevenue().add(room));
+                    summary.setTotalServiceAndMedRevenue(summary.getTotalServiceAndMedRevenue().add(services).add(meds));
+                    summary.setTotalBilledAmount(summary.getTotalBilledAmount().add(total));
+
+                    if (PaymentStatus.PAID.name().equalsIgnoreCase(order.getPaymentStatus())) {
+                        summary.setPaidOrders(summary.getPaidOrders() + 1);
+                        summary.setCollectedRevenue(summary.getCollectedRevenue().add(total));
+                    } else {
+                        summary.setUnpaidOrders(summary.getUnpaidOrders() + 1);
+                        summary.setPendingRevenue(summary.getPendingRevenue().add(total));
+                    }
+                });
+
+        return List.copyOf(summaryMap.values());
+    }
+
+
+    @Override
+    @Transactional
     public OrderResponse createCheckInFee(Integer residentId) {
         Resident resident = residentRepository.findById(residentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy cư dân ID " + residentId));
@@ -179,16 +247,29 @@ public class OrderServiceImpl implements OrderService {
 
         LocalDate startDate = LocalDate.of(year, month, 1);
         LocalDate endDate = startDate.plusMonths(1).minusDays(1);
+        LocalDate admissionDate = resident.getAdmissionDate();
 
+        if (admissionDate != null && admissionDate.isAfter(endDate)) {
+            throw new BadRequestException("Không thể chốt hóa đơn tháng " + month + "/" + year
+                    + " vì cư dân nhập viện từ ngày " + admissionDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
+        }
 
         if (orderRepository.existsByResidentIdAndIssueDateBetween(residentId, startDate, endDate)) {
             throw new BadRequestException("Cư dân đã có hóa đơn trong tháng " + month + "/" + year);
         }
 
+        LocalDate effectiveStartDate = (admissionDate != null && admissionDate.isAfter(startDate))
+                ? admissionDate
+                : startDate;
+        int totalDaysInMonth = startDate.lengthOfMonth();
+        long billableDays = ChronoUnit.DAYS.between(effectiveStartDate, endDate) + 1;
 
-        BigDecimal roomPrice = (resident.getBed() != null && resident.getBed().getRoom() != null)
+        BigDecimal baseRoomPrice = (resident.getBed() != null && resident.getBed().getRoom() != null
+                && resident.getBed().getRoom().getBasePrice() != null)
                 ? resident.getBed().getRoom().getBasePrice()
                 : BigDecimal.ZERO;
+
+        BigDecimal roomPrice = calculateProRataRoomPrice(baseRoomPrice, billableDays, totalDaysInMonth);
 
 
         BigDecimal servicesPrice = orderDetailRepository.sumServicesByResidentIdAndIssueDateBetween(
@@ -207,11 +288,12 @@ public class OrderServiceImpl implements OrderService {
 
         BigDecimal totalAmount = roomPrice.add(servicesPrice).add(medicationsPrice);
 
+        LocalDate issueDate = resolveMonthlyIssueDate(startDate, endDate, effectiveStartDate, LocalDate.now());
 
         Order monthlyOrder = new Order();
         monthlyOrder.setResident(resident);
-        monthlyOrder.setIssueDate(startDate);
-        monthlyOrder.setDueDate(LocalDate.now().plusDays(10));
+        monthlyOrder.setIssueDate(issueDate);
+        monthlyOrder.setDueDate(issueDate.plusDays(10));
         monthlyOrder.setPaymentStatus(PaymentStatus.PENDING.name());
         monthlyOrder.setRoomPrice(roomPrice);
         monthlyOrder.setServicesPrice(servicesPrice);
@@ -221,6 +303,39 @@ public class OrderServiceImpl implements OrderService {
 
         Order saved = orderRepository.save(monthlyOrder);
         return orderMapper.toResponse(saved);
+    }
+
+    private BigDecimal calculateProRataRoomPrice(BigDecimal baseRoomPrice, long billableDays, int totalDaysInMonth) {
+        if (baseRoomPrice == null || baseRoomPrice.compareTo(BigDecimal.ZERO) <= 0 || billableDays <= 0) {
+            return BigDecimal.ZERO;
+        }
+        if (billableDays >= totalDaysInMonth) {
+            return baseRoomPrice;
+        }
+        BigDecimal rawAmount = baseRoomPrice
+                .multiply(BigDecimal.valueOf(billableDays))
+                .divide(BigDecimal.valueOf(totalDaysInMonth), 2, RoundingMode.HALF_UP);
+        // Làm tròn đến hàng nghìn VNĐ khi đơn giá >= 1.000 VNĐ
+        if (baseRoomPrice.compareTo(BigDecimal.valueOf(1000)) >= 0) {
+            return rawAmount.divide(BigDecimal.valueOf(1000), 0, RoundingMode.HALF_UP)
+                    .multiply(BigDecimal.valueOf(1000));
+        }
+        return rawAmount.setScale(0, RoundingMode.HALF_UP);
+    }
+
+    private LocalDate resolveMonthlyIssueDate(
+            LocalDate startDate,
+            LocalDate endDate,
+            LocalDate effectiveStartDate,
+            LocalDate today
+    ) {
+        if (!today.isBefore(startDate) && !today.isAfter(endDate)) {
+            return today.isBefore(effectiveStartDate) ? effectiveStartDate : today;
+        }
+        if (today.isBefore(startDate)) {
+            return startDate;
+        }
+        return endDate;
     }
 
 

@@ -8,12 +8,18 @@ import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Component;
 
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 
 
 @Component
 public class OrderMapper {
+
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
 
    private final ModelMapper modelMapper;
@@ -51,6 +57,7 @@ public class OrderMapper {
        response.setPaymentDate(entity.getPaymentDate());
        response.setIssueDate(entity.getIssueDate());
        response.setDueDate(entity.getDueDate());
+       populateRoomBillingInfo(entity, response);
 
 
        if (entity.getOrderDetails() != null && !entity.getOrderDetails().isEmpty()) {
@@ -64,6 +71,41 @@ public class OrderMapper {
 
 
        return response;
+   }
+
+   private void populateRoomBillingInfo(Order entity, OrderResponse response) {
+       LocalDate issueDate = entity.getIssueDate();
+       if (issueDate == null) {
+           response.setRoomQuantityLabel("1 tháng");
+           return;
+       }
+       LocalDate monthStart = issueDate.withDayOfMonth(1);
+       LocalDate monthEnd = issueDate.withDayOfMonth(issueDate.lengthOfMonth());
+       LocalDate admissionDate = entity.getResident() != null ? entity.getResident().getAdmissionDate() : null;
+
+       LocalDate periodStart = (admissionDate != null && admissionDate.isAfter(monthStart) && !admissionDate.isAfter(monthEnd))
+               ? admissionDate
+               : monthStart;
+
+       int totalDays = issueDate.lengthOfMonth();
+       long billableDays = ChronoUnit.DAYS.between(periodStart, monthEnd) + 1;
+
+       BigDecimal roomBasePrice = (entity.getResident() != null
+               && entity.getResident().getBed() != null
+               && entity.getResident().getBed().getRoom() != null)
+               ? entity.getResident().getBed().getRoom().getBasePrice()
+               : null;
+
+       response.setRoomBillingPeriod(periodStart.format(DATE_FORMATTER) + " - " + monthEnd.format(DATE_FORMATTER));
+       if (billableDays < totalDays
+               && entity.getRoomPrice() != null
+               && entity.getRoomPrice().compareTo(BigDecimal.ZERO) > 0
+               && roomBasePrice != null
+               && entity.getRoomPrice().compareTo(roomBasePrice) < 0) {
+           response.setRoomQuantityLabel(billableDays + "/" + totalDays + " ngày");
+       } else {
+           response.setRoomQuantityLabel("1 tháng");
+       }
    }
 }
 

@@ -19,6 +19,8 @@ import java.math.BigDecimal;
 import java.text.DecimalFormat;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Stream;
 
 @Controller
 @RequestMapping("/billing")
@@ -55,28 +57,68 @@ public class WebBillingController {
         this.staffService = staffService;
     }
 
-    // 1. Bảng chốt hóa đơn hàng tháng (Lễ tân xử lý thu phí, Giám đốc giám sát doanh thu)
+    // 1. Bảng chốt hóa đơn hàng tháng (Lễ tân xử lý thu phí, Giám đốc quản lý doanh thu hàng tháng & hóa đơn)
     @GetMapping("/monthly")
     public String monthlyBilling(
             @RequestParam(required = false) String status,
+            @RequestParam(required = false) Integer month,
+            @RequestParam(required = false) Integer year,
             Model model
     ) {
-        List<OrderResponse> orders = orderService.getAllOrders(status);
+        List<OrderResponse> allOrders = orderService.getAllOrders(null);
+        List<MonthlyRevenueSummary> monthlySummaries = orderService.getMonthlyRevenueSummaries(allOrders);
+
+        List<OrderResponse> periodOrders = allOrders.stream()
+                .filter(o -> month == null || (o.getIssueDate() != null && o.getIssueDate().getMonthValue() == month))
+                .filter(o -> year == null || (o.getIssueDate() != null && o.getIssueDate().getYear() == year))
+                .toList();
+
+        List<OrderResponse> orders = (status == null || status.isBlank())
+                ? periodOrders
+                : periodOrders.stream()
+                        .filter(o -> status.trim().equalsIgnoreCase(o.getPaymentStatus()))
+                        .toList();
+
         List<ResidentResponse> activeResidents = residentService.getAllResidents(null, "ACTIVE");
 
-        long unpaidCount = orderService.countUnpaidOrders();
-        long paidCount = orderService.countPaidOrders();
-        BigDecimal totalCollected = orderService.getTotalCollectedRevenue();
+        long unpaidCount = periodOrders.stream()
+                .filter(o -> "PENDING".equalsIgnoreCase(o.getPaymentStatus()) || "UNPAID".equalsIgnoreCase(o.getPaymentStatus()))
+                .count();
+        long paidCount = periodOrders.stream()
+                .filter(o -> "PAID".equalsIgnoreCase(o.getPaymentStatus()))
+                .count();
+        BigDecimal totalCollected = periodOrders.stream()
+                .filter(o -> "PAID".equalsIgnoreCase(o.getPaymentStatus()) && o.getTotalAmount() != null)
+                .map(OrderResponse::getTotalAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal totalPendingAmount = periodOrders.stream()
+                .filter(o -> ("PENDING".equalsIgnoreCase(o.getPaymentStatus()) || "UNPAID".equalsIgnoreCase(o.getPaymentStatus()))
+                        && o.getTotalAmount() != null)
+                .map(OrderResponse::getTotalAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         LocalDate now = LocalDate.now();
+        List<Integer> availableYears = Stream.concat(
+                        Stream.of(now.getYear()),
+                        allOrders.stream().map(OrderResponse::getIssueDate).filter(Objects::nonNull).map(LocalDate::getYear)
+                )
+                .distinct()
+                .sorted((a, b) -> Integer.compare(b, a))
+                .toList();
 
         model.addAttribute("orders", orders);
+        model.addAttribute("monthlySummaries", monthlySummaries);
         model.addAttribute("activeResidents", activeResidents);
+        model.addAttribute("totalPeriodOrders", periodOrders.size());
         model.addAttribute("unpaidCount", unpaidCount);
         model.addAttribute("paidCount", paidCount);
         model.addAttribute("totalCollected", totalCollected);
+        model.addAttribute("totalPendingAmount", totalPendingAmount);
         model.addAttribute("currentMonth", now.getMonthValue());
         model.addAttribute("currentYear", now.getYear());
+        model.addAttribute("selectedMonth", month);
+        model.addAttribute("selectedYear", year);
+        model.addAttribute("availableYears", availableYears);
         model.addAttribute("filterStatus", status);
         model.addAttribute("activeMenu", "billing-monthly");
 
@@ -163,6 +205,31 @@ public class WebBillingController {
             redirectAttributes.addFlashAttribute("errorMessage", "Lỗi xác nhận thanh toán: " + e.getMessage());
         }
         return "redirect:/billing/orders/" + id;
+    }
+
+    // 4b. Hủy hóa đơn chưa thanh toán khi chốt sai (Chỉ Lễ tân kiêm Thu ngân)
+    @PostMapping("/orders/{id}/cancel")
+    public String cancelOrder(
+            @PathVariable Integer id,
+            Authentication authentication,
+            RedirectAttributes redirectAttributes
+    ) {
+        if (authentication != null && authentication.getAuthorities().stream().noneMatch(a ->
+                a.getAuthority().equals("ROLE_RECEPTIONIST"))) {
+            redirectAttributes.addFlashAttribute("errorMessage",
+                    "Chỉ Lễ tân kiêm Thu ngân mới có thẩm quyền hủy hóa đơn chốt sai.");
+            return "redirect:/billing/monthly";
+        }
+
+        try {
+            orderService.cancelUnpaidOrder(id);
+            redirectAttributes.addFlashAttribute("successMessage",
+                    "Đã hủy hóa đơn #HĐ-" + id + " thành công! Bạn có thể chốt lại hóa đơn mới nếu cần.");
+            return "redirect:/billing/monthly";
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Không thể hủy hóa đơn: " + e.getMessage());
+            return "redirect:/billing/orders/" + id;
+        }
     }
 
     // 5. Bảng điều khiển Gửi thông báo viện phí & sự cố cho thân nhân (Chỉ Lễ tân)
